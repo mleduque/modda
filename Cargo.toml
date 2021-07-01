@@ -12,6 +12,7 @@ anyhow = "1.0"
 clap = { git = "https://github.com/clap-rs/clap/", rev="65b3892" }
 glob = "0.3.0"
 itertools = "0.10.0"
+lazy_static = "1.4.0"
 regex = "1.5.4"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.8"
