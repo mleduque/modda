@@ -1,4 +1,5 @@
 
+mod args;
 mod manifest;
 mod language;
 
@@ -11,55 +12,13 @@ use std::process::Stdio;
 use ansi_term::Colour::{Green, Red, Yellow};
 use anyhow::{anyhow, bail};
 use anyhow::Result;
-use clap::{AppSettings, Clap};
+use clap::{Clap};
 use glob::{glob_with, MatchOptions};
 
+use args::{ Opts, Install, Search };
 use language::{ LanguageOption, LanguageSelection,select_language  };
 use manifest::{ Manifest, Module, ModuleContent };
 
-#[derive(Clap, Debug)]
-#[clap(version = "1.0")]
-#[clap(setting = AppSettings::ColoredHelp)]
-enum Opts {
-    Install(Install),
-    Search(Search),
-}
-
-#[derive(Clap, Debug)]
-struct Install {
-
-    #[clap(long, short)]
-    manifest_path: String,
-    
-    #[clap(long)]
-    no_stop_on_warn: bool,
-
-    /// index in the module list where we start (zero-based)
-    #[clap(long, short = 'f')]
-    from_index: Option<usize>,
-
-    /// index in the module list where we stop
-    #[clap(long, short = 't')]
-    to_index: Option<usize>,
-
-    #[clap(long, short = 'o')]
-    output: Option<String>,
-
-
-    #[clap(long)]
-    dry_run: bool,
-}
-
-#[derive(Clap, Debug)]
-struct Search {
-
-    #[clap(long, short)]
-    manifest_path: String,
-
-
-    #[clap(long, short)]
-    name: String,
-}
 
 
 fn main() -> Result<()> {
