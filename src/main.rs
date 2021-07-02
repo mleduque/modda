@@ -489,7 +489,6 @@ fn run_weidu_interactive(tp2: &str, module: &Module, opts: &Install,
                             game_lang: &str) -> Result<RunResult> {
     let mut command = Command::new("weidu");
     let args = vec![
-        "install".to_owned(),
         tp2.to_owned(),
         "--no-exit-pause".to_owned(),
         "--log".to_owned(),
