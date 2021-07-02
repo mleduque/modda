@@ -208,7 +208,7 @@ fn install(opts: &Install) -> Result<()> {
 fn search(opts: &Search) -> Result<()> {
     let manifest = read_manifest(&opts.manifest_path)?;
     for (idx, module) in manifest.modules.iter().enumerate() {
-        if module.name == opts.name {
+        if module.name.to_lowercase() == opts.name.to_lowercase() {
             println!("idx: '{}\n {:?}", idx, module);
             return Ok(())
         }
