@@ -1,5 +1,7 @@
 
+use std::io::{BufReader};
 
+use anyhow::{anyhow, Result};
 use serde::{Deserialize};
 
 #[derive(Deserialize, Debug)]
@@ -41,4 +43,16 @@ pub struct ModuleConf {
 pub enum ModuleContent {
     Content(String),
     Prompt(String),
+}
+
+pub fn read_manifest(path: &str) -> Result<Manifest> {
+    let file = match std::fs::File::open(path) {
+        Err(error) => return Err(
+            anyhow!(format!("Could not open manifest file {} - {:?}", path, error)
+        )),
+        Ok(file) => file,
+    };
+    let reader = BufReader::new(file);
+    let manifest: Manifest = serde_yaml::from_reader(reader)?;
+    Ok(manifest)
 }
