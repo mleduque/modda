@@ -436,6 +436,7 @@ fn run_weidu(tp2: &str, module: &Module, opts: &Install, lang_preferences: &Opti
     use LanguageSelection::*;
     let language_id = match select_language(tp2, module, lang_preferences) {
         Ok(Selected(id)) => id,
+        Ok(NoMatch(list)) if list.is_empty() => 0,
         Ok(NoPrefSet(available))
         | Ok(NoMatch(available)) => handle_no_language_selected(available, module, lang_preferences,game_lang)?,
         Err(err) => return Err(err),
