@@ -355,7 +355,7 @@ fn select_language(tp2:&str, module: &Module, lang_preferences: &Option<Vec<Stri
                     }
                     match candidate.strip_prefix("#rx#") {
                         Some(reg) => {
-                            let lang_re = regex::Regex::new(reg).unwrap();
+                            let lang_re = regex::Regex::new(&format!("(?i){}", reg)).unwrap();
                             for lang in &available {
                                 let LanguageOption { index, name } = &lang;
                                 if lang_re.is_match(name) {
