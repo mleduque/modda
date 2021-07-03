@@ -131,13 +131,17 @@ fn install(opts: &Install) -> Result<()> {
 
 fn search(opts: &Search) -> Result<()> {
     let manifest = read_manifest(&opts.manifest_path)?;
+    let mut found = false;
     for (idx, module) in manifest.modules.iter().enumerate() {
         if module.name.to_lowercase() == opts.name.to_lowercase() {
-            println!("idx: '{}\n {:?}", idx, module);
-            return Ok(())
+            found = true;
+            println!("idx: '{} - {}\n\t{:?}", idx, module.describe(), module);
         }
     }
-    println!("module {} not found", opts.name);
+
+    if !found {
+        println!("module {} not found", opts.name);
+    }
     Ok(())
 }
 

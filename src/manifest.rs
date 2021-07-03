@@ -1,4 +1,5 @@
 
+use std::borrow::Cow;
 use std::io::{BufReader};
 
 use anyhow::{anyhow, Result};
@@ -7,6 +8,8 @@ use serde::{Deserialize};
 #[derive(Deserialize, Debug)]
 pub struct Module {
     pub name: String,
+    /// Optional description, used to disambiguate multiple occurences of the same mod
+    pub description: Option<String>,
     /// Which language index to use (has precedence over manifest-level lang_prefs)
     pub language: Option<u32>,
     /// List of components to be auto-installed. In None or empty list, run interactively
@@ -14,6 +17,14 @@ pub struct Module {
     #[serde(default)]
     pub ignore_warnings: bool,
     pub add_conf: Option<ModuleConf>,
+}
+impl Module {
+    pub fn describe(&self) -> Cow<String> {
+        match &self.description {
+            None => Cow::Borrowed(&self.name),
+            Some(desc) => Cow::Owned(format!("{} ({})", self.name, desc)),
+        }
+    }
 }
 
 #[derive(Deserialize, Debug)]
