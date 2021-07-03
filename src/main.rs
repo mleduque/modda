@@ -1,29 +1,34 @@
-
 mod args;
 mod bufread_raw;
-mod manifest;
+mod get_module;
+mod download;
 mod language;
+mod archive_layout;
 mod list_components;
 mod log_parser;
 mod lowercase;
+mod manifest;
 mod sub;
 mod run_result;
+mod settings;
 mod tp2;
 mod weidu;
 
 use std::io::{BufReader, BufWriter};
 use std::io::prelude::*;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use ansi_term::{Colour, Colour::{Green, Red, Yellow}};
 use anyhow::{anyhow, bail, Result};
 use clap::Clap;
 
 use args::{ Opts, Install };
+use get_module::get_module;
 use log_parser::{find_components_without_warning, parse_weidu_log};
 use lowercase::LwcString;
 use list_components::list_components;
 use manifest::{ Module, ModuleContent, read_manifest };
+use settings::{read_settings, Config};
 use sub::list_components::sub_list_components;
 use sub::search::search;
 use tp2::find_tp2;
@@ -32,18 +37,22 @@ use weidu::{run_weidu, write_run_result};
 
 
 fn main() -> Result<()> {
+    if !PathBuf::from("chitin.key").exists() {
+        bail!("Must be run from the game directory (where chitin.key is)");
+    }
+    let settings = read_settings();
     let opts: Opts = Opts::parse();
     match opts {
-        Opts::Install(ref install_opts) => install(install_opts),
+        Opts::Install(ref install_opts) => { install(install_opts, &settings)?; Ok(()) },
         Opts::Search(ref search_opts) => search(search_opts),
         Opts::ListComponents(ref params) => sub_list_components(params),
     }
 }
 
-fn install(opts: &Install) -> Result<()> {
+fn install(opts: &Install, settings: &Config) -> Result<()> {
 
     let manifest = read_manifest(&opts.manifest_path)?;
-    check_weidu_conf_lang(&manifest.game_language)?;
+    check_weidu_conf_lang(&manifest.global.game_language)?;
     let modules = &manifest.modules;
 
     let mut log = if let Some(output) = &opts.output {
@@ -68,7 +77,13 @@ fn install(opts: &Install) -> Result<()> {
     let mut finished = false;
     for (index, module) in modules.iter().enumerate() {
         println!("module {} - {}", index, module.name);
-        let tp2 = find_tp2(&module.name)?;
+        let tp2 = match find_tp2(&module.name) {
+            Ok(tp2) => tp2,
+            Err(_) => {
+                get_module(&module, &settings)?;
+                find_tp2(&module.name)?
+            }
+        };
         let tp2_string = match tp2.into_os_string().into_string() {
             Ok(string) => string,
             Err(os_string) => {
@@ -78,7 +93,7 @@ fn install(opts: &Install) -> Result<()> {
             }
         };
         configure_module(module)?;
-        let single_result = run_weidu(&tp2_string, module, &opts, &manifest.lang_preferences, &manifest.game_language)?;
+        let single_result = run_weidu(&tp2_string, module, &opts, &manifest.global)?;
         if let Some(ref mut file) = log {
             let _ = write_run_result(&single_result, file, module);
         }

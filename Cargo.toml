@@ -9,11 +9,23 @@ edition = "2018"
 [dependencies]
 ansi_term = "0.12"
 anyhow = "1.0"
+bytes = "1"
 clap = { git = "https://github.com/clap-rs/clap/", rev="65b3892" }
+directories = "3"
+flate2 = "1"
+fs_extra = "1.2.0"
+futures-util = "0.3.15"
 glob = "0.3.0"
 itertools = "0.10.0"
 lazy_static = "1.4.0"
+percent-encoding = "2.1.0"
 regex = "1.5.4"
+reqwest = { version = "0.11", features = ["stream"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.8"
+tar = "0.4"
+tokio = { version = "1.8", features = ["full"] }
+tempfile = "3.2.0"
+url = "2.2.2"
+zip = "0.5.13"
