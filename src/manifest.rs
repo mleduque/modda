@@ -1,31 +1,10 @@
 
 use std::borrow::Cow;
-use std::io::{BufReader};
+use std::io::BufReader;
 
 use anyhow::{anyhow, Result};
-use serde::{Deserialize};
+use serde::Deserialize;
 
-#[derive(Deserialize, Debug)]
-pub struct Module {
-    pub name: String,
-    /// Optional description, used to disambiguate multiple occurences of the same mod
-    pub description: Option<String>,
-    /// Which language index to use (has precedence over manifest-level lang_prefs)
-    pub language: Option<u32>,
-    /// List of components to be auto-installed. In None or empty list, run interactively
-    pub components: Option<Vec<u32>>,
-    #[serde(default)]
-    pub ignore_warnings: bool,
-    pub add_conf: Option<ModuleConf>,
-}
-impl Module {
-    pub fn describe(&self) -> Cow<String> {
-        match &self.description {
-            None => Cow::Borrowed(&self.name),
-            Some(desc) => Cow::Owned(format!("{} ({})", self.name, desc)),
-        }
-    }
-}
 
 #[derive(Deserialize, Debug)]
 pub struct Manifest {
@@ -42,6 +21,52 @@ pub struct Manifest {
     pub modules: Vec<Module>,
 }
 
+#[derive(Deserialize, Debug)]
+pub struct Module {
+    pub name: String,
+    /// Optional description, used to disambiguate multiple occurrences of the same mod
+    pub description: Option<String>,
+    /// Which language index to use (has precedence over manifest-level lang_prefs)
+    pub language: Option<u32>,
+    /// List of components to be auto-installed. In None or empty list, run interactively
+    pub components: Option<Vec<Component>>,
+    #[serde(default)]
+    pub ignore_warnings: bool,
+    pub add_conf: Option<ModuleConf>,
+}
+impl Module {
+    pub fn describe(&self) -> Cow<String> {
+        match &self.description {
+            None => Cow::Borrowed(&self.name),
+            Some(desc) => Cow::Owned(format!("{} ({})", self.name, desc)),
+        }
+    }
+
+    pub fn components_with_warning(&self) -> Vec<&Component> {
+        match &self.components {
+            None => vec![],
+            Some(components) => components.iter().filter(|comp| match comp {
+                Component::Simple(_) => false,
+                Component::Full{ ignore_warn, ..} =>  *ignore_warn,
+            }).collect::<Vec<_>>(),
+        }
+    }
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(untagged)]
+pub enum Component {
+    Simple(u32),
+    Full { index: u32, ignore_warn: bool },
+}
+impl Component {
+    pub fn index(&self) -> u32 {
+        match &self {
+            Component::Simple(index) => *index,
+            Component::Full { index, ..} => *index,
+        }
+    }
+}
 
 #[derive(Deserialize, Debug)]
 pub struct ModuleConf {

@@ -8,6 +8,7 @@ use clap::{AppSettings, Clap};
 pub enum Opts {
     Install(Install),
     Search(Search),
+    ListComponents(ListComponents),
 }
 
 #[derive(Clap, Debug)]
@@ -44,4 +45,12 @@ pub struct Search {
 
     #[clap(long, short)]
     pub name: String,
+}
+
+#[derive(Clap, Debug)]
+pub struct ListComponents {
+    pub module_name: String,
+
+    #[clap(long, short)]
+    pub lang: u32,
 }

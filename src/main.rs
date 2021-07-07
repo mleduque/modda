@@ -1,23 +1,33 @@
 
 mod args;
+mod bufread_raw;
 mod manifest;
 mod language;
+mod list_components;
+mod log_parser;
+mod lowercase;
+mod sub;
+mod run_result;
+mod tp2;
+mod weidu;
 
 use std::io::{BufReader, BufWriter};
 use std::io::prelude::*;
-use std::path::{Path, PathBuf};
-use std::process::Command;
-use std::process::Stdio;
+use std::path::Path;
 
-use ansi_term::Colour::{Green, Red, Yellow};
-use anyhow::{anyhow, bail};
-use anyhow::Result;
-use clap::{Clap};
-use glob::{glob_with, MatchOptions};
+use ansi_term::{Colour, Colour::{Green, Red, Yellow}};
+use anyhow::{anyhow, bail, Result};
+use clap::Clap;
 
-use args::{ Opts, Install, Search };
-use language::{ LanguageOption, LanguageSelection,select_language  };
+use args::{ Opts, Install };
+use log_parser::{find_components_with_warning, parse_weidu_log};
+use lowercase::LwcString;
+use list_components::list_components;
 use manifest::{ Module, ModuleContent, read_manifest };
+use sub::list_components::sub_list_components;
+use sub::search::search;
+use tp2::find_tp2;
+use weidu::{run_weidu, write_run_result};
 
 
 
@@ -26,6 +36,7 @@ fn main() -> Result<()> {
     match opts {
         Opts::Install(ref install_opts) => install(install_opts),
         Opts::Search(ref search_opts) => search(search_opts),
+        Opts::ListComponents(ref params) => sub_list_components(params),
     }
 }
 
@@ -82,14 +93,14 @@ fn install(opts: &Install) -> Result<()> {
             }
             Some(3) => {
                 let (message, color) = if opts.no_stop_on_warn || module.ignore_warnings {
-                    let message = format!("module {} (index={}) finished with warning (status=3), ignoring as requested", 
-                                            module.name, index);
-                    (message, Yellow)
+                    ignore_warnings(module, index)
                 } else {
-                    finished = true;
-                    let message = format!("module {} (index={}) finished with warning (status=3), stopping as requested", 
-                                            module.name, index);
-                    (message, Red)
+                    // need to check if component with warning was flagged with ignore_warnings
+                    if component_failure_allowed(module) {
+                        ignore_warnings(module, index)
+                    } else {
+                        fail_warnings(module, index)
+                    }
                 }; 
                 if let Some(ref mut file) = log {
                     let _ = writeln!(file, "{}", message);
@@ -129,91 +140,79 @@ fn install(opts: &Install) -> Result<()> {
     Ok(())
 }
 
-fn search(opts: &Search) -> Result<()> {
-    let manifest = read_manifest(&opts.manifest_path)?;
-    let mut found = false;
-    for (idx, module) in manifest.modules.iter().enumerate() {
-        if module.name.to_lowercase() == opts.name.to_lowercase() {
-            found = true;
-            println!("idx: '{} - {}\n\t{:?}", idx, module.describe(), module);
+fn component_failure_allowed(module: &Module) -> bool {
+    let warning_allowed = module.components_with_warning();
+    if warning_allowed.is_empty() {
+        return false;
+    }
+    let components_that_warned = match find_components_with_warning(module) {
+        Err(error) => {
+            eprintln!("Could not retrieve per-components success state from weidu.log for module {} - {:?}", module.name, error);
+            return false;
         }
-    }
-
-    if !found {
-        println!("module {} not found", opts.name);
-    }
-    Ok(())
-}
-
-/**
- * Given a module name, finds a matching path to a .tp2 file
- * can be any of
- * - ${module}/${module}.tp2
- * - ${module}/setup-${module}.tp2
- * - ${module}.tp2
- * - setup-${module}.tp2
- * with case-insensitive search.
- * Search is done in this order and ignores other matches when one is found.
- */
-fn find_tp2(module_name: &str) -> Result<PathBuf> {
-    if let Some(path) = check_glob_casefold(&format!("./{}/{}.tp2", module_name, module_name))? {
-        return Ok(path);
-    }
-    if let Some(path) = check_glob_casefold(&format!("./{}/setup-{}.tp2", module_name, module_name))? {
-        return Ok(path);
-    }
-    if let Some(path) = check_glob_casefold(&format!("./{}.tp2", module_name))? {
-        return Ok(path);
-    }
-    if let Some(path) = check_glob_casefold(&format!("./setup-{}.tp2", module_name))? {
-        return Ok(path);
-    }
-    Err(anyhow!("tp2 file {}.tp2 not found", module_name))
-}
-
-fn check_glob_casefold(pattern: &str) -> Result<Option<PathBuf>> {
-    println!("try {}", pattern);
-    let options = MatchOptions {
-        case_sensitive: false,
-        ..Default::default()
+        Ok(report) => report,
     };
-    let mut glob_result = glob_with(pattern, options)?;
-    if let Some(path) = glob_result.find_map(|item| {
-        match item {
-            Err(_) => None,
-            Ok(value) => Some(value),
+
+    // read module installation language index from weidu.log
+    let module_lang_idx = match parse_weidu_log(Some(LwcString::new(&module.name))) {
+        Err(error) => {
+            eprintln!("Couldn't read module installation language from weidu.log\n->{:?}", error);
+            return false;
         }
-    }) {
-        Ok(Some(path))
-    } else {
-        Ok(None)
+        Ok(report) => match report.first() {
+            None => {
+                eprintln!("Couldn't read module installation language from weidu.log\n-> no row in weidu.log for module {}", module.name);
+                return false;
+            }
+            Some(row) => row.lang_index,
+        }
+    };
+
+    // Ask weidu the list of components in the module in the (module) install language
+    // to match component numbers with their "name"
+    let components = match list_components(&module.name, module_lang_idx) {
+        Err(error) => {
+            eprintln!("Couldn't obtain component list for module {} - {:?}", module.name, error);
+            return false;
+        }
+        Ok(list) => list,
+    };
+
+    // get list of names of components that are allowed to have warnings 
+    // (we only have indexes until now)
+    let allowed_names = warning_allowed.iter().filter_map(|comp| {
+        match components.iter().find(|weidu_comp| weidu_comp.number == comp.index()) {
+            None => None,
+            Some(weidu_comp) => Some(weidu_comp.name.to_owned())
+        }
+    }).collect::<Vec<_>>();
+
+    for component_name in components_that_warned {
+        if !allowed_names.contains(&component_name) {
+            return false;
+        }
     }
+    true
 }
 
-enum RunResult {
-    Dry(String),
-    Real(std::process::Output)
+fn ignore_warnings(module: &Module, index: usize) -> (String, Colour) {
+    let message = format!("module {} (index={}) finished with warning (status=3), ignoring as requested", 
+                            module.name, index);
+    (message, Yellow)
 }
 
-impl RunResult {
-    fn status_code(&self) -> Option<i32> {
-        match self {
-            RunResult::Dry(_) => Some(0),
-            RunResult::Real(output) => output.status.code(),
-        }
-    }
-    fn success(&self) -> bool {
-        match self {
-            RunResult::Dry(_) => true,
-            RunResult::Real(output) => output.status.success(),
-        }
-    }
+fn fail_warnings(module: &Module, index: usize) -> (String, Colour) {
+    let message = format!("module {} (index={}) finished with warning (status=3), stopping as requested", 
+                            module.name, index);
+    (message, Red)
 }
 
 fn configure_module(module: &Module) -> Result<()> {
     if let Some(conf) = &module.add_conf {
         let conf_path = Path::new(&module.name).join(&conf.file_name);
-        let file = match std::fs::OpenOptions::new().create(true).write(true).truncate(true).open(&conf_path) {
+        let file = match std::fs::OpenOptions::new()
+                        .create(true).write(true).truncate(true)
+                        .open(&conf_path) {
             Err(error) => return Err(
                 anyhow!(format!("Could not create conf file {:?} - {:?}", conf_path, error)
             )),
@@ -231,99 +230,6 @@ fn configure_module(module: &Module) -> Result<()> {
         buffered.flush()?;
         Ok(())
     } else { Ok(()) }
-}
-
-fn run_weidu(tp2: &str, module: &Module, opts: &Install, lang_preferences: &Option<Vec<String>>, 
-            game_lang: &str) -> Result<RunResult> {
-    use LanguageSelection::*;
-    let language_id = match select_language(tp2, module, lang_preferences) {
-        Ok(Selected(id)) => id,
-        Ok(NoMatch(list)) if list.is_empty() => 0,
-        Ok(NoPrefSet(available))
-        | Ok(NoMatch(available)) => handle_no_language_selected(available, module, lang_preferences,game_lang)?,
-        Err(err) => return Err(err),
-    };
-    match &module.components {
-        None => run_weidu_interactive(tp2, module, opts, game_lang),
-        Some(comp) if comp.is_empty() => run_weidu_interactive(tp2, module, opts, game_lang),
-        Some(components) => run_weidu_auto(tp2, module, components, opts, game_lang, language_id)
-    }
-}
-
-fn handle_no_language_selected(available: Vec<LanguageOption>, module: &Module, 
-                                lang_pref: &Option<Vec<String>>, _game_lang: &str) -> Result<u32> {
-    // may one day prompt user for selection and (if ok) same in the yaml file
-    bail!(
-        r#"No matching language found for module {} with language preferences {:?}
-        Available choices are {:?}
-        "#,
-        module.name, lang_pref, available);
-}
-
-fn run_weidu_auto(tp2: &str, module: &Module, components: &Vec<u32>, opts: &Install, 
-                    game_lang: &str, language_id: u32) -> Result<RunResult> {
-    
-    let mut command = Command::new("weidu");
-    let mut args = vec![
-        tp2.to_owned(),
-        "--no-exit-pause".to_owned(),
-        "--log".to_owned(),
-        format!("setup-{}.debug", module.name),
-        "--use-lang".to_owned(),
-        game_lang.to_owned(),
-        "--language".to_owned(), language_id.to_string(),
-        "--force-install-list".to_owned(),
-    ];
-    args.extend(components.iter().map(|id| id.to_string()));
-    command.args(&args)
-        .stdin(Stdio::inherit())
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit());
-    if opts.dry_run {
-        println!("would execute {:?}", command);
-        Ok(RunResult::Dry(format!("{:?}", command)))
-    } else {
-        Ok(RunResult::Real(command.output()?))
-    }
-}
-
-fn run_weidu_interactive(tp2: &str, module: &Module, opts: &Install, 
-                            game_lang: &str) -> Result<RunResult> {
-    let mut command = Command::new("weidu");
-    let args = vec![
-        tp2.to_owned(),
-        "--no-exit-pause".to_owned(),
-        "--log".to_owned(),
-        format!("setup-{}.debug", module.name),
-        "--use-lang".to_owned(),
-        game_lang.to_owned(),
-    ];
-    command.args(&args)
-        .stdin(Stdio::inherit())
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit());
-    if opts.dry_run {
-        println!("would execute {:?}", command);
-        Ok(RunResult::Dry(format!("{:?}", command)))
-    } else {
-        Ok(RunResult::Real(command.output()?))
-    }
-}
-
-fn write_run_result(result: &RunResult, file: &mut BufWriter<std::fs::File>, module: &Module) -> Result<()> {
-    match result {
-        RunResult::Real(result) => {
-            let _ = file.write(&result.stdout)?;
-            let _ = file.write(&result.stderr)?;
-            let _ = writeln!(file, "\n==\nmodule {} finished with status {:?}\n", 
-                                module.name, result.status.code());
-        }
-        RunResult::Dry(cmd) => {
-            let _ = writeln!(file, "dry-run: {}", cmd)?;
-        }
-    }
-    let _ = file.flush();
-    Ok(())
 }
 
 fn check_weidu_conf_lang(lang: &str) -> Result<()> {

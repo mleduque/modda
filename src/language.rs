@@ -1,11 +1,16 @@
 
-use std::io::BufRead;
 use std::process::Command;
 
-use anyhow::{bail};
+use anyhow::bail;
 use anyhow::Result;
+use lazy_static::lazy_static;
+use regex::Regex;
 
-use crate::manifest::{ Module };
+use crate::manifest::Module;
+
+lazy_static! {
+    static ref LANGUAGE_REGEX: Regex = Regex::new("^([0-9]*):(.*)$").unwrap();
+}
 
 #[derive(Clone, Debug)]
 pub struct LanguageOption {
@@ -85,28 +90,20 @@ fn list_available_languages(tp2: &str, module: &Module) -> Result<Vec<LanguageOp
     // with [<some file name>] ...
     // then n language lines in the form
     // <integer>COLON<string(language name)>
-    let lines = output.stdout.lines();
-    for line in output.stderr.lines() {
-        println!("on stderr {:?}", line);
-    }
+    let lines = crate::bufread_raw::BufReadRaw::new(&output.stdout[..]).raw_lines();
 
-
-    use lazy_static::lazy_static;
-    use regex::Regex;
-    lazy_static! {
-        static ref language_regex: Regex = Regex::new("^([0-9]*):(.*)$").unwrap();
-    }
     let mut lines_ok = vec![];
     for line in lines {
         match line {
-            Err(err) => bail!("Couldn't obtain language list for module{} [error reading output] _ {:?}", 
+            Err(err) => bail!("Couldn't obtain language list for module '{}' [error reading output] _ {:?}", 
                             module.name, err),
             Ok(line) => {
                 lines_ok.push(line);
             }
         }
     }
-    let entries = lines_ok.iter().filter_map(|line| match language_regex.captures(line) {
+    let lines_str = lines_ok.iter().map(|line| String::from_utf8_lossy(line)).collect::<Vec<_>>();
+    let entries = lines_str.iter().filter_map(|line| match LANGUAGE_REGEX.captures(line) {
         None => None,
         Some(cap) => {
             match (cap.get(1), cap.get(2)) {
