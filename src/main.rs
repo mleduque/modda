@@ -134,7 +134,7 @@ fn install(opts: &Install) -> Result<()> {
             }
         }
         if finished {
-            break;
+            bail!("Program interrupted on error on non-whitelisted warning");
         }
     }
     Ok(())
