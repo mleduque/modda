@@ -20,7 +20,7 @@ use anyhow::{anyhow, bail, Result};
 use clap::Clap;
 
 use args::{ Opts, Install };
-use log_parser::{find_components_with_warning, parse_weidu_log};
+use log_parser::{find_components_without_warning, parse_weidu_log};
 use lowercase::LwcString;
 use list_components::list_components;
 use manifest::{ Module, ModuleContent, read_manifest };
@@ -145,7 +145,7 @@ fn component_failure_allowed(module: &Module) -> bool {
     if warning_allowed.is_empty() {
         return false;
     }
-    let components_that_warned = match find_components_with_warning(module) {
+    let components_that_didnt_warn = match find_components_without_warning(module) {
         Err(error) => {
             eprintln!("Could not retrieve per-components success state from weidu.log for module {} - {:?}", module.name, error);
             return false;
@@ -187,8 +187,8 @@ fn component_failure_allowed(module: &Module) -> bool {
         }
     }).collect::<Vec<_>>();
 
-    for component_name in components_that_warned {
-        if !allowed_names.contains(&component_name) {
+    for component_name in allowed_names {
+        if !components_that_didnt_warn.contains(&component_name) {
             return false;
         }
     }

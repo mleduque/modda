@@ -82,9 +82,9 @@ pub fn parse_weidu_log(mod_filter: Option<LwcString>) -> Result<Vec<LogRow>> {
 
 
 lazy_static! {
-    static ref WARNING_REGEX: Regex = Regex::new(r##"^INSTALLED WITH WARNINGS\s+(.*)$"##).unwrap();
+    static ref WARNING_REGEX: Regex = Regex::new(r##"^SUCCESSFULLY INSTALLED\s+(.*)$"##).unwrap();
 }
-pub fn find_components_with_warning(module: &Module) -> Result<Vec<String>> {
+pub fn find_components_without_warning(module: &Module) -> Result<Vec<String>> {
     let filename = format!("setup-{}.debug", module.name);
     let module_debug = match std::fs::File::open(&filename) { // TODO: handle case variations
         Err(error) => return Err(
