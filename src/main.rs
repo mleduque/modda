@@ -99,6 +99,7 @@ fn install(opts: &Install) -> Result<()> {
                     if component_failure_allowed(module) {
                         ignore_warnings(module, index)
                     } else {
+                        finished = true;
                         fail_warnings(module, index)
                     }
                 }; 
