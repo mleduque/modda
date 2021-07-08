@@ -24,6 +24,8 @@ pub struct Manifest {
 #[derive(Deserialize, Debug)]
 pub struct Module {
     pub name: String,
+    /// Unused at the moment
+    pub version: Option<String>,
     /// Optional description, used to disambiguate multiple occurrences of the same mod
     pub description: Option<String>,
     /// Which language index to use (has precedence over manifest-level lang_prefs)
