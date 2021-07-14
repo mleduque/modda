@@ -51,7 +51,36 @@ The comments are optional of course, they are only for the reader.
 - Needs weidu accessible on the path
 - Only tested with weidu 247
 - At this point, was only tested on linux
-- Mods that use ACTION_READLN are not handled well (installation is interrupted until the user makes some choice, and reproductibility is not guaranteed) 
+- Mods that use ACTION_READLN are not handled well (installation is interrupted until the user makes some choice, and reproductibility is not guaranteed)
+
+## Errors and warnings
+
+Mods that end in a weidu `ERROR` interrupt the installation.
+
+_By default_, mods that emits `WARNINGS` are interrupted too but this can be disabled at the mod level with a ignore_warnings property
+
+```yaml
+  - name: rr # rogue rebalancing
+    components: [ 0, 1, 2, 3, 4, 5, 7, 8, 11, 12]
+    ignore_warnings: true # component 7: WARNING: no effects altered on MISC2P.ITM
+```
+
+I would advise that the components with warnings should be isolated:
+
+```yaml
+  - name: rr # rogue rebalancing
+    description: components before number 7 which gives a warning
+    components: [ 0, 1, 2, 3, 4, 5]
+  - name: rr # rogue rebalancing
+    description: "components 7 alone, warns with WARNING: no effects altered on MISC2P.ITM"
+    components: [7]
+    ignore_warnings: true
+  - name: rr # rogue rebalancing
+    description: components after number 7 which gives a warning
+    components: [8, 11, 12]
+```
+
+If the components with warning has no order dependency or reverse-dependency with the other components in the mod, it can be made simpler by grouping all other components in a single set.
 
 ## Todo
 
