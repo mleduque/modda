@@ -7,35 +7,34 @@ use anyhow::{bail, Result};
 
 use crate::args::Install;
 use crate::language::{LanguageOption, LanguageSelection, select_language};
-use crate::manifest::{Module, Component};
+use crate::manifest::{Module, Component, Global};
 use crate::run_result::RunResult;
 
 
-pub fn run_weidu(tp2: &str, module: &Module, opts: &Install, lang_preferences: &Option<Vec<String>>, 
-            game_lang: &str) -> Result<RunResult> {
+pub fn run_weidu(tp2: &str, module: &Module, opts: &Install, global: &Global) -> Result<RunResult> {
     use LanguageSelection::*;
-    let language_id = match select_language(tp2, module, lang_preferences) {
+    let language_id = match select_language(tp2, module, &global.lang_preferences) {
         Ok(Selected(id)) => id,
         Ok(NoMatch(list)) if list.is_empty() => 0,
         Ok(NoPrefSet(available))
-        | Ok(NoMatch(available)) => handle_no_language_selected(available, module, lang_preferences,game_lang)?,
+        | Ok(NoMatch(available)) => handle_no_language_selected(available, module, global)?,
         Err(err) => return Err(err),
     };
     match &module.components {
-        None => run_weidu_interactive(tp2, module, opts, game_lang),
-        Some(comp) if comp.is_empty() => run_weidu_interactive(tp2, module, opts, game_lang),
-        Some(components) => run_weidu_auto(tp2, module, components, opts, game_lang, language_id)
+        None => run_weidu_interactive(tp2, module, opts, &global.game_language),
+        Some(comp) if comp.is_empty() => run_weidu_interactive(tp2, module, opts, &global.game_language),
+        Some(components) => run_weidu_auto(tp2, module, components, opts, &global.game_language, language_id)
     }
 }
 
 fn handle_no_language_selected(available: Vec<LanguageOption>, module: &Module, 
-                                lang_pref: &Option<Vec<String>>, _game_lang: &str) -> Result<u32> {
+                                global: &Global) -> Result<u32> {
     // may one day prompt user for selection and (if ok) same in the yaml file
     bail!(
         r#"No matching language found for module {} with language preferences {:?}
         Available choices are {:?}
         "#,
-        module.name, lang_pref, available);
+        module.name, &global.lang_preferences, available);
 }
 
 fn run_weidu_auto(tp2: &str, module: &Module, components: &[Component], opts: &Install, 

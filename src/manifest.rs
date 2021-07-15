@@ -1,15 +1,24 @@
 
 use std::borrow::Cow;
 use std::io::BufReader;
-
-use anyhow::{anyhow, Result};
+use std::path::PathBuf;
 use serde::Deserialize;
 
+use anyhow::{bail, Result};
+
+use crate::archive_layout::Layout;
 
 #[derive(Deserialize, Debug)]
 pub struct Manifest {
+    pub global: Global,
+    pub modules: Vec<Module>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Global {
     #[serde(rename = "lang_dir")]
     pub game_language: String,
+
     /// List of language _names_ that should be selected if available, in decreasing order of priority
     /// items in the list are used as regexp (case insensitive by default)
     /// - the simplest case is just putting the expected language names 
@@ -18,7 +27,6 @@ pub struct Manifest {
     ///   syntax here https://docs.rs/regex/1.5.4/regex/#syntax
     ///   ex. ["#rx#^fran[cç]ais", french, english]
     pub lang_preferences: Option<Vec<String>>,
-    pub modules: Vec<Module>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -35,6 +43,8 @@ pub struct Module {
     #[serde(default)]
     pub ignore_warnings: bool,
     pub add_conf: Option<ModuleConf>,
+    /// Where we can obtain the module. If absent, it is assumed to be in the game install
+    pub location: Option<Location>,
 }
 impl Module {
     pub fn describe(&self) -> Cow<String> {
@@ -83,11 +93,144 @@ pub enum ModuleContent {
     Prompt(String),
 }
 
+#[derive(Deserialize, Debug)]
+pub struct Location {
+    pub source: Source,
+    pub cache_name: Option<String>,
+    /// Specifies which files from the archive will be copied to the game directory.
+    /// Read as a Unix shell style glob pattern (https://docs.rs/glob/0.3.0/glob/struct.Pattern.html)
+    #[serde(default)]
+    pub layout: Layout,
+    pub patch: Option<Source>,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(untagged)]
+pub enum Source {
+    Http { http: String, r#type: Option<String> },
+    Local { path: String },
+    Github { github_user: String, repository: String, descriptor: GithubDescriptor },
+}
+
+impl Source {
+    pub fn save_subdir(&self) -> Result<PathBuf> {
+        use Source::*;
+        use url::{Url, Host};
+        match self {
+            Http { ref http, .. } => {
+                let url = match Url::parse(http) {
+                    Ok(url) => url,
+                    Err(error) => bail!("Couldn't parse location url {}\n -> {:?}", http, error),
+                };
+                let host = match url.host() {
+                    None => bail!("Invalid http source {}", http),
+                    Some(Host::Domain(ref domain)) => Cow::Borrowed(*domain),
+                    Some(Host::Ipv6(ref ipv6)) => Cow::Owned(ipv6.to_string()),
+                    Some(Host::Ipv4(ref ipv4)) => Cow::Owned(ipv4.to_string()),
+                };
+                Ok(PathBuf::from("http").join(&*host))
+            }
+            Local { .. } => Ok(PathBuf::new()),
+            Github { github_user, repository, .. } => 
+                Ok(PathBuf::from("github").join(github_user).join(repository))
+        }
+    }
+
+    pub fn save_name(&self, module_name:&str) -> PathBuf {
+        use Source::*;
+        use url::{Url};
+        match self {
+            Http { ref http, r#type } => {
+                let url = match Url::parse(http) {
+                    Err(_) => return default_name(module_name, r#type),
+                    Ok(url) => url,
+                };
+                match url.path_segments() {
+                    None => default_name(module_name, r#type),
+                    Some(segments) => match segments.last() {
+                        Some(seg) => PathBuf::from(
+                            percent_encoding::percent_decode_str(seg).decode_utf8_lossy().into_owned()
+                        ),
+                        None => default_name(module_name, r#type),
+                    }
+                }
+            }
+            Local { .. } => PathBuf::new(),
+            Github { descriptor, .. } => match descriptor {
+                GithubDescriptor::Release { artifact_name , ..} => 
+                                                    PathBuf::from(artifact_name.to_owned()),
+                GithubDescriptor::Commit { commit } => 
+                                                    PathBuf::from(format!("{}-{}.zip",module_name, commit)),
+                GithubDescriptor::Branch { branch } => 
+                                                    PathBuf::from(format!("{}-{}.zip",module_name, branch)),
+                GithubDescriptor::Tag { tag } => PathBuf::from(format!("{}-{}.zip",module_name, tag)),
+            }
+        }
+    }
+}
+
+
+fn default_name(module_name: &str, archive_type: &Option<String>) -> PathBuf {
+    let mut result = PathBuf::from(module_name);
+    match archive_type {
+        None => result,
+        Some(ext) => {
+            let _ = result.set_extension(ext);
+            result
+        }
+    }
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(untagged)]
+pub enum GithubDescriptor {
+    Release { release: Option<String>, artifact_name: String },
+    Commit { commit: String },
+    Branch { branch: String },
+    Tag { tag: String },
+}
+
+impl GithubDescriptor {
+    pub fn get_url(&self, user: &str, repository: &str) -> String {
+        use GithubDescriptor::*;
+        match self {
+            Release { release, artifact_name } => {
+                let release = match &release {
+                    None => String::from("latest"),
+                    Some(release) => release.to_owned(),
+                };
+                format!("https://github.com/{user}/{repo}/releases/download/{release}/{artifact}",
+                    user = user,
+                    repo = repository,
+                    release = release,
+                    artifact = artifact_name.replace("{{release}}", &release),
+                )
+            }
+            Tag { tag } =>
+                format!("https://github.com/{user}/{repo}/archive/refs/tags/{tag}.zip",
+                    user = user,
+                    repo = repository,
+                    tag = tag,
+                ),
+            Branch { branch } =>
+                format!("https://github.com/{user}/{repo}/archive/refs/heads/{branch}.zip",
+                    user = user,
+                    repo = repository,
+                    branch = branch,
+                ),
+            Commit { commit } =>
+                format!("https://github.com/{user}/{repo}/archive/refs/{commit}.zip",
+                    user = user,
+                    repo = repository,
+                    commit = commit,
+                ),
+        }
+    }
+}
+
 pub fn read_manifest(path: &str) -> Result<Manifest> {
     let file = match std::fs::File::open(path) {
-        Err(error) => return Err(
-            anyhow!(format!("Could not open manifest file {} - {:?}", path, error)
-        )),
+        Err(error) => bail!("Could not open manifest file {} - {:?}", path, error),
         Ok(file) => file,
     };
     let reader = BufReader::new(file);
