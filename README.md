@@ -16,8 +16,9 @@ You create a recipe that
 The recipe is a YAML file (This could probably be a json file, but this was not tested), for example this is for an installation on BG1 with a preference for french and fallback on english.
 
 ```yaml
-lang_dir: "fr_FR"
-lang_preferences: ["#rx#^fran[cç]ais", french, english, "american english"]
+global:
+  lang_dir: "fr_FR"
+  lang_preferences: ["#rx#^fran[cç]ais", french, english, "american english"]
 modules:
   - name: DlcMerger
     components: [
