@@ -24,6 +24,13 @@ modules:
     components: [
       1 # Merge DLC into game -> Merge "Siege of Dragonspear" 
     ]
+    location:
+      source:
+        github_user: Argent77
+        repository: A7-DlcMerger
+        descriptor:
+          release: v1.3
+          artifact_name: lin-A7-DlcMerger-v1.3.zip
   - name: bg1ub
     components: [
       0,  # Ice Island Level Two Restoration
@@ -86,5 +93,5 @@ If the components with warning has no order dependency or reverse-dependency wit
 ## Todo
 
 - Parallel HTTP fetching of mods using a pool
-- Document YAML for archive fetching and unpacking
+- Document YAML for archive fetching and unpacking (more)
 - Warn if the version of a mod changed ; this may impact reproductibility (component number changing, new components etc.)
