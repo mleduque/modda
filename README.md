@@ -84,5 +84,6 @@ If the components with warning has no order dependency or reverse-dependency wit
 
 ## Todo
 
-- Implement HTTP fetching of mods
+- Parallel HTTP fetching of mods using a pool
+- Document YAML for archive fetching and unpacking
 - Warn if the version of a mod changed ; this may impact reproductibility (component number changing, new components etc.)
