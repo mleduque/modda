@@ -49,7 +49,7 @@ async fn retrieve_location(loc: &Location, cache: &Cache, module: &Module) -> Re
     use Source::*;
 
     let dest = cache.join(loc.source.save_subdir()?);
-    let save_name = loc.source.save_name(&module.name);
+    let save_name = loc.source.save_name(&module.name)?;
     match &loc.source {
         Http { http, .. } => download(http, &dest, save_name).await,
         Local { path } => Ok(PathBuf::from(path)),
@@ -64,7 +64,24 @@ fn extract_files(archive: &Path, module_name:&str, location: &Location) -> Resul
             None => bail!("Couldn't determine archive type for file {:?}", archive),
             Some("zip") | Some("iemod") => extract_zip(archive, module_name, location),
             Some("rar") => extract_rar(archive, module_name, location),
-            Some("tar.gz") | Some("tgz") => extract_tgz(archive, module_name, location),
+            Some("tgz") => extract_tgz(archive, module_name, location),
+            Some("gz") => {
+                let stem = archive.file_stem();
+                match stem {
+                    Some(stem) => {
+                        let stem_path = PathBuf::from(stem);
+                        let sub_ext = stem_path.extension();
+                        match sub_ext {
+                            None => bail!("unsupported .gz file for archive {:?}", archive),
+                            Some(sub_ext) => match sub_ext.to_str() {
+                                Some("tar") => extract_tgz(archive, module_name, location),
+                                _ =>  bail!("unsupported .gz file for archive {:?}", archive),
+                            }
+                        }
+                    }
+                    None => bail!("unsupported .gz file for archive {:?}", archive)
+                }
+            }
             Some(_) => bail!("unknown file type for archive {:?}", archive),
         }
         None => bail!("archive file has no extension {:?}", archive),

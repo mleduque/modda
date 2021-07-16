@@ -107,7 +107,7 @@ pub struct Location {
 #[derive(Deserialize, Debug)]
 #[serde(untagged)]
 pub enum Source {
-    Http { http: String, r#type: Option<String> },
+    Http { http: String, rename: Option<String> },
     Local { path: String },
     Github { github_user: String, repository: String, descriptor: GithubDescriptor },
 }
@@ -136,47 +136,39 @@ impl Source {
         }
     }
 
-    pub fn save_name(&self, module_name:&str) -> PathBuf {
+    pub fn save_name(&self, module_name:&str) -> Result<PathBuf> {
         use Source::*;
-        use url::{Url};
         match self {
-            Http { ref http, r#type } => {
-                let url = match Url::parse(http) {
-                    Err(_) => return default_name(module_name, r#type),
-                    Ok(url) => url,
-                };
-                match url.path_segments() {
-                    None => default_name(module_name, r#type),
-                    Some(segments) => match segments.last() {
-                        Some(seg) => PathBuf::from(
-                            percent_encoding::percent_decode_str(seg).decode_utf8_lossy().into_owned()
-                        ),
-                        None => default_name(module_name, r#type),
+            Http { ref http, ref rename } => {
+                match rename {
+                    Some(rename) => Ok(PathBuf::from(rename)),
+                    None => {
+                        let url = match url::Url::parse(http) {
+                            Err(error) => bail!("Couldn't parse url {}\n -> {:?}", http, error),
+                            Ok(url) => url,
+                        };
+                        match url.path_segments() {
+                            None => bail!("Couldn't decide archive name for url {} - provide one with 'rename' field", http),
+                            Some(segments) => match segments.last() {
+                                Some(seg) => Ok(PathBuf::from(
+                                    percent_encoding::percent_decode_str(seg).decode_utf8_lossy().into_owned()
+                                )),
+                                None => bail!("Couldn't decide archive name for url {} - provide one with 'rename' field", http),
+                            }
+                        }
                     }
                 }
             }
-            Local { .. } => PathBuf::new(),
+            Local { .. } => Ok(PathBuf::new()),
             Github { descriptor, .. } => match descriptor {
                 GithubDescriptor::Release { artifact_name , ..} => 
-                                                    PathBuf::from(artifact_name.to_owned()),
+                                                    Ok(PathBuf::from(artifact_name.to_owned())),
                 GithubDescriptor::Commit { commit } => 
-                                                    PathBuf::from(format!("{}-{}.zip",module_name, commit)),
+                                                    Ok(PathBuf::from(format!("{}-{}.zip",module_name, commit))),
                 GithubDescriptor::Branch { branch } => 
-                                                    PathBuf::from(format!("{}-{}.zip",module_name, branch)),
-                GithubDescriptor::Tag { tag } => PathBuf::from(format!("{}-{}.zip",module_name, tag)),
+                                                    Ok(PathBuf::from(format!("{}-{}.zip",module_name, branch))),
+                GithubDescriptor::Tag { tag } => Ok(PathBuf::from(format!("{}-{}.zip",module_name, tag))),
             }
-        }
-    }
-}
-
-
-fn default_name(module_name: &str, archive_type: &Option<String>) -> PathBuf {
-    let mut result = PathBuf::from(module_name);
-    match archive_type {
-        None => result,
-        Some(ext) => {
-            let _ = result.set_extension(ext);
-            result
         }
     }
 }

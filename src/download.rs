@@ -36,7 +36,16 @@ pub async fn download(url: &str, dest: &PathBuf, file_name: PathBuf) -> Result<P
     }
     println!("will be located under: '{:?}'", file_name);
 
-    let mut dest = match File::create(file_name.clone()) {
+    let extension = match file_name.extension() {
+        None => bail!("download result has no extension for url {}", url),
+        Some(ext) => ext,
+    };
+    let mut partial_name: std::ffi::OsString = file_name.clone().into();
+    partial_name.push(".");
+    partial_name.push(extension);
+    partial_name.push(".partial");
+    let partial = PathBuf::from(partial_name);
+    let mut dest = match File::create(partial.clone()) {
         Err(error) => bail!("failed to create file {:?}\n -> {:?}", file_name, error),
         Ok(file) => file,
     };
@@ -52,5 +61,10 @@ pub async fn download(url: &str, dest: &PathBuf, file_name: PathBuf) -> Result<P
             bail!("Error while writing to file\n ->{:?}", error);
         }
     }
-    Ok(file_name.to_owned())
+    if let Err(error) = std::fs::rename(partial, file_name.clone()) {
+        bail!("Failed to rename partial file to {:?}\n -> {:?}", file_name, error);
+    } else {
+        println!("renamed partial download file to {:?}", file_name);
+    }
+    Ok(file_name)
 }
