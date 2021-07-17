@@ -28,9 +28,8 @@ modules:
       source:
         github_user: Argent77
         repository: A7-DlcMerger
-        descriptor:
-          release: v1.3
-          artifact_name: lin-A7-DlcMerger-v1.3.zip
+        release: v1.3
+        artifact_name: lin-A7-DlcMerger-v1.3.zip
   - name: bg1ub
     components: [
       0,  # Ice Island Level Two Restoration
@@ -50,6 +49,9 @@ modules:
       33, # Mal-Kalen, the Ulcaster Ghost
       34  # Chapter 6 Dialogue Restorations
     ]
+    location: # here, using a json-y representation for the source, also works with double quotes
+      source: { github_user: Pocket-Plane-Group, repository: bg1ub, release: v16.4,
+                artifact_name: bg1-unfinished-business-v16.4.zip }
 ```
 
 The comments are optional of course, they are only for the reader.
@@ -90,8 +92,26 @@ I would advise that the components with warnings should be isolated:
 
 If the components with warning has no order dependency or reverse-dependency with the other components in the mod, it can be made simpler by grouping all other components in a single set.
 
+## Configuration
+
+This uses a configuration file with one single config property (at the moment).
+The file is name `modda.yml` and will be taken from the current directory (first) then from the "OS conventional location for application configuration.
+
+- on linux, it should be `~/.config/modda/modda.yml`
+- on windows, probably around `%USERPROFILE%\AppData\Roaming\modda\modda.yml` (untested)
+- on macos, something like `$HOME/Library/Application Support/modda/modda.yml`
+
+It currently contains one property: `archive_cache` which tells the program where to store and search for downloaded modf archives.
+
+```yaml
+# can be an absolute path, or can use ~ exapansion on UNIX-like OSes
+archive_cache: ~/path/to/my/cache
+```
+
 ## Todo
 
 - Parallel HTTP fetching of mods using a pool
+- Resume aborted HTTP downloads?
 - Document YAML for archive fetching and unpacking (more)
 - Warn if the version of a mod changed ; this may impact reproductibility (component number changing, new components etc.)
+- Maybe use the `directories` projectdir cachevlue for default location of download cache?

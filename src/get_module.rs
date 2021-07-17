@@ -40,7 +40,8 @@ fn get_cache(settings: &Config) -> Result<Cache> {
             if let Err(error) = std::fs::create_dir_all(&path) {
                 bail!("Could not create destination dir{:?}\n -> {:?}", path, error);
             }
-            Ok(Cache::Path(PathBuf::from(&path)))
+            let expanded = shellexpand::tilde(path);
+            Ok(Cache::Path(PathBuf::from(&*expanded)))
         }
     }
 }
