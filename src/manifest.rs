@@ -1,20 +1,27 @@
 
 use std::borrow::Cow;
-use std::io::BufReader;
+use std::io::{BufReader, Seek, SeekFrom};
 use std::path::PathBuf;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use anyhow::{bail, Result};
 
 use crate::archive_layout::Layout;
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
+pub struct VersionDetect {
+    pub version: String,
+}
+
+#[derive(Deserialize, Serialize, Debug, PartialEq)]
 pub struct Manifest {
+    pub version: String,
     pub global: Global,
+    #[serde(default)]
     pub modules: Vec<Module>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, PartialEq)]
 pub struct Global {
     #[serde(rename = "lang_dir")]
     pub game_language: String,
@@ -29,7 +36,7 @@ pub struct Global {
     pub lang_preferences: Option<Vec<String>>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, PartialEq)]
 pub struct Module {
     pub name: String,
     /// Unused at the moment
@@ -65,7 +72,7 @@ impl Module {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum Component {
     Simple(u32),
@@ -80,20 +87,20 @@ impl Component {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, PartialEq)]
 pub struct ModuleConf {
     pub file_name:String,
     pub content: ModuleContent,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum ModuleContent {
     Content(String),
     Prompt(String),
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, PartialEq)]
 pub struct Location {
     pub source: Source,
     pub cache_name: Option<String>,
@@ -104,12 +111,12 @@ pub struct Location {
     pub patch: Option<Source>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum Source {
     Http { http: String, rename: Option<String> },
     Local { path: String },
-    Github { github_user: String, repository: String, descriptor: GithubDescriptor },
+    Github(Github),
 }
 
 impl Source {
@@ -131,7 +138,7 @@ impl Source {
                 Ok(PathBuf::from("http").join(&*host))
             }
             Local { .. } => Ok(PathBuf::new()),
-            Github { github_user, repository, .. } => 
+            Github(self::Github { github_user, repository, .. }) => 
                 Ok(PathBuf::from("github").join(github_user).join(repository))
         }
     }
@@ -160,7 +167,7 @@ impl Source {
                 }
             }
             Local { .. } => Ok(PathBuf::new()),
-            Github { descriptor, .. } => match descriptor {
+            Github(self::Github { descriptor, .. }) => match descriptor {
                 GithubDescriptor::Release { artifact_name , ..} => 
                                                     Ok(PathBuf::from(artifact_name.to_owned())),
                 GithubDescriptor::Commit { commit } => 
@@ -173,7 +180,15 @@ impl Source {
     }
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, PartialEq)]
+pub struct Github { 
+    pub github_user: String, 
+    pub repository: String,
+    #[serde(flatten)]
+    pub descriptor: GithubDescriptor 
+}
+
+#[derive(Deserialize, Serialize, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum GithubDescriptor {
     Release { release: Option<String>, artifact_name: String },
@@ -221,11 +236,152 @@ impl GithubDescriptor {
 }
 
 pub fn read_manifest(path: &str) -> Result<Manifest> {
-    let file = match std::fs::File::open(path) {
+    let mut file = match std::fs::File::open(path) {
         Err(error) => bail!("Could not open manifest file {} - {:?}", path, error),
         Ok(file) => file,
     };
-    let reader = BufReader::new(file);
-    let manifest: Manifest = serde_yaml::from_reader(reader)?;
+    {
+        let reader = BufReader::new(&file);
+        let version: VersionDetect = serde_yaml::from_reader(reader)?;
+        if version.version != "1" {
+            bail!("Only manifest version 1 is supported for now.");
+        }
+    }
+    let _ = file.seek(SeekFrom::Start(0))?;
+    let reader = BufReader::new(&file);
+    let manifest: Manifest = match serde_yaml::from_reader(reader) {
+        Ok(manifest) => manifest,
+        Err(error) => bail!("Failed to parse manifest at {}\n -> {}", path, error),
+    };
     Ok(manifest)
+}
+
+
+#[cfg(test)]
+mod test_deserialize {
+    use super::{Source, GithubDescriptor};
+
+    #[test]
+    fn deserialize_source_github_branch() {
+        use crate::manifest::Github;
+        let yaml = r#"
+        github_user: my_user
+        repository: my_repo
+        branch: main
+        "#;
+        let source: Source = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(
+            source, 
+            Source::Github(Github { 
+                github_user: "my_user".to_string(),
+                repository: "my_repo".to_string(),
+                descriptor: GithubDescriptor::Branch {
+                    branch: "main".to_string(),
+                },
+            })
+        );
+    }
+
+    #[test]
+    fn deserialize_source_github_tag() {
+        use crate::manifest::Github;
+        let yaml = r#"
+        github_user: my_user
+        repository: my_repo
+        tag: v1.0
+        "#;
+        let source: Source = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(
+            source, 
+            Source::Github(Github { 
+                github_user: "my_user".to_string(),
+                repository: "my_repo".to_string(),
+                descriptor: GithubDescriptor::Tag {
+                    tag: "v1.0".to_string(),
+                },
+            })
+        );
+    }
+
+    #[test]
+    fn deserialize_source_github_committag() {
+        use crate::manifest::Github;
+        let yaml = r#"
+        github_user: my_user
+        repository: my_repo
+        commit: 0123456789abcdef
+        "#;
+        let source: Source = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(
+            source, 
+            Source::Github(Github { 
+                github_user: "my_user".to_string(),
+                repository: "my_repo".to_string(),
+                descriptor: GithubDescriptor::Commit {
+                    commit: "0123456789abcdef".to_string(),
+                },
+            })
+        );
+    }
+
+    #[test]
+    fn deserialize_source_github_release() {
+        use crate::manifest::Github;
+        let yaml = r#"
+        github_user: my_user
+        repository: my_repo
+        release: "1.0"
+        artifact_name: my_repo-1.0.zip
+        "#;
+        let source: Source = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(
+            source, 
+            Source::Github(Github { 
+                github_user: "my_user".to_string(),
+                repository: "my_repo".to_string(),
+                descriptor: GithubDescriptor::Release {
+                    release: Some("1.0".to_string()),
+                    artifact_name: "my_repo-1.0.zip".to_string(),
+                },
+            })
+        );
+    }
+
+    #[test]
+    fn deserialize_source_github_branch_as_json() {
+        use crate::manifest::Github;
+        let yaml = r#"{
+        "github_user": "my_user",
+        "repository": "my_repo",
+        "branch": "main"
+        }"#;
+        let source: Source = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(
+            source, 
+            Source::Github(Github { 
+                github_user: "my_user".to_string(),
+                repository: "my_repo".to_string(),
+                descriptor: GithubDescriptor::Branch {
+                    branch: "main".to_string(),
+                },
+            })
+        );
+    }
+
+    #[test]
+    fn check_read_manifest() {
+        let manifest_path = format!("{}/{}", env!("CARGO_MANIFEST_DIR"), "resources/test/manifest.yml");
+        let manifest = super::read_manifest(&manifest_path).unwrap();
+        assert_eq!(
+            manifest,
+            super::Manifest {
+                version : "1".to_string(),
+                global : super::Global {
+                    game_language: "fr_FR".to_string(),
+                    lang_preferences: Some(vec!["french".to_string()]),
+                },
+                modules : vec![],
+            }
+        )
+    }
 }

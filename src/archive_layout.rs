@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 #[serde(tag = "type")]
 pub enum Layout {
     #[serde(rename = "single_dir")]

@@ -53,7 +53,7 @@ async fn retrieve_location(loc: &Location, cache: &Cache, module: &Module) -> Re
     match &loc.source {
         Http { http, .. } => download(http, &dest, save_name).await,
         Local { path } => Ok(PathBuf::from(path)),
-        Github { github_user, repository, descriptor } => 
+        Github(crate::manifest::Github { github_user, repository, descriptor }) => 
                 get_github(github_user, repository, descriptor, &dest, save_name).await,
     }
 }
