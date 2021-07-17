@@ -12,12 +12,12 @@ pub struct Config {
 }
 
 pub fn read_settings() -> Config {
-    let file = match File::open("bweidu.yml") {
+    let file = match File::open("modda.yml") {
         Ok(file) => Some(file),
         Err(_error) => {
-            if let Some(proj_dir) = directories::ProjectDirs::from("", "", "bweidu") {
+            if let Some(proj_dir) = directories::ProjectDirs::from("", "", "modda") {
                 let conf_dir = proj_dir.config_dir();
-                match File::open(conf_dir.join("bweidu.yml")) {
+                match File::open(conf_dir.join("modda.yml")) {
                     Ok(file) =>Some(file),
                     Err(_error) => None,
                 }
