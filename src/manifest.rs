@@ -28,7 +28,7 @@ pub struct Global {
 
     /// List of language _names_ that should be selected if available, in decreasing order of priority
     /// items in the list are used as regexp (case insensitive by default)
-    /// - the simplest case is just putting the expected language names 
+    /// - the simplest case is just putting the expected language names
     ///   ex. [français, french, english]
     /// - items in the list that start with `#rx#`are interpreted as regexes
     ///   syntax here https://docs.rs/regex/1.5.4/regex/#syntax
@@ -36,7 +36,7 @@ pub struct Global {
     pub lang_preferences: Option<Vec<String>>,
 }
 
-#[derive(Deserialize, Serialize, Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Default)]
 pub struct Module {
     pub name: String,
     /// Unused at the moment
@@ -102,11 +102,11 @@ pub enum ModuleContent {
 
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
 pub struct Location {
+    #[serde(flatten)]
     pub source: Source,
-    pub cache_name: Option<String>,
     /// Specifies which files from the archive will be copied to the game directory.
     /// Read as a Unix shell style glob pattern (https://docs.rs/glob/0.3.0/glob/struct.Pattern.html)
-    #[serde(default)]
+    #[serde(default, flatten)]
     pub layout: Layout,
     pub patch: Option<Source>,
 }
@@ -138,7 +138,7 @@ impl Source {
                 Ok(PathBuf::from("http").join(&*host))
             }
             Local { .. } => Ok(PathBuf::new()),
-            Github(self::Github { github_user, repository, .. }) => 
+            Github(self::Github { github_user, repository, .. }) =>
                 Ok(PathBuf::from("github").join(github_user).join(repository))
         }
     }
@@ -168,11 +168,11 @@ impl Source {
             }
             Local { .. } => Ok(PathBuf::new()),
             Github(self::Github { descriptor, .. }) => match descriptor {
-                GithubDescriptor::Release { artifact_name , ..} => 
+                GithubDescriptor::Release { artifact_name , ..} =>
                                                     Ok(PathBuf::from(artifact_name.to_owned())),
-                GithubDescriptor::Commit { commit } => 
+                GithubDescriptor::Commit { commit } =>
                                                     Ok(PathBuf::from(format!("{}-{}.zip",module_name, commit))),
-                GithubDescriptor::Branch { branch } => 
+                GithubDescriptor::Branch { branch } =>
                                                     Ok(PathBuf::from(format!("{}-{}.zip",module_name, branch))),
                 GithubDescriptor::Tag { tag } => Ok(PathBuf::from(format!("{}-{}.zip",module_name, tag))),
             }
@@ -181,11 +181,11 @@ impl Source {
 }
 
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
-pub struct Github { 
-    pub github_user: String, 
+pub struct Github {
+    pub github_user: String,
     pub repository: String,
     #[serde(flatten)]
-    pub descriptor: GithubDescriptor 
+    pub descriptor: GithubDescriptor
 }
 
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
@@ -271,8 +271,8 @@ mod test_deserialize {
         "#;
         let source: Source = serde_yaml::from_str(yaml).unwrap();
         assert_eq!(
-            source, 
-            Source::Github(Github { 
+            source,
+            Source::Github(Github {
                 github_user: "my_user".to_string(),
                 repository: "my_repo".to_string(),
                 descriptor: GithubDescriptor::Branch {
@@ -292,8 +292,8 @@ mod test_deserialize {
         "#;
         let source: Source = serde_yaml::from_str(yaml).unwrap();
         assert_eq!(
-            source, 
-            Source::Github(Github { 
+            source,
+            Source::Github(Github {
                 github_user: "my_user".to_string(),
                 repository: "my_repo".to_string(),
                 descriptor: GithubDescriptor::Tag {
@@ -313,8 +313,8 @@ mod test_deserialize {
         "#;
         let source: Source = serde_yaml::from_str(yaml).unwrap();
         assert_eq!(
-            source, 
-            Source::Github(Github { 
+            source,
+            Source::Github(Github {
                 github_user: "my_user".to_string(),
                 repository: "my_repo".to_string(),
                 descriptor: GithubDescriptor::Commit {
@@ -335,8 +335,8 @@ mod test_deserialize {
         "#;
         let source: Source = serde_yaml::from_str(yaml).unwrap();
         assert_eq!(
-            source, 
-            Source::Github(Github { 
+            source,
+            Source::Github(Github {
                 github_user: "my_user".to_string(),
                 repository: "my_repo".to_string(),
                 descriptor: GithubDescriptor::Release {
@@ -357,8 +357,8 @@ mod test_deserialize {
         }"#;
         let source: Source = serde_yaml::from_str(yaml).unwrap();
         assert_eq!(
-            source, 
-            Source::Github(Github { 
+            source,
+            Source::Github(Github {
                 github_user: "my_user".to_string(),
                 repository: "my_repo".to_string(),
                 descriptor: GithubDescriptor::Branch {
@@ -367,6 +367,45 @@ mod test_deserialize {
             })
         );
     }
+
+    #[test]
+    fn deserialize_module() {
+        use crate::manifest::{Module, Location, Source, Layout, Github, Component};
+        let yaml = r#"
+        name: DlcMerger
+        location:
+            github_user: Argent77
+            repository: A7-DlcMerger
+            release: v1.3
+            artifact_name: lin-A7-DlcMerger-v1.3.zip
+            strip_leading: 3
+            layout_type: single_dir
+        components:
+            - 1
+        "#;
+        let module: Module = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(
+            module,
+            Module {
+                name: "DlcMerger".to_string(),
+                components: Some(vec! [ Component::Simple(1) ]),
+                location: Some(Location {
+                    source: Source::Github(Github {
+                        github_user: "Argent77".to_string(),
+                        repository: "A7-DlcMerger".to_string(),
+                        descriptor: GithubDescriptor::Release {
+                            release: Some("v1.3".to_string()),
+                            artifact_name: "lin-A7-DlcMerger-v1.3.zip".to_string(),
+                        },
+                    }),
+                    layout: Layout::single_dir(3),
+                    patch: None,
+                }),
+                ..Module::default()
+            }
+        );
+    }
+
 
     #[test]
     fn check_read_manifest() {

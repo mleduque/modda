@@ -6,11 +6,11 @@ use serde::{Deserialize, Serialize};
 pub struct Layout {
     pub strip_leading: Option<usize>,
     #[serde(default, flatten)]
-    pub content: LayoutContent,
+    pub layout: LayoutContent,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
-#[serde(tag = "type")]
+#[serde(tag = "layout_type")]
 pub enum LayoutContent {
     #[serde(rename = "single_dir")]
     SingleDir,
@@ -38,7 +38,7 @@ impl Layout {
         } else {
             format!("{}/", prefix)
         };
-        match &self.content {
+        match &self.layout {
             SingleDir => vec![format!("{}{}", prefix, module_name)],
             SingleDirPlusTp2 { tp2: Some(tp2) } => vec![
                     format!("{}{}", prefix, module_name),
@@ -83,43 +83,43 @@ impl LayoutContent {
 impl Layout {
     pub fn single_dir(strip_lvl: usize) -> Self {
         Layout {
-            content: LayoutContent::SingleDir,
+            layout: LayoutContent::SingleDir,
             strip_leading: Some(strip_lvl),
         }
     }
     pub fn with_tp2(tp2: String) -> Self {
         Layout {
-            content: LayoutContent::with_tp2(tp2),
+            layout: LayoutContent::with_tp2(tp2),
             ..Self::default()
         }
     }
     pub fn with_tp2_default() -> Self {
         Layout {
-            content: LayoutContent::with_tp2_default(),
+            layout: LayoutContent::with_tp2_default(),
             ..Self::default()
         }
     }
     pub fn with_tp2_and_strip(tp2: String, strip_lvl: usize) -> Self {
         Layout {
-            content: LayoutContent::with_tp2(tp2),
+            layout: LayoutContent::with_tp2(tp2),
             strip_leading: Some(strip_lvl),
         }
     }
     pub fn with_tp2_default_and_strip(strip_lvl: usize) -> Self {
         Layout {
-            content: LayoutContent::with_tp2_default(),
+            layout: LayoutContent::with_tp2_default(),
             strip_leading: Some(strip_lvl),
         }
     }
     pub fn multi_dir(dirs: Vec<String>) -> Self {
         Layout {
-            content: LayoutContent::multi_dir(dirs),
+            layout: LayoutContent::multi_dir(dirs),
             ..Self::default()
         }
     }
     pub fn multi_dir_and_strip(dirs: Vec<String>, strip_lvl: usize) -> Self {
         Layout {
-            content: LayoutContent::multi_dir(dirs),
+            layout: LayoutContent::multi_dir(dirs),
             strip_leading: Some(strip_lvl),
         }
     }
@@ -202,7 +202,7 @@ fn test_to_glob() {
 #[test]
 fn deserialize_layout_single_dir_missing_strip() {
     let yaml = r#"
-    type: single_dir
+    layout_type: single_dir
     "#;
     let layout: Layout = serde_yaml::from_str(yaml).unwrap();
     assert_eq!(
@@ -215,7 +215,7 @@ fn deserialize_layout_single_dir_missing_strip() {
 fn deserialize_layout_single_dir_with_strip() {
     let yaml = r#"
     strip_leading: 1
-    type: single_dir
+    layout_type: single_dir
     "#;
     let layout: Layout = serde_yaml::from_str(yaml).unwrap();
     assert_eq!(
@@ -228,7 +228,7 @@ fn deserialize_layout_single_dir_with_strip() {
 fn deserialize_layout_single_dir_with_tp2_default() {
     let yaml = r#"
     strip_leading: 1
-    type: single_dir_plus_tp2
+    layout_type: single_dir_plus_tp2
     "#;
     let layout: Layout = serde_yaml::from_str(yaml).unwrap();
     assert_eq!(
@@ -241,7 +241,7 @@ fn deserialize_layout_single_dir_with_tp2_default() {
 fn deserialize_layout_single_dir_with_tp2() {
     let yaml = r#"
     strip_leading: 1
-    type: single_dir_plus_tp2
+    layout_type: single_dir_plus_tp2
     tp2: toto.tp2
     "#;
     let layout: Layout = serde_yaml::from_str(yaml).unwrap();
