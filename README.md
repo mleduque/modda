@@ -29,7 +29,7 @@ modules:
         github_user: Argent77
         repository: A7-DlcMerger
         release: v1.3
-        artifact_name: lin-A7-DlcMerger-v1.3.zip
+        asset: lin-A7-DlcMerger-v1.3.zip
   - name: bg1ub
     components: [
       0,  # Ice Island Level Two Restoration
@@ -51,7 +51,7 @@ modules:
     ]
     location: # here, using a json-y representation for the source, also works with double quotes
       source: { github_user: Pocket-Plane-Group, repository: bg1ub, release: v16.4,
-                artifact_name: bg1-unfinished-business-v16.4.zip }
+                asset: bg1-unfinished-business-v16.4.zip }
 ```
 
 The comments are optional of course, they are only for the reader.

@@ -168,8 +168,8 @@ impl Source {
             }
             Local { .. } => Ok(PathBuf::new()),
             Github(self::Github { descriptor, .. }) => match descriptor {
-                GithubDescriptor::Release { artifact_name , ..} =>
-                                                    Ok(PathBuf::from(artifact_name.to_owned())),
+                GithubDescriptor::Release { asset , ..} =>
+                                                    Ok(PathBuf::from(asset.to_owned())),
                 GithubDescriptor::Commit { commit } =>
                                                     Ok(PathBuf::from(format!("{}-{}.zip",module_name, commit))),
                 GithubDescriptor::Branch { branch } =>
@@ -191,7 +191,7 @@ pub struct Github {
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum GithubDescriptor {
-    Release { release: Option<String>, artifact_name: String },
+    Release { release: Option<String>, asset: String },
     Commit { commit: String },
     Branch { branch: String },
     Tag { tag: String },
@@ -201,16 +201,16 @@ impl GithubDescriptor {
     pub fn get_url(&self, user: &str, repository: &str) -> String {
         use GithubDescriptor::*;
         match self {
-            Release { release, artifact_name } => {
+            Release { release, asset } => {
                 let release = match &release {
                     None => String::from("latest"),
                     Some(release) => release.to_owned(),
                 };
-                format!("https://github.com/{user}/{repo}/releases/download/{release}/{artifact}",
+                format!("https://github.com/{user}/{repo}/releases/download/{release}/{asset}",
                     user = user,
                     repo = repository,
                     release = release,
-                    artifact = artifact_name.replace("{{release}}", &release),
+                    asset = asset.replace("{{release}}", &release),
                 )
             }
             Tag { tag } =>
@@ -331,7 +331,7 @@ mod test_deserialize {
         github_user: my_user
         repository: my_repo
         release: "1.0"
-        artifact_name: my_repo-1.0.zip
+        asset: my_repo-1.0.zip
         "#;
         let source: Source = serde_yaml::from_str(yaml).unwrap();
         assert_eq!(
@@ -341,7 +341,7 @@ mod test_deserialize {
                 repository: "my_repo".to_string(),
                 descriptor: GithubDescriptor::Release {
                     release: Some("1.0".to_string()),
-                    artifact_name: "my_repo-1.0.zip".to_string(),
+                    asset: "my_repo-1.0.zip".to_string(),
                 },
             })
         );
@@ -377,7 +377,7 @@ mod test_deserialize {
             github_user: Argent77
             repository: A7-DlcMerger
             release: v1.3
-            artifact_name: lin-A7-DlcMerger-v1.3.zip
+            asset: lin-A7-DlcMerger-v1.3.zip
             strip_leading: 3
             layout_type: single_dir
         components:
@@ -395,7 +395,7 @@ mod test_deserialize {
                         repository: "A7-DlcMerger".to_string(),
                         descriptor: GithubDescriptor::Release {
                             release: Some("v1.3".to_string()),
-                            artifact_name: "lin-A7-DlcMerger-v1.3.zip".to_string(),
+                            asset: "lin-A7-DlcMerger-v1.3.zip".to_string(),
                         },
                     }),
                     layout: Layout::single_dir(3),
