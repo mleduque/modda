@@ -178,6 +178,16 @@ impl Source {
             }
         }
     }
+
+    pub fn default_strip_leading(&self) -> usize {
+        use GithubDescriptor::*;
+        match self {
+            Source::Github(Github { descriptor: Commit{..}, .. })
+            | Source::Github(Github { descriptor: Tag{..}, .. })
+            | Source::Github(Github { descriptor: Branch{..}, .. }) => 1,
+            _ => 0,
+        }
+    }
 }
 
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
@@ -256,6 +266,37 @@ pub fn read_manifest(path: &str) -> Result<Manifest> {
     Ok(manifest)
 }
 
+
+
+#[cfg(test)]
+impl Source {
+    pub fn http_source() -> Source {
+        Source::Http { http: "https://dummy.example".to_string(), rename: None }
+    }
+    pub fn gh_release_source() -> Source {
+        Source::Github(
+            Github {
+                github_user: "".to_string(),
+                repository: "".to_string(),
+                descriptor: GithubDescriptor::Release {
+                    release: Some("".to_string()),
+                    asset: "".to_string(),
+                },
+            }
+        )
+    }
+    pub fn gh_branch_source() -> Source {
+        Source::Github(
+            Github {
+                github_user: "".to_string(),
+                repository: "".to_string(),
+                descriptor: GithubDescriptor::Branch {
+                    branch: "".to_string(),
+                },
+            }
+        )
+    }
+}
 
 #[cfg(test)]
 mod test_deserialize {

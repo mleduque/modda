@@ -115,3 +115,4 @@ archive_cache: ~/path/to/my/cache
 - Document YAML for archive fetching and unpacking (more)
 - Warn if the version of a mod changed ; this may impact reproductibility (component number changing, new components etc.)
 - Maybe use the `directories` projectdir cachevlue for default location of download cache?
+- Update or lock when using a "branch" location ?

@@ -28,5 +28,6 @@ shellexpand = "2.1.0"
 tar = "0.4"
 tokio = { version = "1.8", features = ["full"] }
 tempfile = "3.2.0"
+unrar = "0.4.4"
 url = "2.2.2"
 zip = "0.5.13"

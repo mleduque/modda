@@ -54,7 +54,7 @@ async fn retrieve_location(loc: &Location, cache: &Cache, module: &Module) -> Re
     match &loc.source {
         Http { http, .. } => download(http, &dest, save_name).await,
         Local { path } => Ok(PathBuf::from(path)),
-        Github(crate::manifest::Github { github_user, repository, descriptor }) => 
+        Github(crate::manifest::Github { github_user, repository, descriptor }) =>
                 get_github(github_user, repository, descriptor, &dest, save_name).await,
     }
 }
@@ -111,12 +111,35 @@ fn extract_zip(archive: &Path, module_name:&str, location: &Location) -> Result<
         bail!("Failed to copy file for archive {:?} from temp dir to game dir\n -> {:?}", archive, error);
     }
     println!("{:?}", temp_dir_attempt);
-    
+
     Ok(())
 }
 
-fn extract_rar(_archive: &Path, _module_name:&str, _location: &Location) -> Result<()> {
-    bail!("not implemented yet")
+fn extract_rar(archive: &Path, module_name:&str, location: &Location) -> Result<()> {
+    let string_path = match archive.as_os_str().to_str() {
+        None => bail!("invalid path for archive {:?}", archive),
+        Some(value) => value.to_owned(),
+    };
+    let rar_archive = unrar::archive::Archive::new(string_path);
+
+
+    let temp_dir = match tempfile::tempdir() {
+        Ok(dir) => dir,
+        Err(error) => bail!("Could not create temp dir for archive extraction\n -> {:?}", error),
+    };
+
+    let temp_dir_path = temp_dir.path();
+    let temp_dir_str = match temp_dir_path.as_os_str().to_str() {
+        None => bail!("invalid path for temp dir "),
+        Some(ref value) => value.to_string(),
+    };
+    if let Err(error) = rar_archive.extract_to(temp_dir_str) {
+        bail!("RAR extraction failed for {:?} - {:?}", archive, error);
+    }
+    if let Err(error) = move_from_temp_dir(&temp_dir, module_name, location) {
+        bail!("Failed to copy file for archive {:?} from temp dir to game dir\n -> {:?}", archive, error);
+    }
+    Ok(())
 }
 
 fn extract_tgz(archive: &Path, module_name:&str, location: &Location) -> Result<()> {
@@ -131,11 +154,11 @@ fn extract_tgz(archive: &Path, module_name:&str, location: &Location) -> Result<
     if let Err(error) = tar_archive.unpack(&temp_dir) {
         bail!("Tgz extraction failed for {:?} - {:?}", archive, error);
     }
-    
+
     if let Err(error) = move_from_temp_dir(&temp_dir, module_name, location) {
         bail!("Failed to copy file for archive {:?} from temp dir to game dir\n -> {:?}", archive, error);
     }
-    
+
     Ok(())
 }
 
@@ -147,10 +170,10 @@ fn patch_module(_archive: &Path, patch_loc: &Option<Source>) -> Result<()> {
     }
 }
 
-fn move_from_temp_dir(temp_dir: &TempDir, module_name:&str, location: &Location) -> Result<()> {
+fn move_from_temp_dir(temp_dir: &TempDir, module_name: &str, location: &Location) -> Result<()> {
     let mut items = std::collections::HashSet::new();
 
-    let patterns = location.layout.to_glob(&module_name);
+    let patterns = location.layout.to_glob(module_name, &location.source);
     for pattern in patterns {
         let options = MatchOptions {
             case_sensitive: false,
@@ -177,11 +200,11 @@ fn move_from_temp_dir(temp_dir: &TempDir, module_name:&str, location: &Location)
     Ok(())
 }
 
-async fn get_github(github_user: &str, repository: &str, descriptor: &GithubDescriptor, 
+async fn get_github(github_user: &str, repository: &str, descriptor: &GithubDescriptor,
                     dest: &PathBuf, save_name: PathBuf) -> Result<PathBuf> {
     download(
-        &descriptor.get_url(github_user, repository), 
-        dest, 
+        &descriptor.get_url(github_user, repository),
+        dest,
         save_name,
     ).await
 }
