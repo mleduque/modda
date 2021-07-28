@@ -28,6 +28,10 @@ pub async fn download(url: &str, dest: &PathBuf, file_name: PathBuf) -> Result<P
         Err(error) => bail!("HTTP download failed\n -> {:?}", error),
     };
 
+    let response = match response.error_for_status() {
+        Err(ref error) => bail!("Could not download mod archive at {}\n -> {}", url, error),
+        Ok(response) => response,
+    };
     println!("file to download: '{:?}'", file_name);
     let file_name = dest.join(file_name);
     if file_name.exists() {
