@@ -174,6 +174,9 @@ fn move_from_temp_dir(temp_dir: &TempDir, module_name: &str, location: &Location
     let mut items = std::collections::HashSet::new();
 
     let patterns = location.layout.to_glob(module_name, &location.source);
+    if patterns.is_empty() || patterns.iter().all(|entry| entry.trim().is_empty()) {
+        bail!("No file patterns to copy from archive for module {}", module_name);
+    }
     for pattern in patterns {
         let options = MatchOptions {
             case_sensitive: false,
@@ -189,6 +192,9 @@ fn move_from_temp_dir(temp_dir: &TempDir, module_name: &str, location: &Location
                 Err(error) => bail!("Failed to construct list of files to copy\n -> {:?}", error),
             };
         }
+    }
+    if items.is_empty() {
+        bail!("Did not find files to copy from archive for module {}", module_name);
     }
     let dest = std::env::current_dir()?;
     let copy_options = fs_extra::dir::CopyOptions {
