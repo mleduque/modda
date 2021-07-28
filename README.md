@@ -116,3 +116,12 @@ archive_cache: ~/path/to/my/cache
 - Warn if the version of a mod changed ; this may impact reproductibility (component number changing, new components etc.)
 - Maybe use the `directories` projectdir cachevlue for default location of download cache?
 - Update or lock when using a "branch" location ?
+
+## Not sure
+
+RAR archive support has code but doesn't work
+ - RAR archive in Rust is sparse, few crates, mostly unmaintained
+ - Few actual RAR archives for mods
+ - Could use external RAR tools but fragile
+
+The cost does seem to high for the reward.
