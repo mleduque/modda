@@ -99,7 +99,7 @@ fn install(opts: &Install, settings: &Config) -> Result<()> {
         }
         match single_result.status_code() {
             Some(0) => {
-                let message = format!("module {} (index={}) finished with success.", 
+                let message = format!("module {} (index={}) finished with success.",
                                 module.name, index);
                 if let Some(ref mut file) = log {
                     let _ = writeln!(file, "{}", message);
@@ -117,7 +117,7 @@ fn install(opts: &Install, settings: &Config) -> Result<()> {
                         finished = true;
                         fail_warnings(module, index)
                     }
-                }; 
+                };
                 if let Some(ref mut file) = log {
                     let _ = writeln!(file, "{}", message);
                 }
@@ -125,7 +125,7 @@ fn install(opts: &Install, settings: &Config) -> Result<()> {
             }
             Some(value) => {
                 finished = true;
-                let message = format!("module {} (index={}) finished with error (status={}), stopping.", 
+                let message = format!("module {} (index={}) finished with error (status={}), stopping.",
                                         module.name, index, value);
                 if let Some(ref mut file) = log {
                     let _ = writeln!(file, "{}", message);
@@ -133,7 +133,7 @@ fn install(opts: &Install, settings: &Config) -> Result<()> {
                 println!("{}", Red.bold().paint(message));
             }
             None => if !single_result.success() {
-                let message = format!("module {} (index={}) finished with success.", 
+                let message = format!("module {} (index={}) finished with success.",
                                 module.name, index);
                 if let Some(ref mut file) = log {
                     let _ = writeln!(file, "{}", message);
@@ -141,7 +141,7 @@ fn install(opts: &Install, settings: &Config) -> Result<()> {
                 println!("{}", Green.bold().paint(message));
             } else {
                 finished = true;
-                let message = format!("module {} (index={}) finished with error, stopping.", 
+                let message = format!("module {} (index={}) finished with error, stopping.",
                                         module.name, index);
                 if let Some(ref mut file) = log {
                     let _ = writeln!(file, "{}", message);
@@ -194,7 +194,7 @@ fn component_failure_allowed(module: &Module) -> bool {
         Ok(list) => list,
     };
 
-    // get list of names of components that are allowed to have warnings 
+    // get list of names of components that are allowed to have warnings
     // (we only have indexes until now)
     let allowed_names = warning_allowed.iter().filter_map(|comp| {
         match components.iter().find(|weidu_comp| weidu_comp.number == comp.index()) {
@@ -212,13 +212,13 @@ fn component_failure_allowed(module: &Module) -> bool {
 }
 
 fn ignore_warnings(module: &Module, index: usize) -> (String, Colour) {
-    let message = format!("module {} (index={}) finished with warning (status=3), ignoring as requested", 
+    let message = format!("module {} (index={}) finished with warning (status=3), ignoring as requested",
                             module.name, index);
     (message, Yellow)
 }
 
 fn fail_warnings(module: &Module, index: usize) -> (String, Colour) {
-    let message = format!("module {} (index={}) finished with warning (status=3), stopping as requested", 
+    let message = format!("module {} (index={}) finished with warning (status=3), stopping as requested",
                             module.name, index);
     (message, Red)
 }
@@ -236,8 +236,8 @@ fn configure_module(module: &Module) -> Result<()> {
         };
         let mut buffered = BufWriter::new(file);
         let content = match &conf.content {
-            ModuleContent::Content(content) => content,
-            ModuleContent::Prompt(_prompt) => {
+            ModuleContent::Content { content } => content,
+            ModuleContent::Prompt { .. } => {
                 // print the prompt and read the content line
                 bail!("not implemented yet")
             }

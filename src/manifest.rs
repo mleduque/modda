@@ -90,26 +90,29 @@ impl Component {
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
 pub struct ModuleConf {
     pub file_name:String,
+    #[serde(flatten)]
     pub content: ModuleContent,
 }
 
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum ModuleContent {
-    Content(String),
-    Prompt(String),
+    /// The actual content of thefile is provided
+    Content { content: String },
+    /// Interrupt and ask the user to input the content (value of `prompt` is shown)
+    Prompt { prompt: String },
 }
-
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
 pub struct Location {
     #[serde(flatten)]
     pub source: Source,
     /// Specifies which files from the archive will be copied to the game directory.
     /// Read as a Unix shell style glob pattern (https://docs.rs/glob/0.3.0/glob/struct.Pattern.html)
-    #[serde(default, flatten)]
+    #[serde(default)]
     pub layout: Layout,
     pub patch: Option<Source>,
 }
+
 
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
 #[serde(untagged)]
@@ -447,6 +450,88 @@ mod test_deserialize {
         );
     }
 
+    #[test]
+    fn deserialize_module_with_add_conf_and_content() {
+
+        use crate::manifest::{Module, Component, ModuleConf, ModuleContent};
+        let yaml = r#"
+        name: DlcMerger
+        add_conf:
+            file_name: toto
+            content: whatever
+        components:
+            - 1
+        "#;
+        let module: Module = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(
+            module,
+            Module {
+                name: "DlcMerger".to_string(),
+                components: Some(vec! [ Component::Simple(1) ]),
+                add_conf: Some(ModuleConf {
+                    file_name: "toto".to_string(),
+                    content: ModuleContent::Content { content: "whatever".to_string() },
+                }),
+                ..Module::default()
+            }
+        );
+    }
+
+    #[test]
+    fn deserialize_module_with_add_conf_and_multiline_content() {
+
+        use crate::manifest::{Module, Component, ModuleConf, ModuleContent};
+        let yaml = r#"
+        name: DlcMerger
+        add_conf:
+            file_name: toto
+            content: |
+                line 1
+                line 2
+        components:
+            - 1
+        "#;
+        let module: Module = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(
+            module,
+            Module {
+                name: "DlcMerger".to_string(),
+                components: Some(vec! [ Component::Simple(1) ]),
+                add_conf: Some(ModuleConf {
+                    file_name: "toto".to_string(),
+                    content: ModuleContent::Content { content: "line 1\nline 2\n".to_string() },
+                }),
+                ..Module::default()
+            }
+        );
+    }
+
+    #[test]
+    fn deserialize_module_with_add_conf_with_prompt() {
+
+        use crate::manifest::{Module, Component, ModuleConf, ModuleContent};
+        let yaml = r#"
+        name: DlcMerger
+        add_conf:
+            file_name: toto
+            prompt: prompt
+        components:
+            - 1
+        "#;
+        let module: Module = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(
+            module,
+            Module {
+                name: "DlcMerger".to_string(),
+                components: Some(vec! [ Component::Simple(1) ]),
+                add_conf: Some(ModuleConf {
+                    file_name: "toto".to_string(),
+                    content: ModuleContent::Prompt { prompt: "prompt".to_string() },
+                }),
+                ..Module::default()
+            }
+        );
+    }
 
     #[test]
     fn check_read_manifest() {
