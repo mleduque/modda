@@ -105,7 +105,7 @@ fn extract_zip(archive: &Path, module_name:&str, location: &Location) -> Result<
         Err(error) => bail!("Could not create temp dir for archive extraction\n -> {:?}", error),
     };
     if let Err(error) = zip_archive.extract(&temp_dir) {
-        bail!("Zip extraction failed for {:?} - {:?}", archive, error);
+        bail!("Zip extraction failed for {:?}\n-> {:?}", archive, error);
     }
     if let Err(error) = move_from_temp_dir(&temp_dir, module_name, location) {
         bail!("Failed to copy file for archive {:?} from temp dir to game dir\n -> {:?}", archive, error);
