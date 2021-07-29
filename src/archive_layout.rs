@@ -46,10 +46,10 @@ impl Layout {
                     format!("{}{}", prefix, module_name),
                     format!("{}{}", prefix, tp2),
                 ],
-                SingleDirPlusTp2 { tp2: None } => vec![
-                        format!("{}{}", prefix, module_name),
-                        format!("{}setup-{}.tp2", prefix, module_name),
-                    ],
+            SingleDirPlusTp2 { tp2: None } => vec![
+                    format!("{}{}", prefix, module_name),
+                    format!("{}setup-{}.tp2", prefix, module_name),
+                ],
             MultipleDirs { dirs } => dirs.iter().map(|dir|
                     format!("{}{}", prefix, dir)
                 ).collect::<Vec<_>>(),
