@@ -5,7 +5,6 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{bail, Result};
 use glob::{ glob_with, MatchOptions};
-use tempfile::TempDir;
 
 use crate::download::{download, Cache};
 use crate::manifest::{Module, Location, Source, GithubDescriptor};
@@ -107,7 +106,7 @@ fn extract_zip(archive: &Path, module_name:&str, location: &Location) -> Result<
     if let Err(error) = zip_archive.extract(&temp_dir) {
         bail!("Zip extraction failed for {:?}\n-> {:?}", archive, error);
     }
-    if let Err(error) = move_from_temp_dir(&temp_dir, module_name, location) {
+    if let Err(error) = move_from_temp_dir(&temp_dir.as_ref(), module_name, location) {
         bail!("Failed to copy file for archive {:?} from temp dir to game dir\n -> {:?}", archive, error);
     }
     println!("{:?}", temp_dir_attempt);
@@ -136,7 +135,7 @@ fn extract_rar(archive: &Path, module_name:&str, location: &Location) -> Result<
     if let Err(error) = rar_archive.extract_to(temp_dir_str) {
         bail!("RAR extraction failed for {:?} - {:?}", archive, error);
     }
-    if let Err(error) = move_from_temp_dir(&temp_dir, module_name, location) {
+    if let Err(error) = move_from_temp_dir(temp_dir.as_ref(), module_name, location) {
         bail!("Failed to copy file for archive {:?} from temp dir to game dir\n -> {:?}", archive, error);
     }
     Ok(())
@@ -155,7 +154,7 @@ fn extract_tgz(archive: &Path, module_name:&str, location: &Location) -> Result<
         bail!("Tgz extraction failed for {:?} - {:?}", archive, error);
     }
 
-    if let Err(error) = move_from_temp_dir(&temp_dir, module_name, location) {
+    if let Err(error) = move_from_temp_dir(temp_dir.as_ref(), module_name, location) {
         bail!("Failed to copy file for archive {:?} from temp dir to game dir\n -> {:?}", archive, error);
     }
 
@@ -170,7 +169,7 @@ fn patch_module(_archive: &Path, patch_loc: &Option<Source>) -> Result<()> {
     }
 }
 
-fn move_from_temp_dir(temp_dir: &TempDir, module_name: &str, location: &Location) -> Result<()> {
+fn move_from_temp_dir(temp_dir:&Path, module_name: &str, location: &Location) -> Result<()> {
     let mut items = std::collections::HashSet::new();
 
     let patterns = location.layout.to_glob(module_name, &location.source);
@@ -182,7 +181,7 @@ fn move_from_temp_dir(temp_dir: &TempDir, module_name: &str, location: &Location
             case_sensitive: false,
             ..Default::default()
         };
-        let batch = temp_dir.as_ref().join(pattern);
+        let batch = temp_dir.join(pattern);
         let batch = batch.to_str().unwrap();
         println!("copy files from {:?}", batch);
         let glob_result = glob_with(batch, options)?;
