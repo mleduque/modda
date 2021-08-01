@@ -76,7 +76,8 @@ fn install(opts: &Install, settings: &Config) -> Result<()> {
     };
     let mut finished = false;
     for (index, module) in modules.iter().enumerate() {
-        println!("module {} - {}", index, module.name);
+        let real_index = index + opts.from_index.unwrap_or(0);
+        println!("module {} - {}", real_index, module.name);
         let tp2 = match find_tp2(&module.name) {
             Ok(tp2) => tp2,
             Err(_) => {
@@ -100,7 +101,7 @@ fn install(opts: &Install, settings: &Config) -> Result<()> {
         match single_result.status_code() {
             Some(0) => {
                 let message = format!("module {} (index={}) finished with success.",
-                                module.name, index);
+                                module.name, real_index);
                 if let Some(ref mut file) = log {
                     let _ = writeln!(file, "{}", message);
                 }
@@ -108,14 +109,14 @@ fn install(opts: &Install, settings: &Config) -> Result<()> {
             }
             Some(3) => {
                 let (message, color) = if opts.no_stop_on_warn || module.ignore_warnings {
-                    ignore_warnings(module, index)
+                    ignore_warnings(module, real_index)
                 } else {
                     // need to check if component with warning was flagged with ignore_warnings
                     if component_failure_allowed(module) {
-                        ignore_warnings(module, index)
+                        ignore_warnings(module, real_index)
                     } else {
                         finished = true;
-                        fail_warnings(module, index)
+                        fail_warnings(module, real_index)
                     }
                 };
                 if let Some(ref mut file) = log {
@@ -126,7 +127,7 @@ fn install(opts: &Install, settings: &Config) -> Result<()> {
             Some(value) => {
                 finished = true;
                 let message = format!("module {} (index={}) finished with error (status={}), stopping.",
-                                        module.name, index, value);
+                                        module.name, real_index, value);
                 if let Some(ref mut file) = log {
                     let _ = writeln!(file, "{}", message);
                 }
@@ -134,7 +135,7 @@ fn install(opts: &Install, settings: &Config) -> Result<()> {
             }
             None => if !single_result.success() {
                 let message = format!("module {} (index={}) finished with success.",
-                                module.name, index);
+                                module.name, real_index);
                 if let Some(ref mut file) = log {
                     let _ = writeln!(file, "{}", message);
                 }
@@ -142,7 +143,7 @@ fn install(opts: &Install, settings: &Config) -> Result<()> {
             } else {
                 finished = true;
                 let message = format!("module {} (index={}) finished with error, stopping.",
-                                        module.name, index);
+                                        module.name, real_index);
                 if let Some(ref mut file) = log {
                     let _ = writeln!(file, "{}", message);
                 }
