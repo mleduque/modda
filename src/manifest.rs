@@ -422,8 +422,9 @@ mod test_deserialize {
             repository: A7-DlcMerger
             release: v1.3
             asset: lin-A7-DlcMerger-v1.3.zip
-            strip_leading: 3
-            layout_type: single_dir
+            layout:
+                strip_leading: 3
+                layout_type: single_dir
         components:
             - 1
         "#;
@@ -443,6 +444,46 @@ mod test_deserialize {
                         },
                     }),
                     layout: Layout::single_dir(3),
+                    patch: None,
+                }),
+                ..Module::default()
+            }
+        );
+    }
+
+    #[test]
+    fn deserialize_multi_module() {
+        use crate::manifest::{Module, Location, Source, Layout, Github, Component};
+        let yaml = r#"
+        name: DlcMerger
+        location:
+            github_user: Argent77
+            repository: A7-DlcMerger
+            release: v1.3
+            asset: lin-A7-DlcMerger-v1.3.zip
+            strip_leading: 37
+            layout:
+                layout_type: multi_dir
+                dirs: ["a", "b"]
+        components:
+            - 1
+        "#;
+        let module: Module = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(
+            module,
+            Module {
+                name: "DlcMerger".to_string(),
+                components: Some(vec! [ Component::Simple(1) ]),
+                location: Some(Location {
+                    source: Source::Github(Github {
+                        github_user: "Argent77".to_string(),
+                        repository: "A7-DlcMerger".to_string(),
+                        descriptor: GithubDescriptor::Release {
+                            release: Some("v1.3".to_string()),
+                            asset: "lin-A7-DlcMerger-v1.3.zip".to_string(),
+                        },
+                    }),
+                    layout: Layout::multi_dir(vec!["a".to_string(),"b".to_string()]),
                     patch: None,
                 }),
                 ..Module::default()

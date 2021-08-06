@@ -64,7 +64,7 @@ impl Layout {
     }
 
     fn strip_pattern(&self, source: &Source) -> String {
-        vec!["*".to_string() ; self.strip_level(source)].join("/")
+        vec!["/*".to_string() ; self.strip_level(source)].join("")
     }
 }
 
@@ -270,5 +270,20 @@ fn deserialize_layout_single_dir_with_tp2() {
     assert_eq!(
         layout,
         Layout::with_tp2_and_strip("toto.tp2".to_string(), 1)
+    );
+}
+
+#[test]
+fn deserialize_layout_multi_dir() {
+    let yaml = r#"
+    layout_type: multi_dir
+    dirs:
+        - a
+        - b
+    "#;
+    let layout: Layout = serde_yaml::from_str(yaml).unwrap();
+    assert_eq!(
+        layout,
+        Layout::multi_dir(vec!["a".to_string(), "b".to_string()])
     );
 }

@@ -6,6 +6,7 @@ mod language;
 mod archive_layout;
 mod list_components;
 mod log_parser;
+#[macro_use]
 mod lowercase;
 mod manifest;
 mod sub;
@@ -74,15 +75,20 @@ fn install(opts: &Install, settings: &Config) -> Result<()> {
         (None, Some(to_index)) => &modules[..to_index],
         (None, None) => &modules,
     };
+
+    let current = match std::env::current_dir() {
+        Ok(cwd) => cwd,
+        Err(error) => bail!("Failed to obtain current directory\n -> {:?}", error),
+    };
     let mut finished = false;
     for (index, module) in modules.iter().enumerate() {
         let real_index = index + opts.from_index.unwrap_or(0);
         println!("module {} - {}", real_index, module.name);
-        let tp2 = match find_tp2(&module.name) {
+        let tp2 = match find_tp2(&current, &module.name) {
             Ok(tp2) => tp2,
             Err(_) => {
                 get_module(&module, &settings)?;
-                find_tp2(&module.name)?
+                find_tp2(&current, &module.name)?
             }
         };
         let tp2_string = match tp2.into_os_string().into_string() {
@@ -187,7 +193,11 @@ fn component_failure_allowed(module: &Module) -> bool {
 
     // Ask weidu the list of components in the module in the (module) install language
     // to match component numbers with their "name"
-    let components = match list_components(&module.name, module_lang_idx) {
+    let current = match std::env::current_dir() {
+        Ok(cwd) => cwd,
+        Err(_error) => return false,
+    };
+    let components = match list_components(&current, &module.name, module_lang_idx) {
         Err(error) => {
             eprintln!("Couldn't obtain component list for module {} - {:?}", module.name, error);
             return false;

@@ -15,7 +15,7 @@ directories = "3"
 flate2 = "1"
 fs_extra = "1.2.0"
 futures-util = "0.3.15"
-glob = "0.3.0"
+globwalk = "0.8.1"
 itertools = "0.10.0"
 lazy_static = "1.4.0"
 percent-encoding = "2.1.0"
@@ -30,4 +30,4 @@ tokio = { version = "1.8", features = ["full"] }
 tempfile = "3.2.0"
 unrar = "0.4.4"
 url = "2.2.2"
-zip = { github = "mleduque/zip", tag = "0.5.13-noperm" }
+zip = { git = "https://github.com/mleduque/zip", tag = "0.5.13-noperm" }

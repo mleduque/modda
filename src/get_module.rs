@@ -1,10 +1,11 @@
 
+use std::collections::HashSet;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::{Path, PathBuf};
 
 use anyhow::{bail, Result};
-use glob::{ glob_with, MatchOptions};
+use globwalk::GlobWalkerBuilder;
 
 use crate::download::{download, Cache};
 use crate::manifest::{Module, Location, Source, GithubDescriptor};
@@ -109,7 +110,6 @@ fn extract_zip(archive: &Path, module_name:&str, location: &Location) -> Result<
     if let Err(error) = move_from_temp_dir(&temp_dir.as_ref(), module_name, location) {
         bail!("Failed to copy file for archive {:?} from temp dir to game dir\n -> {:?}", archive, error);
     }
-    println!("{:?}", temp_dir_attempt);
 
     Ok(())
 }
@@ -169,32 +169,11 @@ fn patch_module(_archive: &Path, patch_loc: &Option<Source>) -> Result<()> {
     }
 }
 
-fn move_from_temp_dir(temp_dir:&Path, module_name: &str, location: &Location) -> Result<()> {
-    let mut items = std::collections::HashSet::new();
-
-    let patterns = location.layout.to_glob(module_name, &location.source);
-    if patterns.is_empty() || patterns.iter().all(|entry| entry.trim().is_empty()) {
-        bail!("No file patterns to copy from archive for module {}", module_name);
-    }
-    for pattern in patterns {
-        let options = MatchOptions {
-            case_sensitive: false,
-            ..Default::default()
-        };
-        let batch = temp_dir.join(pattern);
-        let batch = batch.to_str().unwrap();
-        println!("copy files from {:?}", batch);
-        let glob_result = glob_with(batch, options)?;
-        for path in glob_result {
-            match path {
-                Ok(path) => { items.insert(path); }
-                Err(error) => bail!("Failed to construct list of files to copy\n -> {:?}", error),
-            };
-        }
-    }
-    if items.is_empty() {
-        bail!("Did not find files to copy from archive for module {}", module_name);
-    }
+fn move_from_temp_dir(temp_dir: &Path, module_name: &str, location: &Location) -> Result<()> {
+    let items = match files_to_move(temp_dir, module_name, location) {
+        Ok(items) => items,
+        Err(error) => bail!("Failed to prepare list of files to move\n -> {:?}", error),
+    };
     let dest = std::env::current_dir()?;
     let copy_options = fs_extra::dir::CopyOptions {
         copy_inside: true,
@@ -203,6 +182,28 @@ fn move_from_temp_dir(temp_dir:&Path, module_name: &str, location: &Location) ->
     let _result = fs_extra::move_items(&items.iter().collect::<Vec<_>>(), dest, &copy_options)?;
     // this is ne number of moved items ; I don't care
     Ok(())
+}
+
+fn files_to_move(base: &Path, module_name: &str, location:&Location) -> Result<HashSet<PathBuf>> {
+    let mut items = HashSet::new();
+    println!("move_from_temp_dir temp dir={:?}", base);
+
+    let patterns = location.layout.to_glob(module_name, &location.source);
+    if patterns.is_empty() || patterns.iter().all(|entry| entry.trim().is_empty()) {
+        bail!("No file patterns to copy from archive for module {}", module_name);
+    }
+    println!("Copy files from patterns: {:?}", patterns);
+    let glob_builder = GlobWalkerBuilder::from_patterns(base, &patterns)
+            .case_insensitive(true)
+            .max_depth(1);
+    let glob = match glob_builder.build() {
+        Err(error) => bail!("Could not evaluate patterns {:?}\n -> {:?}", patterns, error),
+        Ok(glob) => glob,
+    };
+    for item in glob.into_iter().filter_map(Result::ok) {
+        items.insert(item.into_path());
+    }
+    Ok(items)
 }
 
 async fn get_github(github_user: &str, repository: &str, descriptor: &GithubDescriptor,
