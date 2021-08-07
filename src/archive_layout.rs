@@ -31,28 +31,40 @@ impl Default for LayoutContent {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct GlobDesc {
+    pub patterns: Vec<String>,
+    pub strip: usize,
+}
+impl GlobDesc {
+    pub fn single(pattern: &str, strip: usize) -> Self { Self { patterns: vec![pattern.to_owned()], strip } }
+    pub fn from(patterns: &[&str], strip: usize) -> Self {
+        Self {
+            patterns: patterns.iter().map(|item| item.to_string()).collect(),
+            strip,
+        }
+    }
+    pub fn with(patterns: &[String], strip: usize) -> Self {
+        Self {
+            patterns: patterns.iter().map(|item| item.to_owned()).collect(),
+            strip,
+        }
+    }
+}
+
 impl Layout {
-    pub fn to_glob(&self, module_name: &str, location_source: &Source) -> Vec<String> {
+    pub fn to_glob(&self, module_name: &str, location_source: &Source) -> GlobDesc {
         use LayoutContent::*;
-        let prefix = self.strip_pattern(location_source);
-        let prefix = if prefix.is_empty() {
-            prefix
-        } else {
-            format!("{}/", prefix)
-        };
+
+        let strip_level = self.strip_level(location_source);
         match &self.layout {
-            SingleDir => vec![format!("{}{}", prefix, module_name)],
-            SingleDirPlusTp2 { tp2: Some(tp2) } => vec![
-                    format!("{}{}", prefix, module_name),
-                    format!("{}{}", prefix, tp2),
-                ],
-            SingleDirPlusTp2 { tp2: None } => vec![
-                    format!("{}{}", prefix, module_name),
-                    format!("{}setup-{}.tp2", prefix, module_name),
-                ],
-            MultipleDirs { dirs } => dirs.iter().map(|dir|
-                    format!("{}{}", prefix, dir)
-                ).collect::<Vec<_>>(),
+            SingleDir => GlobDesc::single(module_name, strip_level),
+            SingleDirPlusTp2 { tp2: Some(tp2) } => GlobDesc::from(&vec![module_name, &tp2], strip_level),
+            SingleDirPlusTp2 { tp2: None } => GlobDesc::from(&vec![
+                module_name,
+                &format!("setup-{}.tp2",module_name)
+                ], strip_level),
+            MultipleDirs { dirs } => GlobDesc::with(&dirs, strip_level),
         }
     }
 
@@ -61,10 +73,6 @@ impl Layout {
             Layout { strip_leading: None, .. } => source.default_strip_leading(),
             Layout { strip_leading: Some(v), .. } => *v,
         }
-    }
-
-    fn strip_pattern(&self, source: &Source) -> String {
-        vec!["/*".to_string() ; self.strip_level(source)].join("")
     }
 }
 
@@ -128,96 +136,72 @@ impl Layout {
 }
 
 #[test]
-fn test_strip_pattern() {
-    let http_source = Source::http_source();
-    assert_eq!(Layout::default().strip_pattern(&http_source), "");
-    assert_eq!(Layout::single_dir(0).strip_pattern(&http_source), "");
-    assert_eq!(Layout::single_dir(1).strip_pattern(&http_source), "*");
-    assert_eq!(Layout::single_dir(2).strip_pattern(&http_source), "*/*");
-    assert_eq!(Layout::single_dir(3).strip_pattern(&http_source), "*/*/*");
-
-    let gh_release_source = Source::gh_branch_source();
-    assert_eq!(Layout::with_tp2("a".to_owned()).strip_pattern(&gh_release_source), "*");
-    assert_eq!(Layout::with_tp2_and_strip("a".to_owned(), 0).strip_pattern(&gh_release_source), "");
-    assert_eq!(Layout::with_tp2_and_strip("a".to_owned(), 1).strip_pattern(&gh_release_source), "*");
-    assert_eq!(Layout::with_tp2_and_strip("a".to_owned(), 2).strip_pattern(&gh_release_source), "*/*");
-    assert_eq!(Layout::with_tp2_and_strip("a".to_owned(), 3).strip_pattern(&gh_release_source), "*/*/*");
-
-    let dirs = vec!["a".to_owned(), "b".to_owned()];
-    assert_eq!(Layout::multi_dir(dirs.clone()).strip_pattern(&http_source), "");
-    assert_eq!(Layout::multi_dir_and_strip(dirs.clone(), 0).strip_pattern(&http_source), "");
-    assert_eq!(Layout::multi_dir_and_strip(dirs.clone(), 1).strip_pattern(&http_source), "*");
-    assert_eq!(Layout::multi_dir_and_strip(dirs.clone(), 2).strip_pattern(&http_source), "*/*");
-    assert_eq!(Layout::multi_dir_and_strip(dirs.clone(), 3).strip_pattern(&http_source), "*/*/*");
-}
-
-#[test]
 fn test_to_glob() {
     let http_source = Source::http_source();
 
-    assert_eq!(Layout::default().to_glob("toto", &http_source), vec!["toto".to_string()]);
-    assert_eq!(Layout::single_dir(0).to_glob("toto", &http_source), vec!["toto".to_string()]);
-    assert_eq!(Layout::single_dir(1).to_glob("toto", &http_source), vec!["*/toto".to_string()]);
-    assert_eq!(Layout::single_dir(2).to_glob("toto", &http_source), vec!["*/*/toto".to_string()]);
-    assert_eq!(Layout::single_dir(3).to_glob("toto", &http_source), vec!["*/*/*/toto".to_string()]);
+    assert_eq!(Layout::default().to_glob("toto", &http_source), GlobDesc::single("toto", 0));
+    assert_eq!(Layout::single_dir(0).to_glob("toto", &http_source), GlobDesc::single("toto", 0));
+    assert_eq!(Layout::single_dir(1).to_glob("toto", &http_source), GlobDesc::single("toto", 1));
+    assert_eq!(Layout::single_dir(2).to_glob("toto", &http_source), GlobDesc::single("toto", 2));
+    assert_eq!(Layout::single_dir(3).to_glob("toto", &http_source), GlobDesc::single("toto", 3));
 
     let gh_release_source = Source::gh_release_source();
 
-    assert_eq!(Layout::default().to_glob("toto", &gh_release_source), vec!["toto".to_string()]);
-    assert_eq!(Layout::single_dir(0).to_glob("toto", &gh_release_source), vec!["toto".to_string()]);
-    assert_eq!(Layout::single_dir(1).to_glob("toto", &gh_release_source), vec!["*/toto".to_string()]);
-    assert_eq!(Layout::single_dir(2).to_glob("toto", &gh_release_source), vec!["*/*/toto".to_string()]);
-    assert_eq!(Layout::single_dir(3).to_glob("toto", &gh_release_source), vec!["*/*/*/toto".to_string()]);
+    assert_eq!(Layout::default().to_glob("toto", &gh_release_source), GlobDesc::single("toto", 0));
+    assert_eq!(Layout::single_dir(0).to_glob("toto", &gh_release_source), GlobDesc::single("toto", 0));
+    assert_eq!(Layout::single_dir(1).to_glob("toto", &gh_release_source), GlobDesc::single("toto", 1));
+    assert_eq!(Layout::single_dir(2).to_glob("toto", &gh_release_source), GlobDesc::single("toto", 2));
+    assert_eq!(Layout::single_dir(3).to_glob("toto", &gh_release_source), GlobDesc::single("toto", 3));
 
     let gh_branch_source = Source::gh_branch_source();
 
-    assert_eq!(Layout::default().to_glob("toto", &gh_branch_source), vec!["*/toto".to_string()]);
-    assert_eq!(Layout::single_dir(0).to_glob("toto", &gh_branch_source), vec!["toto".to_string()]);
-    assert_eq!(Layout::single_dir(1).to_glob("toto", &gh_branch_source), vec!["*/toto".to_string()]);
-    assert_eq!(Layout::single_dir(2).to_glob("toto", &gh_branch_source), vec!["*/*/toto".to_string()]);
-    assert_eq!(Layout::single_dir(3).to_glob("toto", &gh_branch_source), vec!["*/*/*/toto".to_string()]);
+    assert_eq!(Layout::default().to_glob("toto", &gh_branch_source), GlobDesc::single("toto", 1));
+    assert_eq!(Layout::single_dir(0).to_glob("toto", &gh_branch_source), GlobDesc::single("toto", 0));
+    assert_eq!(Layout::single_dir(1).to_glob("toto", &gh_branch_source), GlobDesc::single("toto", 1));
+    assert_eq!(Layout::single_dir(2).to_glob("toto", &gh_branch_source), GlobDesc::single("toto", 2));
+    assert_eq!(Layout::single_dir(3).to_glob("toto", &gh_branch_source), GlobDesc::single("toto", 3));
 
     assert_eq!(Layout::with_tp2("a".to_owned()).to_glob("toto",&http_source),
-                                    vec!["toto".to_string(), "a".to_string()]);
+                                GlobDesc::from(&["toto", "a"], 0));
     assert_eq!(Layout::with_tp2_and_strip("a".to_owned(), 0).to_glob("toto",&http_source),
-                                    vec!["toto".to_string(), "a".to_string()]);
+                                GlobDesc::from(&["toto", "a"], 0));
     assert_eq!(Layout::with_tp2_and_strip("a".to_owned(), 1).to_glob("toto",&http_source),
-                                    vec!["*/toto".to_string(), "*/a".to_string()]);
+                                GlobDesc::from(&["toto", "a"], 1));
     assert_eq!(Layout::with_tp2_and_strip("a".to_owned(), 2).to_glob("toto",&http_source),
-                                    vec!["*/*/toto".to_string(), "*/*/a".to_string()]);
+                                GlobDesc::from(&["toto", "a"], 2));
     assert_eq!(Layout::with_tp2_and_strip("a".to_owned(), 3).to_glob("toto",&http_source),
-                                    vec!["*/*/*/toto".to_string(), "*/*/*/a".to_string()]);
+                                GlobDesc::from(&["toto", "a"], 3));
 
 
     assert_eq!(
         Layout::with_tp2_default().to_glob("toto",&http_source),
-        vec!["toto".to_string(), "setup-toto.tp2".to_string()]
+        GlobDesc::from(&["toto", "setup-toto.tp2"], 0)
     );
     assert_eq!(
         Layout::with_tp2_default_and_strip(1).to_glob("toto",&http_source),
-        vec!["*/toto".to_string(), "*/setup-toto.tp2".to_string()]
+        GlobDesc::from(&["toto", "setup-toto.tp2"], 1)
     );
 
     let dirs = vec!["a".to_owned(), "b".to_owned()];
     assert_eq!(
         Layout::multi_dir(dirs.clone()).to_glob("toto",&http_source),
-        vec!["a".to_string(), "b".to_string()]
+        GlobDesc::from(&["a", "b"], 0)
     );
     assert_eq!(
         Layout::multi_dir_and_strip(dirs.clone(), 0).to_glob("toto",&http_source),
-        vec!["a".to_string(), "b".to_string()]
+        GlobDesc::from(&["a", "b"], 0)
     );
     assert_eq!(
         Layout::multi_dir_and_strip(dirs.clone(), 1).to_glob("toto",&http_source),
-        vec!["*/a".to_string(), "*/b".to_string()]
+        GlobDesc::from(&["a", "b"], 1)
     );
     assert_eq!(
         Layout::multi_dir_and_strip(dirs.clone(), 2).to_glob("toto",&http_source),
-        vec!["*/*/a".to_string(), "*/*/b".to_string()]
+        GlobDesc::from(&["a", "b"], 2)
     );
     assert_eq!(
         Layout::multi_dir_and_strip(dirs.clone(), 3).to_glob("toto",&http_source),
-        vec!["*/*/*/a".to_string(), "*/*/*/b".to_string()]
+        GlobDesc::from(&["a", "b"], 3)
     );
 }
 

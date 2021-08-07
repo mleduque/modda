@@ -188,16 +188,17 @@ fn files_to_move(base: &Path, module_name: &str, location:&Location) -> Result<H
     let mut items = HashSet::new();
     println!("move_from_temp_dir temp dir={:?}", base);
 
-    let patterns = location.layout.to_glob(module_name, &location.source);
-    if patterns.is_empty() || patterns.iter().all(|entry| entry.trim().is_empty()) {
+    let glob_descs = location.layout.to_glob(module_name, &location.source);
+    if glob_descs.patterns.is_empty() || glob_descs.patterns.iter().all(|entry| entry.trim().is_empty()) {
         bail!("No file patterns to copy from archive for module {}", module_name);
     }
-    println!("Copy files from patterns: {:?}", patterns);
-    let glob_builder = GlobWalkerBuilder::from_patterns(base, &patterns)
+    println!("Copy files from patterns: {:?}", glob_descs);
+    let glob_builder = GlobWalkerBuilder::from_patterns(base, &glob_descs.patterns)
             .case_insensitive(true)
-            .max_depth(1);
+            .min_depth(glob_descs.strip)
+            .max_depth(glob_descs.strip + 1);
     let glob = match glob_builder.build() {
-        Err(error) => bail!("Could not evaluate patterns {:?}\n -> {:?}", patterns, error),
+        Err(error) => bail!("Could not evaluate patterns {:?}\n -> {:?}", glob_descs, error),
         Ok(glob) => glob,
     };
     for item in glob.into_iter().filter_map(Result::ok) {
