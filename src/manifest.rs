@@ -239,7 +239,7 @@ impl GithubDescriptor {
                     branch = branch,
                 ),
             Commit { commit } =>
-                format!("https://github.com/{user}/{repo}/archive/refs/{commit}.zip",
+                format!("https://github.com/{user}/{repo}/archive/{commit}.zip",
                     user = user,
                     repo = repository,
                     commit = commit,
