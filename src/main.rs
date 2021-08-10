@@ -55,6 +55,7 @@ fn install(opts: &Install, settings: &Config) -> Result<()> {
     let manifest = read_manifest(&opts.manifest_path)?;
     check_weidu_conf_lang(&manifest.global.game_language)?;
     let modules = &manifest.modules;
+    let mod_count = modules.len();
 
     let mut log = if let Some(output) = &opts.output {
         let file = match std::fs::OpenOptions::new().create(true).write(true).truncate(true).open(output) {
@@ -106,8 +107,8 @@ fn install(opts: &Install, settings: &Config) -> Result<()> {
         }
         match single_result.status_code() {
             Some(0) => {
-                let message = format!("module {} (index={}) finished with success.",
-                                module.name, real_index);
+                let message = format!("module {name} (index={index}/{len}) finished with success.",
+                                name = module.name, index = real_index, len = mod_count);
                 if let Some(ref mut file) = log {
                     let _ = writeln!(file, "{}", message);
                 }
@@ -115,14 +116,14 @@ fn install(opts: &Install, settings: &Config) -> Result<()> {
             }
             Some(3) => {
                 let (message, color) = if opts.no_stop_on_warn || module.ignore_warnings {
-                    ignore_warnings(module, real_index)
+                    ignore_warnings(module, real_index, mod_count)
                 } else {
                     // need to check if component with warning was flagged with ignore_warnings
                     if component_failure_allowed(module) {
-                        ignore_warnings(module, real_index)
+                        ignore_warnings(module, real_index, mod_count)
                     } else {
                         finished = true;
-                        fail_warnings(module, real_index)
+                        fail_warnings(module, real_index, mod_count)
                     }
                 };
                 if let Some(ref mut file) = log {
@@ -132,24 +133,24 @@ fn install(opts: &Install, settings: &Config) -> Result<()> {
             }
             Some(value) => {
                 finished = true;
-                let message = format!("module {} (index={}) finished with error (status={}), stopping.",
-                                        module.name, real_index, value);
+                let message = format!("module {name} (index={idx}/{len}) finished with error (status={status}), stopping.",
+                                        name = module.name, idx = real_index, len = mod_count, status = value);
                 if let Some(ref mut file) = log {
                     let _ = writeln!(file, "{}", message);
                 }
                 println!("{}", Red.bold().paint(message));
             }
             None => if !single_result.success() {
-                let message = format!("module {} (index={}) finished with success.",
-                                module.name, real_index);
+                let message = format!("module {name} (index={idx}/{len}) finished with success.",
+                                        name = module.name, idx = real_index, len = mod_count);
                 if let Some(ref mut file) = log {
                     let _ = writeln!(file, "{}", message);
                 }
                 println!("{}", Green.bold().paint(message));
             } else {
                 finished = true;
-                let message = format!("module {} (index={}) finished with error, stopping.",
-                                        module.name, real_index);
+                let message = format!("module {name} (index={idx}/{len}) finished with error, stopping.",
+                                    name = module.name, idx = real_index, len = mod_count);
                 if let Some(ref mut file) = log {
                     let _ = writeln!(file, "{}", message);
                 }
@@ -222,15 +223,15 @@ fn component_failure_allowed(module: &Module) -> bool {
     true
 }
 
-fn ignore_warnings(module: &Module, index: usize) -> (String, Colour) {
-    let message = format!("module {} (index={}) finished with warning (status=3), ignoring as requested",
-                            module.name, index);
+fn ignore_warnings(module: &Module, index: usize, total: usize) -> (String, Colour) {
+    let message = format!("module {} (index={}/{}) finished with warning (status=3), ignoring as requested",
+                            module.name, index, total);
     (message, Yellow)
 }
 
-fn fail_warnings(module: &Module, index: usize) -> (String, Colour) {
-    let message = format!("module {} (index={}) finished with warning (status=3), stopping as requested",
-                            module.name, index);
+fn fail_warnings(module: &Module, index: usize, total: usize) -> (String, Colour) {
+    let message = format!("module {} (index={},/{}) finished with warning (status=3), stopping as requested",
+                            module.name, index, total);
     (message, Red)
 }
 
