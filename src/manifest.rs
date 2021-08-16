@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use anyhow::{bail, Result};
 
 use crate::archive_layout::Layout;
+use crate::patch_source::PatchSource;
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct VersionDetect {
@@ -110,7 +111,8 @@ pub struct Location {
     /// Read as a Unix shell style glob pattern (https://docs.rs/glob/0.3.0/glob/struct.Pattern.html)
     #[serde(default)]
     pub layout: Layout,
-    pub patch: Option<Source>,
+    #[serde(default)]
+    pub patch: Option<PatchSource>,
 }
 
 
@@ -303,6 +305,10 @@ impl Source {
 
 #[cfg(test)]
 mod test_deserialize {
+
+    use indoc::indoc;
+
+    use crate::patch_source::PatchSource;
     use super::{Source, GithubDescriptor};
 
     #[test]
@@ -413,7 +419,7 @@ mod test_deserialize {
     }
 
     #[test]
-    fn deserialize_module() {
+    fn deserialize_module_usual() {
         use crate::manifest::{Module, Location, Source, Layout, Github, Component};
         let yaml = r#"
         name: DlcMerger
@@ -568,6 +574,100 @@ mod test_deserialize {
                 add_conf: Some(ModuleConf {
                     file_name: "toto".to_string(),
                     content: ModuleContent::Prompt { prompt: "prompt".to_string() },
+                }),
+                ..Module::default()
+            }
+        );
+    }
+
+    #[test]
+    fn deserialize_module_with_http_patch() {
+        use crate::manifest::{ Module, Component, Location, Layout };
+
+        let yaml = r#"
+        name: DlcMerger
+        location:
+            http: https://module.location
+            patch:
+                http: https://patch.location
+        components:
+            - 1
+        "#;
+        let module: Module = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(
+            module,
+            Module {
+                name: "DlcMerger".to_string(),
+                components: Some(vec! [ Component::Simple(1) ]),
+                location: Some(Location {
+                    source: Source::Http {
+                        http: "https://module.location".to_owned(),
+                        rename: None,
+                    },
+                    layout: Layout::default(),
+                    patch: Some(PatchSource::Http {
+                        http: "https://patch.location".to_owned(),
+                    }),
+                }),
+                ..Module::default()
+            }
+        );
+    }
+
+    #[test]
+    fn deserialize_module_with_inline_patch() {
+        use crate::manifest::{ Module, Component, Location, Layout };
+
+        let yaml = indoc!(r#"
+            name: modulename
+            location:
+                http: https://module.location
+                patch:
+                    inline: |
+                        diff --git a/resources/test/patch/modulename.tp2 b/resources/test/patch/modulename.tp2
+                        index a27f249..12c4323 100644
+                        --- a/resources/test/patch/modulename.tp2
+                        +++ b/resources/test/patch/modulename.tp2
+                        @@ -1,6 +1,6 @@
+                        BACKUP ~weidu_external/backup/modulename~
+                        SUPPORT ~http://somewhere.iflucky.org~
+                        -VERSION ~1.0~
+                        +VERSION ~2.0~
+
+                        LANGUAGE ~English~
+                                ~english~
+            components:
+                - 1
+        "#);
+        let module: Module = serde_yaml::from_str(yaml).unwrap();
+        let expected_content = indoc!(r#"
+            diff --git a/resources/test/patch/modulename.tp2 b/resources/test/patch/modulename.tp2
+            index a27f249..12c4323 100644
+            --- a/resources/test/patch/modulename.tp2
+            +++ b/resources/test/patch/modulename.tp2
+            @@ -1,6 +1,6 @@
+            BACKUP ~weidu_external/backup/modulename~
+            SUPPORT ~http://somewhere.iflucky.org~
+            -VERSION ~1.0~
+            +VERSION ~2.0~
+
+            LANGUAGE ~English~
+                    ~english~
+        "#).to_owned();
+        assert_eq!(
+            module,
+            Module {
+                name: "modulename".to_string(),
+                components: Some(vec! [ Component::Simple(1) ]),
+                location: Some(Location {
+                    source: Source::Http {
+                        http: "https://module.location".to_owned(),
+                        rename: None,
+                    },
+                    layout: Layout::default(),
+                    patch: Some(PatchSource::Inline {
+                        inline: expected_content,
+                    }),
                 }),
                 ..Module::default()
             }

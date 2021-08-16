@@ -9,6 +9,7 @@ use globwalk::GlobWalkerBuilder;
 
 use crate::download::{download, Cache};
 use crate::manifest::{Module, Location, Source, GithubDescriptor};
+use crate::patch_source::PatchSource;
 use crate::settings::Config;
 
 // at some point, I'd like to have a pool of downloads with installations done
@@ -161,11 +162,10 @@ fn extract_tgz(archive: &Path, module_name:&str, location: &Location) -> Result<
     Ok(())
 }
 
-fn patch_module(_archive: &Path, patch_loc: &Option<Source>) -> Result<()> {
-    if let Some(patch_loc) = patch_loc {
-        bail!("not implemented yet - patch from source {:?}", patch_loc);
-    } else {
-        Ok(())
+fn patch_module(_archive: &Path, patch_loc: &Option<PatchSource>) -> Result<()> {
+    match patch_loc {
+        None => Ok(()),
+        _ => { bail!("not implemented yet - patch from source {:?}", patch_loc); }
     }
 }
 

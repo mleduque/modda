@@ -9,6 +9,7 @@ mod log_parser;
 #[macro_use]
 mod lowercase;
 mod manifest;
+mod patch_source;
 mod sub;
 mod run_result;
 mod settings;
