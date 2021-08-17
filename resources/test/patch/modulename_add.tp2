@@ -1,7 +1,8 @@
 BACKUP ~weidu_external/backup/modulename~
 SUPPORT ~http://somewhere.iflucky.org~
-VERSION ~1.0~
+VERSION ~2.0~
 //languages
+//more comment
 LANGUAGE ~English~
         ~english~
     ~modulename/language/english/setup.tra~

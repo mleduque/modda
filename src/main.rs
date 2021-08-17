@@ -1,3 +1,6 @@
+
+mod pathext;
+mod apply_patch;
 mod args;
 mod bufread_raw;
 mod get_module;
@@ -10,6 +13,7 @@ mod log_parser;
 mod lowercase;
 mod manifest;
 mod patch_source;
+mod progname;
 mod sub;
 mod run_result;
 mod settings;

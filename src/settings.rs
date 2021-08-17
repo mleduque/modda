@@ -5,6 +5,7 @@ use std::fs::File;
 
 use serde::Deserialize;
 
+use crate::progname::PROGNAME;
 
 #[derive(Deserialize, Debug, Default)]
 pub struct Config {
@@ -12,12 +13,13 @@ pub struct Config {
 }
 
 pub fn read_settings() -> Config {
-    let file = match File::open("modda.yml") {
+    let yaml_name = format!("{prog_name}.yml", prog_name = PROGNAME);
+    let file = match File::open(&yaml_name) {
         Ok(file) => Some(file),
         Err(_error) => {
-            if let Some(proj_dir) = directories::ProjectDirs::from("", "", "modda") {
+            if let Some(proj_dir) = directories::ProjectDirs::from("", "", PROGNAME) {
                 let conf_dir = proj_dir.config_dir();
-                match File::open(conf_dir.join("modda.yml")) {
+                match File::open(conf_dir.join(&yaml_name)) {
                     Ok(file) =>Some(file),
                     Err(_error) => None,
                 }
