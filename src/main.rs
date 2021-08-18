@@ -31,7 +31,7 @@ use args::{ Opts, Install };
 use clap::Clap;
 use env_logger::{Env, Target};
 use get_module::get_module;
-use log::{info, error};
+use log::{debug, error, info};
 use log_parser::{find_components_without_warning, parse_weidu_log};
 use lowercase::LwcString;
 use list_components::list_components;
@@ -97,6 +97,7 @@ fn install(opts: &Install, settings: &Config) -> Result<()> {
     for (index, module) in modules.iter().enumerate() {
         let real_index = index + opts.from_index.unwrap_or(0);
         info!("module {} - {}", real_index, module.name);
+        debug!("{:?}", module);
         let tp2 = match find_tp2(&current, &module.name) {
             Ok(tp2) => tp2,
             Err(_) => {

@@ -67,6 +67,13 @@ pub async fn retrieve_location(loc: &Location, cache: &Cache, module: &Module) -
 }
 
 fn extract_files(archive: &Path, game_dir: &CanonPath, module_name:&str, location: &Location, config: &Config) -> Result<()> {
+    debug!("extract_files from archive {:?} for {}", archive, module_name);
+    let result = _extract_files(archive, game_dir, module_name, location, config);
+    debug!("done extracting files, ended in {}", result.as_ref().map(|_| "success".to_owned()).unwrap_or_else(|_| "failure".to_owned()));
+    result
+}
+
+fn _extract_files(archive: &Path, game_dir: &CanonPath, module_name:&str, location: &Location, config: &Config) -> Result<()> {
     match archive.extension() {
         Some(ext) =>  match ext.to_str() {
             None => bail!("Couldn't determine archive type for file {:?}", archive),
@@ -111,12 +118,15 @@ fn extract_zip(archive: &Path, game_dir: &CanonPath, module_name:&str, location:
         Ok(ref dir) => dir,
         Err(error) => bail!("Extraction of zip mod {} failed\n -> {:?}", module_name, error),
     };
+    debug!("zip extraction starting");
     if let Err(error) = zip_archive.extract(&temp_dir) {
         bail!("Zip extraction failed for {:?}\n-> {:?}", archive, error);
     }
+    debug!("zip extraction done");
     if let Err(error) = move_from_temp_dir(&temp_dir.as_ref(), game_dir, module_name, location) {
         bail!("Failed to copy file for archive {:?} from temp dir to game dir\n -> {:?}", archive, error);
     }
+    debug!("files done moving to final destinatino");
 
     Ok(())
 }
