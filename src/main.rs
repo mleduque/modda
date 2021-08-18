@@ -27,10 +27,11 @@ use std::path::{Path, PathBuf};
 
 use ansi_term::{Colour, Colour::{Green, Red, Yellow}};
 use anyhow::{anyhow, bail, Result};
-use clap::Clap;
-
 use args::{ Opts, Install };
+use clap::Clap;
+use env_logger::{Env, Target};
 use get_module::get_module;
+use log::{info, error};
 use log_parser::{find_components_without_warning, parse_weidu_log};
 use lowercase::LwcString;
 use list_components::list_components;
@@ -44,8 +45,12 @@ use weidu::{run_weidu, write_run_result};
 
 
 fn main() -> Result<()> {
+    env_logger::Builder::from_env(Env::default().default_filter_or("info")).target(Target::Stdout).init();
+
     if !PathBuf::from("chitin.key").exists() {
         bail!("Must be run from the game directory (where chitin.key is)");
+    } else {
+        info!("chitin.key found");
     }
     let settings = read_settings();
     let opts: Opts = Opts::parse();
@@ -90,7 +95,7 @@ fn install(opts: &Install, settings: &Config) -> Result<()> {
     let mut finished = false;
     for (index, module) in modules.iter().enumerate() {
         let real_index = index + opts.from_index.unwrap_or(0);
-        println!("module {} - {}", real_index, module.name);
+        info!("module {} - {}", real_index, module.name);
         let tp2 = match find_tp2(&current, &module.name) {
             Ok(tp2) => tp2,
             Err(_) => {
@@ -118,7 +123,7 @@ fn install(opts: &Install, settings: &Config) -> Result<()> {
                 if let Some(ref mut file) = log {
                     let _ = writeln!(file, "{}", message);
                 }
-                println!("{}", Green.bold().paint(message));
+                info!("{}", Green.bold().paint(message));
             }
             Some(3) => {
                 let (message, color) = if opts.no_stop_on_warn || module.ignore_warnings {
@@ -135,7 +140,7 @@ fn install(opts: &Install, settings: &Config) -> Result<()> {
                 if let Some(ref mut file) = log {
                     let _ = writeln!(file, "{}", message);
                 }
-                println!("{}", color.bold().paint(message));
+                info!("{}", color.bold().paint(message));
             }
             Some(value) => {
                 finished = true;
@@ -144,7 +149,7 @@ fn install(opts: &Install, settings: &Config) -> Result<()> {
                 if let Some(ref mut file) = log {
                     let _ = writeln!(file, "{}", message);
                 }
-                println!("{}", Red.bold().paint(message));
+                info!("{}", Red.bold().paint(message));
             }
             None => if !single_result.success() {
                 let message = format!("module {name} (index={idx}/{len}) finished with success.",
@@ -152,7 +157,7 @@ fn install(opts: &Install, settings: &Config) -> Result<()> {
                 if let Some(ref mut file) = log {
                     let _ = writeln!(file, "{}", message);
                 }
-                println!("{}", Green.bold().paint(message));
+                info!("{}", Green.bold().paint(message));
             } else {
                 finished = true;
                 let message = format!("module {name} (index={idx}/{len}) finished with error, stopping.",
@@ -160,7 +165,7 @@ fn install(opts: &Install, settings: &Config) -> Result<()> {
                 if let Some(ref mut file) = log {
                     let _ = writeln!(file, "{}", message);
                 }
-                println!("{}", Red.bold().paint(message));
+                info!("{}", Red.bold().paint(message));
             }
         }
         if finished {
@@ -177,7 +182,7 @@ fn component_failure_allowed(module: &Module) -> bool {
     }
     let components_that_didnt_warn = match find_components_without_warning(module) {
         Err(error) => {
-            eprintln!("Could not retrieve per-components success state from weidu.log for module {} - {:?}", module.name, error);
+            error!("Could not retrieve per-components success state from weidu.log for module {} - {:?}", module.name, error);
             return false;
         }
         Ok(report) => report,
@@ -186,12 +191,12 @@ fn component_failure_allowed(module: &Module) -> bool {
     // read module installation language index from weidu.log
     let module_lang_idx = match parse_weidu_log(Some(LwcString::new(&module.name))) {
         Err(error) => {
-            eprintln!("Couldn't read module installation language from weidu.log\n->{:?}", error);
+            error!("Couldn't read module installation language from weidu.log\n->{:?}", error);
             return false;
         }
         Ok(report) => match report.first() {
             None => {
-                eprintln!("Couldn't read module installation language from weidu.log\n-> no row in weidu.log for module {}", module.name);
+                error!("Couldn't read module installation language from weidu.log\n-> no row in weidu.log for module {}", module.name);
                 return false;
             }
             Some(row) => row.lang_index,
@@ -206,7 +211,7 @@ fn component_failure_allowed(module: &Module) -> bool {
     };
     let components = match list_components(&current, &module.name, module_lang_idx) {
         Err(error) => {
-            eprintln!("Couldn't obtain component list for module {} - {:?}", module.name, error);
+            error!("Couldn't obtain component list for module {} - {:?}", module.name, error);
             return false;
         }
         Ok(list) => list,

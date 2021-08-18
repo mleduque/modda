@@ -6,7 +6,9 @@ use std::io::BufReader;
 
 use anyhow::{anyhow, Result};
 use lazy_static::lazy_static;
+use log::{error, warn};
 use regex::{Regex, RegexBuilder};
+
 use crate::bufread_raw::BufReadRaw;
 use crate::lowercase::LwcString;
 use crate::manifest::Module;
@@ -44,7 +46,7 @@ pub fn parse_weidu_log(mod_filter: Option<LwcString>) -> Result<Vec<LogRow>> {
             None => {
                 // probably header comment
                 if !line.starts_with("//") {
-                    println!("WARN: potential garbage in weidu.log");
+                    warn!("potential garbage in weidu.log");
                 }
                 None
             }
@@ -103,7 +105,7 @@ pub fn find_components_without_warning(module: &Module) -> Result<Vec<String>> {
                     result.push(cap.get(1).unwrap().as_str().to_owned())
                 }
             }
-            Err(error) => eprintln!("error reading module debug file line - {:?}", error),
+            Err(error) => error!("error reading module debug file line - {:?}", error),
         }
     }
     Ok(result)

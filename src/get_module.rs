@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{bail, Result};
 use globwalk::GlobWalkerBuilder;
+use log::debug;
 
 use crate::apply_patch::patch_module;
 use crate::args::{Install};
@@ -123,7 +124,12 @@ fn extract_zip(archive: &Path, game_dir: &CanonPath, module_name:&str, location:
 fn create_temp_dir(config: &Config) -> Result<tempfile::TempDir> {
     let temp_dir_attempt = match &config.extract_location {
         None => tempfile::tempdir(),
-        Some(location) => tempfile::tempdir_in(location),
+        Some(location) => {
+            if let Err(error) = std::fs::create_dir_all(location) {
+                bail!("Error creating extraction location from config: {}\n -> {:?}", location, error);
+            }
+            tempfile::tempdir_in(location)
+        }
     };
     match temp_dir_attempt {
         Ok(dir) => Ok(dir),
@@ -195,13 +201,13 @@ fn move_from_temp_dir(temp_dir: &Path, game_dir: &CanonPath, module_name: &str, 
 
 fn files_to_move(base: &Path, module_name: &str, location:&Location) -> Result<HashSet<PathBuf>> {
     let mut items = HashSet::new();
-    println!("move_from_temp_dir temp dir={:?}", base);
+    debug!("move_from_temp_dir temp dir={:?}", base);
 
     let glob_descs = location.layout.to_glob(module_name, &location.source);
     if glob_descs.patterns.is_empty() || glob_descs.patterns.iter().all(|entry| entry.trim().is_empty()) {
         bail!("No file patterns to copy from archive for module {}", module_name);
     }
-    println!("Copy files from patterns: {:?}", glob_descs);
+    debug!("Copy files from patterns: {:?}", glob_descs);
     let glob_builder = GlobWalkerBuilder::from_patterns(base, &glob_descs.patterns)
             .case_insensitive(true)
             .min_depth(glob_descs.strip)

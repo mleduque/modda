@@ -4,6 +4,7 @@ use std::path::PathBuf;
 
 use anyhow::{anyhow, bail, Result};
 use globwalk::{GlobWalkerBuilder};
+use log::debug;
 
 use crate::lowercase::{LwcString, ContainsStr};
 
@@ -54,7 +55,7 @@ pub fn find_tp2_str(from_base: &PathBuf, module_name: &str) -> Result<String> {
 }
 
 fn find_glob_casefold(from_base: &PathBuf, module_name: &str, depth: usize) -> Result<Vec<PathBuf>> {
-    println!("search tp2 for module {} from {:?} depth={}", module_name, from_base, depth);
+    debug!("search tp2 for module {} from {:?} depth={}", module_name, from_base, depth);
     let pattern =format!("**/*{module}.tp2",module = module_name);
     let walker = match GlobWalkerBuilder::new(from_base, &pattern)
         .case_insensitive(true)
@@ -66,7 +67,7 @@ fn find_glob_casefold(from_base: &PathBuf, module_name: &str, depth: usize) -> R
         .filter_map(Result::ok);
     let mut result = vec![];
     for item in walker {
-        println!("check_glob_casefold got {:?}", item);
+        debug!("check_glob_casefold got {:?}", item);
         result.push(item.path().strip_prefix(from_base).unwrap().to_owned())
     }
 

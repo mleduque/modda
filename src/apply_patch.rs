@@ -5,6 +5,7 @@ use std::io::BufRead;
 use std::path::{Path, PathBuf};
 
 use anyhow::{bail, Result};
+use log::{debug, info};
 use patch::{Patch, Line};
 
 use crate::args::{Install};
@@ -15,6 +16,7 @@ pub async fn patch_module(game_dir: &CanonPath, module_name: &str, patch_loc: &O
     match patch_loc {
         None => Ok(()),
         Some(patch) => {
+            info!("mod {} needs patching", module_name);
             let patch_content = match &patch {
                 PatchSource::Http { http: _http } => { bail!("not implemented yet - patch from source {:?}", patch); }
                 PatchSource::Relative { relative } => {
@@ -105,9 +107,9 @@ fn apply_patch<'a>(old_lines: &'a[String], diff: &'a Patch) -> Vec<&'a str> {
     let mut new_lines = vec![];
     let mut old_line = 0;
     for hunk in &diff.hunks {
-        //println!("hunk {:?}", hunk);
+        debug!("hunk {:?}", hunk);
         while old_line < hunk.old_range.start - 1 {
-            //println!("copy line {}", old_lines[old_line as usize]);
+            debug!("copy line {}", old_lines[old_line as usize]);
             new_lines.push(old_lines[old_line as usize].as_str());
             old_line += 1;
         }
@@ -121,7 +123,7 @@ fn apply_patch<'a>(old_lines: &'a[String], diff: &'a Patch) -> Vec<&'a str> {
                 Line::Remove(_) => { old_line += 1; }
             }
         }
-        //println!("at the end of the hunk, old_line is {}", old_line);
+        debug!("at the end of the hunk, old_line is {}", old_line);
     }
     for line in old_lines.get((old_line as usize)..).unwrap_or(&[]) {
         new_lines.push(line);
@@ -140,7 +142,7 @@ fn read_patch_relative(relative: &str, game_dir: &CanonPath, opts: &Install) -> 
         bail!("path is not relative: {:?}", relative);
     }
     match PathBuf::from(&opts.manifest_path).parent() {
-        None => println!("Couldn't get manifest file parent - continue search with other locations"),
+        None => info!("Couldn't get manifest file parent - continue search with other locations"),
         Some(parent) => {
             let parent = match CanonPath::new(parent) {
                 Ok(parent) => parent,

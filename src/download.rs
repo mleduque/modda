@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{bail, Result};
 use futures_util::stream::StreamExt;
+use log::{debug, info};
 
 #[derive(Debug)]
 pub enum Cache {
@@ -21,7 +22,7 @@ impl Cache {
 }
 
 pub async fn download(url: &str, dest: &PathBuf, file_name: PathBuf) -> Result<PathBuf> {
-    println!("download {} to {:?} ({:?})", url, dest, file_name);
+    info!("download {} to {:?} ({:?})", url, dest, file_name);
     std::fs::create_dir_all(dest)?;
     let response = match reqwest::get(url).await {
         Ok(response) => response,
@@ -32,13 +33,13 @@ pub async fn download(url: &str, dest: &PathBuf, file_name: PathBuf) -> Result<P
         Err(ref error) => bail!("Could not download mod archive at {}\n -> {}", url, error),
         Ok(response) => response,
     };
-    println!("file to download: '{:?}'", file_name);
+    debug!("file to download: '{:?}'", file_name);
     let file_name = dest.join(file_name);
     if file_name.exists() {
-        println!("File already downloaded before, reusing");
+        info!("File already downloaded before, reusing");
         return Ok(file_name.to_owned());
     }
-    println!("will be located under: '{:?}'", file_name);
+    debug!("will be located under: '{:?}'", file_name);
 
     let extension = match file_name.extension() {
         None => bail!("download result has no extension for url {}", url),
@@ -68,7 +69,7 @@ pub async fn download(url: &str, dest: &PathBuf, file_name: PathBuf) -> Result<P
     if let Err(error) = std::fs::rename(partial, file_name.clone()) {
         bail!("Failed to rename partial file to {:?}\n -> {:?}", file_name, error);
     } else {
-        println!("renamed partial download file to {:?}", file_name);
+        debug!("renamed partial download file to {:?}", file_name);
     }
     Ok(file_name)
 }
