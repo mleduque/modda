@@ -37,7 +37,7 @@ pub async fn get_module(module: &Module, settings: &Config, opts: &Install) -> R
     }
 }
 
-fn get_cache(settings: &Config) -> Result<Cache> {
+pub fn get_cache(settings: &Config) -> Result<Cache> {
     match &settings.archive_cache {
         None => match tempfile::tempdir() {
             Err(error) => bail!("Couldn't set up archive cache\n -> {:?}", error),
@@ -53,7 +53,7 @@ fn get_cache(settings: &Config) -> Result<Cache> {
     }
 }
 
-async fn retrieve_location(loc: &Location, cache: &Cache, module: &Module) -> Result<PathBuf> {
+pub async fn retrieve_location(loc: &Location, cache: &Cache, module: &Module) -> Result<PathBuf> {
     use Source::*;
 
     let dest = cache.join(loc.source.save_subdir()?);

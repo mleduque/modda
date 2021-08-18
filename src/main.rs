@@ -4,8 +4,8 @@ mod apply_patch;
 mod args;
 mod bufread_raw;
 mod canon_path;
-mod get_module;
 mod download;
+mod get_module;
 mod language;
 mod archive_layout;
 mod list_components;
@@ -55,9 +55,10 @@ fn main() -> Result<()> {
     let settings = read_settings();
     let opts: Opts = Opts::parse();
     match opts {
-        Opts::Install(ref install_opts) => { install(install_opts, &settings)?; Ok(()) },
+        Opts::Install(ref install_opts) => install(install_opts, &settings),
         Opts::Search(ref search_opts) => search(search_opts),
         Opts::ListComponents(ref params) => sub_list_components(params),
+        Opts::Invalidate(ref params) => sub::invalidate::invalidate(params, &settings),
     }
 }
 

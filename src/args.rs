@@ -9,6 +9,7 @@ pub enum Opts {
     Install(Install),
     Search(Search),
     ListComponents(ListComponents),
+    Invalidate(Invalidate)
 }
 
 #[derive(Clap, Debug)]
@@ -16,7 +17,7 @@ pub struct Install {
 
     #[clap(long, short)]
     pub manifest_path: String,
-    
+
     #[clap(long)]
     pub no_stop_on_warn: bool,
 
@@ -53,4 +54,14 @@ pub struct ListComponents {
 
     #[clap(long, short)]
     pub lang: u32,
+}
+
+#[derive(Clap, Debug)]
+pub struct Invalidate {
+
+    #[clap(long, short)]
+    pub manifest_path: String,
+
+    #[clap(long, short)]
+    pub name: String,
 }
