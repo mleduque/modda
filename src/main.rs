@@ -267,7 +267,7 @@ fn configure_module(module: &Module) -> Result<()> {
                 bail!("not implemented yet")
             }
         };
-        writeln!(buffered, "{}", content)?;
+        write!(buffered, "{}", content)?;
         buffered.flush()?;
         Ok(())
     } else { Ok(()) }
