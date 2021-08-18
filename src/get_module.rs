@@ -29,7 +29,7 @@ pub async fn get_module(module: &Module, settings: &Config, opts: &Install) -> R
 
             let dest = std::env::current_dir()?;
             let dest = CanonPath::new(dest)?;
-            extract_files(&archive, &dest, &module.name, location)?;
+            extract_files(&archive, &dest, &module.name, location, settings)?;
             patch_module(&dest, &module.name, &location.patch, opts).await?;
             Ok(())
         }
@@ -65,13 +65,13 @@ async fn retrieve_location(loc: &Location, cache: &Cache, module: &Module) -> Re
     }
 }
 
-fn extract_files(archive: &Path, game_dir: &CanonPath, module_name:&str, location: &Location) -> Result<()> {
+fn extract_files(archive: &Path, game_dir: &CanonPath, module_name:&str, location: &Location, config: &Config) -> Result<()> {
     match archive.extension() {
         Some(ext) =>  match ext.to_str() {
             None => bail!("Couldn't determine archive type for file {:?}", archive),
-            Some("zip") | Some("iemod") => extract_zip(archive, game_dir, module_name, location),
-            Some("rar") => extract_rar(archive, game_dir, module_name, location),
-            Some("tgz") => extract_tgz(archive, game_dir, module_name, location),
+            Some("zip") | Some("iemod") => extract_zip(archive, game_dir, module_name, location, config),
+            Some("rar") => extract_rar(archive, game_dir, module_name, location, config),
+            Some("tgz") => extract_tgz(archive, game_dir, module_name, location, config),
             Some("gz") => {
                 let stem = archive.file_stem();
                 match stem {
@@ -81,7 +81,7 @@ fn extract_files(archive: &Path, game_dir: &CanonPath, module_name:&str, locatio
                         match sub_ext {
                             None => bail!("unsupported .gz file for archive {:?}", archive),
                             Some(sub_ext) => match sub_ext.to_str() {
-                                Some("tar") => extract_tgz(archive, game_dir, module_name, location),
+                                Some("tar") => extract_tgz(archive, game_dir, module_name, location, config),
                                 _ =>  bail!("unsupported .gz file for archive {:?}", archive),
                             }
                         }
@@ -95,7 +95,7 @@ fn extract_files(archive: &Path, game_dir: &CanonPath, module_name:&str, locatio
     }
 }
 
-fn extract_zip(archive: &Path, game_dir: &CanonPath, module_name:&str, location: &Location) -> Result<()> {
+fn extract_zip(archive: &Path, game_dir: &CanonPath, module_name:&str, location: &Location, config: &Config) -> Result<()> {
     let file = match File::open(archive) {
         Ok(file) => file,
         Err(error) => bail!("Could not open archive {:?} - {:?}", archive, error)
@@ -105,10 +105,10 @@ fn extract_zip(archive: &Path, game_dir: &CanonPath, module_name:&str, location:
         Ok(archive) => archive,
         Err(error) => bail!("Cold not open zip archive at {:?}\n -> {:?}", archive, error),
     };
-    let temp_dir_attempt = tempfile::tempdir();
+    let temp_dir_attempt = create_temp_dir(config);
     let temp_dir = match temp_dir_attempt {
         Ok(ref dir) => dir,
-        Err(error) => bail!("Could not create temp dir for archive extraction\n -> {:?}", error),
+        Err(error) => bail!("Extraction of zip mod {} failed\n -> {:?}", module_name, error),
     };
     if let Err(error) = zip_archive.extract(&temp_dir) {
         bail!("Zip extraction failed for {:?}\n-> {:?}", archive, error);
@@ -120,17 +120,28 @@ fn extract_zip(archive: &Path, game_dir: &CanonPath, module_name:&str, location:
     Ok(())
 }
 
-fn extract_rar(archive: &Path, game_dir: &CanonPath, module_name:&str, location: &Location) -> Result<()> {
+fn create_temp_dir(config: &Config) -> Result<tempfile::TempDir> {
+    let temp_dir_attempt = match &config.extract_location {
+        None => tempfile::tempdir(),
+        Some(location) => tempfile::tempdir_in(location),
+    };
+    match temp_dir_attempt {
+        Ok(dir) => Ok(dir),
+        Err(error) => bail!("Could not create temp dir for archive extraction\n -> {:?}", error),
+    }
+}
+
+fn extract_rar(archive: &Path, game_dir: &CanonPath, module_name:&str, location: &Location, config: &Config) -> Result<()> {
     let string_path = match archive.as_os_str().to_str() {
         None => bail!("invalid path for archive {:?}", archive),
         Some(value) => value.to_owned(),
     };
     let rar_archive = unrar::archive::Archive::new(string_path);
 
-
-    let temp_dir = match tempfile::tempdir() {
+    let temp_dir_attempt = create_temp_dir(config);
+    let temp_dir = match temp_dir_attempt {
         Ok(dir) => dir,
-        Err(error) => bail!("Could not create temp dir for archive extraction\n -> {:?}", error),
+        Err(error) => bail!("Extraction of rar mod {} failed\n -> {:?}", module_name, error),
     };
 
     let temp_dir_path = temp_dir.path();
@@ -147,14 +158,15 @@ fn extract_rar(archive: &Path, game_dir: &CanonPath, module_name:&str, location:
     Ok(())
 }
 
-fn extract_tgz(archive: &Path, game_dir: &CanonPath, module_name:&str, location: &Location) -> Result<()> {
+fn extract_tgz(archive: &Path, game_dir: &CanonPath, module_name:&str, location: &Location, config: &Config) -> Result<()> {
     let tar_gz = File::open(archive)?;
     let tar = flate2::read::GzDecoder::new(tar_gz);
     let mut tar_archive = tar::Archive::new(tar);
 
-    let temp_dir = match tempfile::tempdir() {
+    let temp_dir_attempt = create_temp_dir(config);
+    let temp_dir = match temp_dir_attempt {
         Ok(dir) => dir,
-        Err(error) => bail!("Could not create temp dir for archive extraction\n -> {:?}", error),
+        Err(error) => bail!("Extraction of tgz mod {} failed\n -> {:?}", module_name, error),
     };
     if let Err(error) = tar_archive.unpack(&temp_dir) {
         bail!("Tgz extraction failed for {:?} - {:?}", archive, error);

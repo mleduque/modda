@@ -10,6 +10,7 @@ use crate::progname::PROGNAME;
 #[derive(Deserialize, Debug, Default)]
 pub struct Config {
     pub archive_cache: Option<String>,
+    pub extract_location: Option<String>,
 }
 
 pub fn read_settings() -> Config {
