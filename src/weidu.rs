@@ -49,10 +49,13 @@ fn run_weidu_auto(tp2: &str, module: &Module, components: &[Component], opts: &I
         format!("setup-{}.debug", module.name),
         "--use-lang".to_owned(),
         game_lang.to_owned(),
-        "--language".to_owned(), language_id.to_string(),
-        "--force-install-list".to_owned(),
+        "--language".to_owned(),
+        language_id.to_string(),
     ];
+    // component list
+    args.push("--force-install-list".to_owned());
     args.extend(components.iter().map(|id| id.index().to_string()));
+
     command.args(&args)
         .stdin(Stdio::inherit())
         .stdout(Stdio::inherit())
