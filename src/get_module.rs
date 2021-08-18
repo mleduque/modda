@@ -18,8 +18,8 @@ use crate::settings::Config;
 // at some point, I'd like to have a pool of downloads with installations done
 // concurrently as soon as modules are there
 #[tokio::main]
-pub async fn get_module(module: &Module, settings: &Config, opts: &Install) -> Result<()> {
-    let cache = get_cache(settings)?;
+pub async fn get_module(module: &Module, config: &Config, opts: &Install) -> Result<()> {
+    let cache = get_cache(config)?;
     match &module.location {
         None => bail!("No location provided to retrieve missing module {}", module.name),
         Some(location) => {
@@ -30,15 +30,15 @@ pub async fn get_module(module: &Module, settings: &Config, opts: &Install) -> R
 
             let dest = std::env::current_dir()?;
             let dest = CanonPath::new(dest)?;
-            extract_files(&archive, &dest, &module.name, location, settings)?;
+            extract_files(&archive, &dest, &module.name, location, config)?;
             patch_module(&dest, &module.name, &location.patch, opts).await?;
             Ok(())
         }
     }
 }
 
-pub fn get_cache(settings: &Config) -> Result<Cache> {
-    match &settings.archive_cache {
+pub fn get_cache(config: &Config) -> Result<Cache> {
+    match &config.archive_cache {
         None => match tempfile::tempdir() {
             Err(error) => bail!("Couldn't set up archive cache\n -> {:?}", error),
             Ok(dir) => Ok(Cache::Tmp(dir),)
