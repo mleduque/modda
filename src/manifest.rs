@@ -306,8 +306,6 @@ impl Source {
 #[cfg(test)]
 mod test_deserialize {
 
-    use indoc::indoc;
-
     use crate::patch_source::PatchSource;
     use super::{Source, GithubDescriptor};
 
@@ -618,42 +616,9 @@ mod test_deserialize {
     fn deserialize_module_with_inline_patch() {
         use crate::manifest::{ Module, Component, Location, Layout };
 
-        let yaml = indoc!(r#"
-            name: modulename
-            location:
-                http: https://module.location
-                patch:
-                    inline: |
-                        diff --git a/resources/test/patch/modulename.tp2 b/resources/test/patch/modulename.tp2
-                        index a27f249..12c4323 100644
-                        --- a/resources/test/patch/modulename.tp2
-                        +++ b/resources/test/patch/modulename.tp2
-                        @@ -1,6 +1,6 @@
-                        BACKUP ~weidu_external/backup/modulename~
-                        SUPPORT ~http://somewhere.iflucky.org~
-                        -VERSION ~1.0~
-                        +VERSION ~2.0~
-
-                        LANGUAGE ~English~
-                                ~english~
-            components:
-                - 1
-        "#);
+        let yaml = include_str!("../resources/test/read_inline_patch/module_with_inline_patch.yaml");
         let module: Module = serde_yaml::from_str(yaml).unwrap();
-        let expected_content = indoc!(r#"
-            diff --git a/resources/test/patch/modulename.tp2 b/resources/test/patch/modulename.tp2
-            index a27f249..12c4323 100644
-            --- a/resources/test/patch/modulename.tp2
-            +++ b/resources/test/patch/modulename.tp2
-            @@ -1,6 +1,6 @@
-            BACKUP ~weidu_external/backup/modulename~
-            SUPPORT ~http://somewhere.iflucky.org~
-            -VERSION ~1.0~
-            +VERSION ~2.0~
-
-            LANGUAGE ~English~
-                    ~english~
-        "#).to_owned();
+        let expected_content = include_str!("../resources/test/read_inline_patch/inline_patch.diff");
         assert_eq!(
             module,
             Module {
@@ -666,7 +631,7 @@ mod test_deserialize {
                     },
                     layout: Layout::default(),
                     patch: Some(PatchSource::Inline {
-                        inline: expected_content,
+                        inline: expected_content.to_owned(),
                     }),
                 }),
                 ..Module::default()

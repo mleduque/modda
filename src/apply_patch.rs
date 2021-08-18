@@ -170,6 +170,20 @@ mod apply_patch_tests {
                  ~english~
     "#);
 
+
+    const PATCH_WITH_UNMODIFIED_EMPTY_LINE: &str = indoc!(r#"
+        --- modulename.tp2
+        +++ modulename.tp2
+        @@ -1,6 +1,6 @@
+         BACKUP ~weidu_external/backup/modulename~
+         SUPPORT ~http://somewhere.iflucky.org~
+        -VERSION ~1.0~
+        +VERSION ~2.0~
+         //languages
+         LANGUAGE ~English~
+                 ~english~
+    "#);
+
     fn setup_test_game_dir() -> (tempfile::TempDir, std::path::PathBuf) {
         let tempdir = tempfile::tempdir().unwrap();
         let test_game_dir = tempdir.path().join("game");
@@ -211,6 +225,19 @@ mod apply_patch_tests {
         let result = apply_patch(&old, &patch);
 
         let patched_origin = Path::new(env!("CARGO_MANIFEST_DIR")).join("resources/test/patch/modulename_add.tp2");
+        let expected = super::read_all(&patched_origin).unwrap();
+
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn apply_patch_with_unmodified_empty_line() {
+        let origin = Path::new(env!("CARGO_MANIFEST_DIR")).join("resources/test/patch/modulename.tp2");
+        let old = super::read_all(&origin).unwrap();
+        let patch = Patch::from_single(PATCH_WITH_UNMODIFIED_EMPTY_LINE).unwrap();
+        let result = apply_patch(&old, &patch);
+
+        let patched_origin = Path::new(env!("CARGO_MANIFEST_DIR")).join("resources/test/patch/modulename_patched.tp2");
         let expected = super::read_all(&patched_origin).unwrap();
 
         assert_eq!(result, expected);
