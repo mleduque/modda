@@ -22,6 +22,15 @@ impl Cache {
 }
 
 pub async fn download(url: &str, dest: &PathBuf, file_name: PathBuf) -> Result<PathBuf> {
+    info!("obtaining {:?}, url is {} (cache={:?})", file_name, url, dest);
+
+    // check if archive exixts in the cache
+    let file_name = dest.join(file_name);
+    if file_name.exists() {
+        info!("File already downloaded before, reusing");
+        return Ok(file_name.to_owned());
+    }
+
     info!("download {} to {:?} ({:?})", url, dest, file_name);
     std::fs::create_dir_all(dest)?;
     let response = match reqwest::get(url).await {
@@ -33,12 +42,6 @@ pub async fn download(url: &str, dest: &PathBuf, file_name: PathBuf) -> Result<P
         Err(ref error) => bail!("Could not download mod archive at {}\n -> {}", url, error),
         Ok(response) => response,
     };
-    debug!("file to download: '{:?}'", file_name);
-    let file_name = dest.join(file_name);
-    if file_name.exists() {
-        info!("File already downloaded before, reusing");
-        return Ok(file_name.to_owned());
-    }
     debug!("will be located under: '{:?}'", file_name);
 
     let extension = match file_name.extension() {
