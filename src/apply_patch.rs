@@ -2,19 +2,29 @@
 
 use std::borrow::Cow;
 use std::io::BufRead;
-use std::path::{Path};
+use std::path::{Path, PathBuf};
 
 use anyhow::{bail, Result};
 use patch::{Patch, Line};
 
+use crate::args::{Install};
+use crate::canon_path::CanonPath;
 use crate::patch_source::PatchSource;
 
-pub async fn patch_module(game_dir: &Path, module_name: &str, patch_loc: &Option<PatchSource>) -> Result<()> {
+pub async fn patch_module(game_dir: &CanonPath, module_name: &str, patch_loc: &Option<PatchSource>, opts: &Install) -> Result<()> {
     match patch_loc {
         None => Ok(()),
         Some(patch) => {
             let patch_content = match &patch {
                 PatchSource::Http { http: _http } => { bail!("not implemented yet - patch from source {:?}", patch); }
+                PatchSource::Relative { relative } => {
+                    let diff = match read_patch_relative(relative, game_dir, opts) {
+                        Ok(diff) => diff,
+                        Err(error) => bail!("Error reading relative patch at {} for {}\n -> {:?}",
+                                                relative, module_name, error),
+                    };
+                    Cow::Owned(diff)
+                }
                 PatchSource::Inline { inline } => Cow::Borrowed(inline),
             };
             patch_module_with_content(game_dir, module_name, &*patch_content)
@@ -22,7 +32,7 @@ pub async fn patch_module(game_dir: &Path, module_name: &str, patch_loc: &Option
     }
 }
 
-fn patch_module_with_content(game_dir: &Path, module_name: &str, patch: &str) -> Result<()> {
+fn patch_module_with_content(game_dir: &CanonPath, module_name: &str, patch: &str) -> Result<()> {
     let diff = match Patch::from_multiple(&patch) {
         Ok(diff) => diff,
         Err(error) => bail!("Couldn't parse patch for module {}\n -> {:?}", module_name, error),
@@ -50,8 +60,8 @@ fn patch_module_with_content(game_dir: &Path, module_name: &str, patch: &str) ->
     Ok(())
 }
 
-fn check_path(base: &Path, path: &Path) -> Result<()> {
-    if !path.starts_with(base) {
+fn check_path(base: &CanonPath, path: &Path) -> Result<()> {
+    if !path.starts_with(base.path()) {
         bail!("Attempt to patch file not in game directory");
     }
     Ok(())
@@ -123,6 +133,46 @@ fn apply_patch<'a>(old_lines: &'a[String], diff: &'a Patch) -> Vec<&'a str> {
     new_lines
 }
 
+
+fn read_patch_relative(relative: &str, game_dir: &CanonPath, opts: &Install) -> Result<String> {
+    let relative_path = PathBuf::from(relative);
+    if !relative_path.is_relative() {
+        bail!("path is not relative: {:?}", relative);
+    }
+    match PathBuf::from(&opts.manifest_path).parent() {
+        None => println!("Couldn't get manifest file parent - continue search with other locations"),
+        Some(parent) => {
+            let parent = match CanonPath::new(parent) {
+                Ok(parent) => parent,
+                Err(error) => bail!("failed to canonalize manifest parent\n -> {:?}", error),
+            };
+            if let Ok(diff) = read_patch_from(relative_path.as_path(), &parent) {
+                return Ok(diff);
+            }
+        }
+    }
+    match read_patch_from(&relative_path, game_dir) {
+        Ok(diff) => Ok(diff),
+        Err(_error) => bail!("Couldn't find relative patch file {}", relative),
+    }
+}
+
+fn read_patch_from(relative: &Path, base: &CanonPath) -> Result<String> {
+    let complete = base.join(relative);
+    if let Ok(path) = CanonPath::new(&complete) {
+        if path.starts_with(base) {
+            match std::fs::read_to_string(&path) {
+                Ok(content) => Ok(content),
+                Err(error) => bail!("Failed to read patch file {:?}\n -> {:?}", path, error),
+            }
+        } else {
+            bail!("Relative patch not in expected location")
+        }
+    } else {
+        bail!("Could not canonalize path {:?}", complete);
+    }
+}
+
 #[cfg(test)]
 mod apply_patch_tests {
     use std::path::Path;
@@ -184,11 +234,11 @@ mod apply_patch_tests {
                  ~english~
     "#);
 
-    fn setup_test_game_dir() -> (tempfile::TempDir, std::path::PathBuf) {
+    fn setup_test_game_dir() -> (tempfile::TempDir, crate::canon_path::CanonPath) {
         let tempdir = tempfile::tempdir().unwrap();
         let test_game_dir = tempdir.path().join("game");
         std::fs::create_dir_all(&test_game_dir).unwrap();
-        (tempdir, test_game_dir.to_owned())
+        (tempdir, crate::canon_path::CanonPath::new(test_game_dir).unwrap())
     }
 
     #[test]

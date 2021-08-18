@@ -8,6 +8,8 @@ use anyhow::{bail, Result};
 use globwalk::GlobWalkerBuilder;
 
 use crate::apply_patch::patch_module;
+use crate::args::{Install};
+use crate::canon_path::CanonPath;
 use crate::download::{download, Cache};
 use crate::manifest::{Module, Location, Source, GithubDescriptor};
 use crate::settings::Config;
@@ -15,7 +17,7 @@ use crate::settings::Config;
 // at some point, I'd like to have a pool of downloads with installations done
 // concurrently as soon as modules are there
 #[tokio::main]
-pub async fn get_module(module: &Module, settings: &Config) -> Result<()> {
+pub async fn get_module(module: &Module, settings: &Config, opts: &Install) -> Result<()> {
     let cache = get_cache(settings)?;
     match &module.location {
         None => bail!("No location provided to retrieve missing module {}", module.name),
@@ -26,8 +28,9 @@ pub async fn get_module(module: &Module, settings: &Config) -> Result<()> {
             };
 
             let dest = std::env::current_dir()?;
+            let dest = CanonPath::new(dest)?;
             extract_files(&archive, &dest, &module.name, location)?;
-            patch_module(&dest, &module.name, &location.patch).await?;
+            patch_module(&dest, &module.name, &location.patch, opts).await?;
             Ok(())
         }
     }
@@ -62,7 +65,7 @@ async fn retrieve_location(loc: &Location, cache: &Cache, module: &Module) -> Re
     }
 }
 
-fn extract_files(archive: &Path, game_dir: &Path, module_name:&str, location: &Location) -> Result<()> {
+fn extract_files(archive: &Path, game_dir: &CanonPath, module_name:&str, location: &Location) -> Result<()> {
     match archive.extension() {
         Some(ext) =>  match ext.to_str() {
             None => bail!("Couldn't determine archive type for file {:?}", archive),
@@ -92,7 +95,7 @@ fn extract_files(archive: &Path, game_dir: &Path, module_name:&str, location: &L
     }
 }
 
-fn extract_zip(archive: &Path, game_dir: &Path, module_name:&str, location: &Location) -> Result<()> {
+fn extract_zip(archive: &Path, game_dir: &CanonPath, module_name:&str, location: &Location) -> Result<()> {
     let file = match File::open(archive) {
         Ok(file) => file,
         Err(error) => bail!("Could not open archive {:?} - {:?}", archive, error)
@@ -117,7 +120,7 @@ fn extract_zip(archive: &Path, game_dir: &Path, module_name:&str, location: &Loc
     Ok(())
 }
 
-fn extract_rar(archive: &Path, game_dir: &Path, module_name:&str, location: &Location) -> Result<()> {
+fn extract_rar(archive: &Path, game_dir: &CanonPath, module_name:&str, location: &Location) -> Result<()> {
     let string_path = match archive.as_os_str().to_str() {
         None => bail!("invalid path for archive {:?}", archive),
         Some(value) => value.to_owned(),
@@ -144,7 +147,7 @@ fn extract_rar(archive: &Path, game_dir: &Path, module_name:&str, location: &Loc
     Ok(())
 }
 
-fn extract_tgz(archive: &Path, game_dir: &Path, module_name:&str, location: &Location) -> Result<()> {
+fn extract_tgz(archive: &Path, game_dir: &CanonPath, module_name:&str, location: &Location) -> Result<()> {
     let tar_gz = File::open(archive)?;
     let tar = flate2::read::GzDecoder::new(tar_gz);
     let mut tar_archive = tar::Archive::new(tar);
@@ -164,7 +167,7 @@ fn extract_tgz(archive: &Path, game_dir: &Path, module_name:&str, location: &Loc
     Ok(())
 }
 
-fn move_from_temp_dir(temp_dir: &Path, game_dir: &Path, module_name: &str, location: &Location) -> Result<()> {
+fn move_from_temp_dir(temp_dir: &Path, game_dir: &CanonPath, module_name: &str, location: &Location) -> Result<()> {
     let items = match files_to_move(temp_dir, module_name, location) {
         Ok(items) => items,
         Err(error) => bail!("Failed to prepare list of files to move\n -> {:?}", error),
@@ -173,7 +176,7 @@ fn move_from_temp_dir(temp_dir: &Path, game_dir: &Path, module_name: &str, locat
         copy_inside: true,
         ..Default::default()
     };
-    let _result = fs_extra::move_items(&items.iter().collect::<Vec<_>>(), game_dir, &copy_options)?;
+    let _result = fs_extra::move_items(&items.iter().collect::<Vec<_>>(), game_dir.path(), &copy_options)?;
     // this is ne number of moved items ; I don't care
     Ok(())
 }

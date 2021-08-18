@@ -3,6 +3,7 @@ mod pathext;
 mod apply_patch;
 mod args;
 mod bufread_raw;
+mod canon_path;
 mod get_module;
 mod download;
 mod language;
@@ -93,7 +94,7 @@ fn install(opts: &Install, settings: &Config) -> Result<()> {
         let tp2 = match find_tp2(&current, &module.name) {
             Ok(tp2) => tp2,
             Err(_) => {
-                get_module(&module, &settings)?;
+                get_module(&module, settings, opts)?;
                 find_tp2(&current, &module.name)?
             }
         };
