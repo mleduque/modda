@@ -135,10 +135,12 @@ fn create_temp_dir(config: &Config) -> Result<tempfile::TempDir> {
     let temp_dir_attempt = match &config.extract_location {
         None => tempfile::tempdir(),
         Some(location) => {
-            if let Err(error) = std::fs::create_dir_all(location) {
-                bail!("Error creating extraction location from config: {}\n -> {:?}", location, error);
+            let expanded = shellexpand::tilde(location);
+            debug!("using {:?} for extraction location", expanded);
+            if let Err(error) = std::fs::create_dir_all(&*expanded) {
+                bail!("Error creating extraction location from config: {}\n -> {:?}", expanded, error);
             }
-            tempfile::tempdir_in(location)
+            tempfile::tempdir_in(&*expanded)
         }
     };
     match temp_dir_attempt {
