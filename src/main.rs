@@ -25,7 +25,7 @@ use std::io::{BufReader, BufWriter};
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 
-use ansi_term::{Colour, Colour::{Green, Red, Yellow}};
+use ansi_term::{Colour, Colour::{Green, Red, Yellow, Blue}};
 use anyhow::{anyhow, bail, Result};
 use args::{ Opts, Install };
 use clap::Clap;
@@ -172,6 +172,9 @@ fn install(opts: &Install, settings: &Config) -> Result<()> {
         }
         if finished {
             bail!("Program interrupted on error on non-whitelisted warning");
+        } else if module.interrupt {
+            info!("{}",  Blue.bold().paint(format!("Interruption requested for module {} - {}", real_index, module.name)));
+            return Ok(());
         }
     }
     Ok(())

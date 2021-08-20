@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use anyhow::{bail, Result};
 
 use crate::archive_layout::Layout;
-use crate::patch_source::PatchSource;
+use crate::patch_source::PatchDesc;
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct VersionDetect {
@@ -53,6 +53,8 @@ pub struct Module {
     pub add_conf: Option<ModuleConf>,
     /// Where we can obtain the module. If absent, it is assumed to be in the game install
     pub location: Option<Location>,
+    #[serde(default)]
+    pub interrupt: bool,
 }
 impl Module {
     pub fn describe(&self) -> Cow<String> {
@@ -112,7 +114,7 @@ pub struct Location {
     #[serde(default)]
     pub layout: Layout,
     #[serde(default)]
-    pub patch: Option<PatchSource>,
+    pub patch: Option<PatchDesc>,
 }
 
 
@@ -306,7 +308,7 @@ impl Source {
 #[cfg(test)]
 mod test_deserialize {
 
-    use crate::patch_source::PatchSource;
+    use crate::patch_source::{PatchDesc, PatchEncoding, PatchSource};
     use super::{Source, GithubDescriptor};
 
     #[test]
@@ -603,8 +605,11 @@ mod test_deserialize {
                         rename: None,
                     },
                     layout: Layout::default(),
-                    patch: Some(PatchSource::Http {
-                        http: "https://patch.location".to_owned(),
+                    patch: Some(PatchDesc {
+                        patch_source: PatchSource::Http {
+                            http: "https://patch.location".to_owned(),
+                        },
+                        encoding: PatchEncoding::UTF8,
                     }),
                 }),
                 ..Module::default()
@@ -630,8 +635,11 @@ mod test_deserialize {
                         rename: None,
                     },
                     layout: Layout::default(),
-                    patch: Some(PatchSource::Inline {
-                        inline: expected_content.to_owned(),
+                    patch: Some(PatchDesc {
+                        patch_source: PatchSource::Inline {
+                            inline: expected_content.to_owned(),
+                        },
+                        encoding: PatchEncoding::UTF8,
                     }),
                 }),
                 ..Module::default()
