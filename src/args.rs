@@ -21,7 +21,7 @@ pub struct Install {
     #[clap(long)]
     pub no_stop_on_warn: bool,
 
-    /// index in the module list where we start (zero-based)
+    /// index in the module list where we start (counting from *one*)
     #[clap(long, short = 'f')]
     pub from_index: Option<usize>,
 

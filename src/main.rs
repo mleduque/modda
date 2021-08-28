@@ -83,9 +83,9 @@ fn install(opts: &Install, settings: &Config) -> Result<()> {
     };
 
     let modules = match (opts.from_index, opts.to_index) {
-        (Some(from_index), Some(to_index)) => &modules[from_index..to_index],
-        (Some(from_index), None) => &modules[from_index..],
-        (None, Some(to_index)) => &modules[..to_index],
+        (Some(from_index), Some(to_index)) => &modules[(from_index - 1)..(to_index - 1)],
+        (Some(from_index), None) => &modules[(from_index - 1)..],
+        (None, Some(to_index)) => &modules[..(to_index - 1)],
         (None, None) => &modules,
     };
 
