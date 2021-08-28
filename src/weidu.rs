@@ -45,6 +45,7 @@ fn run_weidu_auto(tp2: &str, module: &Module, components: &[Component], opts: &I
     let mut args = vec![
         tp2.to_owned(),
         "--no-exit-pause".to_owned(),
+        "--skip-at-view".to_owned(),
         "--log".to_owned(),
         format!("setup-{}.debug", module.name),
         "--use-lang".to_owned(),
@@ -74,6 +75,7 @@ fn run_weidu_interactive(tp2: &str, module: &Module, opts: &Install,
     let args = vec![
         tp2.to_owned(),
         "--no-exit-pause".to_owned(),
+        "--skip-at-view".to_owned(),
         "--log".to_owned(),
         format!("setup-{}.debug", module.name),
         "--use-lang".to_owned(),
