@@ -9,7 +9,8 @@ pub enum Opts {
     Install(Install),
     Search(Search),
     ListComponents(ListComponents),
-    Invalidate(Invalidate)
+    Invalidate(Invalidate),
+    Uninstall(Uninstall),
 }
 
 #[derive(Clap, Debug)]
@@ -64,4 +65,37 @@ pub struct Invalidate {
 
     #[clap(long, short)]
     pub name: String,
+}
+
+#[derive(Clap, Debug)]
+pub struct Uninstall {
+
+    #[clap(long, short)]
+    pub manifest_path: String,
+
+    #[clap(long)]
+    pub dry_run: bool,
+
+    #[clap(flatten)]
+    pub what: UninstallTarget,
+}
+
+#[derive(Clap, Debug)]
+pub enum UninstallTarget {
+    Mod(ModTarget),
+    Components(ComponentsTarget),
+}
+
+#[derive(Clap, Debug)]
+pub struct ModTarget {
+    index: u32,
+}
+
+#[derive(Clap, Debug)]
+pub struct ComponentsTarget {
+    #[clap(long, short)]
+    index: u32,
+
+    #[clap(long, short)]
+    components: Vec<u32>,
 }

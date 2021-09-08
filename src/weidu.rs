@@ -6,7 +6,7 @@ use std::process::{Command, Stdio};
 use anyhow::{bail, Result};
 use log::{error};
 
-use crate::args::Install;
+use crate::args::{Install, Uninstall};
 use crate::language::{LanguageOption, LanguageSelection, select_language};
 use crate::manifest::{Module, Component, Global};
 use crate::run_result::RunResult;
@@ -143,4 +143,29 @@ pub fn run_weidu_list_components(tp2: &str, lang_id: u32) -> Result<Vec<WeiduCom
         return Ok(result);
     }
     bail!("weidu json output not parseable")
+}
+
+pub fn run_weidu_uninstall_components(tp2: &str, components: &[u32], mod_name: &str, opts: &Uninstall) -> Result<RunResult> {
+    let mut command = Command::new("weidu");
+    let mut args = vec![
+        tp2.to_owned(),
+        "--no-exit-pause".to_owned(),
+        "--log".to_owned(),
+        format!("setup-{}.debug", mod_name),
+        "--logapp".to_owned(),
+    ];
+    // component list
+    args.push("--force-uninstall-list".to_owned());
+    args.extend(components.iter().map(|id| id.to_string()));
+
+    command.args(&args)
+        .stdin(Stdio::inherit())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit());
+    if opts.dry_run {
+        println!("[uninstall] would execute {:?}", command);
+        Ok(RunResult::Dry(format!("{:?}", command)))
+    } else {
+        Ok(RunResult::Real(command.output()?))
+    }
 }

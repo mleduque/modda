@@ -59,6 +59,7 @@ fn main() -> Result<()> {
         Opts::Search(ref search_opts) => search(search_opts),
         Opts::ListComponents(ref params) => sub_list_components(params),
         Opts::Invalidate(ref params) => sub::invalidate::invalidate(params, &settings),
+        Opts::Uninstall(_) => todo!(),
     }
 }
 
