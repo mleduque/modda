@@ -96,7 +96,7 @@ fn install(opts: &Install, settings: &Config) -> Result<()> {
     let mut finished = false;
     for (index, module) in modules.iter().enumerate() {
         let real_index = index + opts.from_index.unwrap_or(0);
-        info!("module {} - {}", real_index, module.name);
+        info!("module {} - {}", real_index, module.describe());
         debug!("{:?}", module);
         let tp2 = match find_tp2(&current, &module.name) {
             Ok(tp2) => tp2,
@@ -121,7 +121,7 @@ fn install(opts: &Install, settings: &Config) -> Result<()> {
         match single_result.status_code() {
             Some(0) => {
                 let message = format!("module {name} (index={index}/{len}) finished with success.",
-                                name = module.name, index = real_index, len = mod_count);
+                                name = module.name, index = real_index + 1, len = mod_count);
                 if let Some(ref mut file) = log {
                     let _ = writeln!(file, "{}", message);
                 }
@@ -147,7 +147,7 @@ fn install(opts: &Install, settings: &Config) -> Result<()> {
             Some(value) => {
                 finished = true;
                 let message = format!("module {name} (index={idx}/{len}) finished with error (status={status}), stopping.",
-                                        name = module.name, idx = real_index, len = mod_count, status = value);
+                                        name = module.name, idx = real_index + 1, len = mod_count, status = value);
                 if let Some(ref mut file) = log {
                     let _ = writeln!(file, "{}", message);
                 }
@@ -155,7 +155,7 @@ fn install(opts: &Install, settings: &Config) -> Result<()> {
             }
             None => if !single_result.success() {
                 let message = format!("module {name} (index={idx}/{len}) finished with success.",
-                                        name = module.name, idx = real_index, len = mod_count);
+                                        name = module.name, idx = real_index + 1, len = mod_count);
                 if let Some(ref mut file) = log {
                     let _ = writeln!(file, "{}", message);
                 }
@@ -163,7 +163,7 @@ fn install(opts: &Install, settings: &Config) -> Result<()> {
             } else {
                 finished = true;
                 let message = format!("module {name} (index={idx}/{len}) finished with error, stopping.",
-                                    name = module.name, idx = real_index, len = mod_count);
+                                    name = module.name, idx = real_index + 1, len = mod_count);
                 if let Some(ref mut file) = log {
                     let _ = writeln!(file, "{}", message);
                 }
@@ -173,7 +173,7 @@ fn install(opts: &Install, settings: &Config) -> Result<()> {
         if finished {
             bail!("Program interrupted on error on non-whitelisted warning");
         } else if module.interrupt {
-            info!("{}",  Blue.bold().paint(format!("Interruption requested for module {} - {}", real_index, module.name)));
+            info!("{}",  Blue.bold().paint(format!("Interruption requested for module {} - {}", real_index + 1, module.describe())));
             return Ok(());
         }
     }
