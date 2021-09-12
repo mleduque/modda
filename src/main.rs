@@ -240,14 +240,14 @@ fn component_failure_allowed(module: &Module) -> bool {
 }
 
 fn ignore_warnings(module: &Module, index: usize, total: usize) -> (String, Colour) {
-    let message = format!("module {} (index={}/{}) finished with warning (status=3), ignoring as requested",
-                            module.name, index, total);
+    let message = format!("module {modname} (index={idx}/{total}) finished with warning (status=3), ignoring as requested",
+                                modname =  module.name, idx = index, total = total);
     (message, Yellow)
 }
 
 fn fail_warnings(module: &Module, index: usize, total: usize) -> (String, Colour) {
-    let message = format!("module {} (index={},/{}) finished with warning (status=3), stopping as requested",
-                            module.name, index, total);
+    let message = format!("module {modname} (index={idx}/{total}) finished with warning (status=3), stopping as requested",
+                                modname =  module.name, idx = index, total = total);
     (message, Red)
 }
 
