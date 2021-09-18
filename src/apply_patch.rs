@@ -1,5 +1,4 @@
 
-
 use std::borrow::Cow;
 use std::path::{Path, PathBuf};
 
@@ -90,7 +89,10 @@ fn patch_files(old: &Path, new: &Path, diff: &Patch, encoding: PatchEncoding) ->
 
     let old_lines: Vec<String> = old_content.split("\n").map(From::from).collect();
 
-    let new_lines = apply_patch(&old_lines, diff);
+    let new_lines = match apply_patch(&old_lines, diff) {
+        Err(error) => bail!("Error patching file {:?}\n -> {:?}", old, error),
+        Ok(new_lines) => new_lines,
+    };
 
     let save_old_path = crate::pathext::append_extension("old", old.to_path_buf());
     if let Err(error) = std::fs::write(&save_old_path, old_lines.join("\n")) {
@@ -105,11 +107,12 @@ fn patch_files(old: &Path, new: &Path, diff: &Patch, encoding: PatchEncoding) ->
     Ok(())
 }
 
-fn apply_patch<'a>(old_lines: &'a[String], diff: &'a Patch) -> Vec<&'a str> {
+fn apply_patch<'a>(old_lines: &'a[String], diff: &'a Patch) -> Result<Vec<&'a str>> {
     let mut new_lines = vec![];
     let mut old_line = 0;
-    for hunk in &diff.hunks {
-        debug!("hunk {:?}", hunk);
+    for (idx, hunk) in diff.hunks.iter().enumerate() {
+        info!("apply hunk {} of {}", idx + 1, diff.hunks.len());
+        debug!("hunk {}", hunk);
         while old_line < hunk.old_range.start - 1 {
             new_lines.push(old_lines[old_line as usize].as_str());
             old_line += 1;
@@ -118,10 +121,22 @@ fn apply_patch<'a>(old_lines: &'a[String], diff: &'a Patch) -> Vec<&'a str> {
             match line {
                 Line::Add(s)  => new_lines.push(s),
                 Line::Context(s) => {
+                    let context_line = &old_lines[old_line as usize];
+                    if !str_equals_ignore_cr(context_line, s) {
+                        bail!("patch hunk doesn't apply (actual context line '{:?}'):\n{}",
+                                context_line.as_bytes(), hunk);
+                    }
                     new_lines.push(s);
                     old_line += 1;
                 }
-                Line::Remove(_) => { old_line += 1; }
+                Line::Remove(s) => {
+                    let context_line = &old_lines[old_line as usize];
+                    if !str_equals_ignore_cr(context_line, s) {
+                        bail!("patch hunk doesn't apply (actual deleted line '{:?}', expected '{:?}'):\n{}",
+                                context_line.as_bytes(), s.as_bytes(), hunk);
+                    }
+                    old_line += 1;
+                }
             }
         }
         debug!("at the end of the hunk, old_line is {}", old_line);
@@ -133,7 +148,7 @@ fn apply_patch<'a>(old_lines: &'a[String], diff: &'a Patch) -> Vec<&'a str> {
         Some(s) if *s == "\n" => new_lines.push(""),
         _ => {}
     }
-    new_lines
+    Ok(new_lines)
 }
 
 
@@ -171,6 +186,15 @@ fn read_patch_from(relative: &Path, base: &CanonPath, encoding: PatchEncoding) -
     } else {
         bail!("Could not canonalize path {:?}", complete);
     }
+}
+
+const CR: char = 13 as char;
+const LF: char = 10 as char;
+
+fn str_equals_ignore_cr(s1: &str, s2: &str) -> bool {
+    let ignored: &[_] = &[CR, LF];
+    return (s1 == s2)
+            || (s1.trim_end_matches(ignored) == s2.trim_end_matches(ignored));
 }
 
 #[cfg(test)]
@@ -235,6 +259,32 @@ mod apply_patch_tests {
                  ~english~
     "#);
 
+    const PATCH_WITH_INCORRECT_CONTEXT_LINE: &str = indoc!(r#"
+        --- modulename.tp2
+        +++ modulename.tp2
+        @@ -1,6 +1,6 @@
+         BACKUP ~weidu_external/backup/modulename~
+         SUPPORT ~http://somewhere.iflucky.com~
+        -VERSION ~1.0~
+        +VERSION ~2.0~
+         //languages
+         LANGUAGE ~English~
+                 ~english~
+    "#);
+
+    const PATCH_WITH_INCORRECT_DELETED_LINE: &str = indoc!(r#"
+        --- modulename.tp2
+        +++ modulename.tp2
+        @@ -1,6 +1,6 @@
+         BACKUP ~weidu_external/backup/modulename~
+         SUPPORT ~http://somewhere.iflucky.org~
+        -VERSION ~1.1~
+        +VERSION ~2.0~
+         //languages
+         LANGUAGE ~English~
+                 ~english~
+    "#);
+
     fn read_all(path: &Path) -> Result<Vec<String>> {
         let file = std::fs::File::open(path)?;
         let buf = std::io::BufReader::new(file);
@@ -265,7 +315,7 @@ mod apply_patch_tests {
         let patched_origin = Path::new(env!("CARGO_MANIFEST_DIR")).join("resources/test/patch/modulename_patched.tp2");
         let expected = read_all(&patched_origin).unwrap();
 
-        assert_eq!(result, expected);
+        assert_eq!(result.unwrap(), expected);
     }
 
     #[test]
@@ -278,7 +328,7 @@ mod apply_patch_tests {
         let patched_origin = Path::new(env!("CARGO_MANIFEST_DIR")).join("resources/test/patch/modulename_delete.tp2");
         let expected = read_all(&patched_origin).unwrap();
 
-        assert_eq!(result, expected);
+        assert_eq!(result.unwrap(), expected);
     }
 
     #[test]
@@ -291,7 +341,7 @@ mod apply_patch_tests {
         let patched_origin = Path::new(env!("CARGO_MANIFEST_DIR")).join("resources/test/patch/modulename_add.tp2");
         let expected = read_all(&patched_origin).unwrap();
 
-        assert_eq!(result, expected);
+        assert_eq!(result.unwrap(), expected);
     }
 
     #[test]
@@ -304,7 +354,31 @@ mod apply_patch_tests {
         let patched_origin = Path::new(env!("CARGO_MANIFEST_DIR")).join("resources/test/patch/modulename_patched.tp2");
         let expected = read_all(&patched_origin).unwrap();
 
-        assert_eq!(result, expected);
+        assert_eq!(result.unwrap(), expected);
+    }
+
+    #[test]
+    fn apply_patch_failure_in_context() {
+        let origin = Path::new(env!("CARGO_MANIFEST_DIR")).join("resources/test/patch/modulename.tp2");
+        let old = read_all(&origin).unwrap();
+        let patch = Patch::from_single(PATCH_WITH_INCORRECT_CONTEXT_LINE).unwrap();
+        let result = apply_patch(&old, &patch);
+
+        println!("{:?}", result);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn apply_patch_failure_in_delete() {
+        let origin = Path::new(env!("CARGO_MANIFEST_DIR")).join("resources/test/patch/modulename.tp2");
+        let old = read_all(&origin).unwrap();
+        let patch = Patch::from_single(PATCH_WITH_INCORRECT_DELETED_LINE).unwrap();
+        let result = apply_patch(&old, &patch);
+
+        println!("{:?}", result);
+
+        assert!(result.is_err());
     }
 
     #[test]
