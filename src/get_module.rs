@@ -3,16 +3,17 @@ use std::collections::HashSet;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
 
 use anyhow::{bail, Result};
 use globwalk::GlobWalkerBuilder;
-use log::debug;
+use log::{debug, info};
 
 use crate::apply_patch::patch_module;
 use crate::args::{Install};
 use crate::canon_path::CanonPath;
 use crate::download::{download, Cache};
-use crate::manifest::{Module, Location, Source, GithubDescriptor};
+use crate::manifest::{GithubDescriptor, Location, Module, PrecopyCommand, Source};
 use crate::settings::Config;
 
 // at some point, I'd like to have a pool of downloads with installations done
@@ -123,6 +124,11 @@ fn extract_zip(archive: &Path, game_dir: &CanonPath, module_name:&str, location:
         bail!("Zip extraction failed for {:?}\n-> {:?}", archive, error);
     }
     debug!("zip extraction done");
+    if let Some(command) = &location.precopy {
+        if let Err(error) = run_precopy_command(&temp_dir.as_ref(), command) {
+            bail!("Couldn't run precopy command for mod {}\n{}\n{:?}", module_name, command.command, error);
+        }
+    }
     if let Err(error) = move_from_temp_dir(&temp_dir.as_ref(), game_dir, module_name, location) {
         bail!("Failed to copy file for archive {:?} from temp dir to game dir\n -> {:?}", archive, error);
     }
@@ -241,4 +247,31 @@ async fn get_github(github_user: &str, repository: &str, descriptor: &GithubDesc
         dest,
         save_name,
     ).await
+}
+
+fn run_precopy_command(from: &Path, precopy: &PrecopyCommand) -> Result<()> {
+    info!("Running precommand `{}` with args {:?} from path `{:?}`", precopy.command, precopy.args, from);
+    let mut command = Command::new(&precopy.command);
+    let workdir = match &precopy.subdir {
+        None => from.to_path_buf(),
+        Some(subdir) => from.join(subdir),
+    };
+    command.current_dir(workdir)
+        .stdin(Stdio::inherit())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit());
+    if let Some(args) = &precopy.args {
+        command.args(args);
+    }
+    debug!("command: {:?}", command);
+    return match command.status() {
+        Ok(status) => {
+            if status.success() {
+                Ok(())
+            } else {
+                bail!("precopy command failed with status\n{:?}", status.code())
+            }
+        }
+        Err(error) => bail!("failure running precopy command\n{:?}", error),
+    }
 }

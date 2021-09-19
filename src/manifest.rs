@@ -115,6 +115,8 @@ pub struct Location {
     pub layout: Layout,
     #[serde(default)]
     pub patch: Option<PatchDesc>,
+    #[serde(default)]
+    pub precopy: Option<PrecopyCommand>,
 }
 
 
@@ -273,7 +275,12 @@ pub fn read_manifest(path: &str) -> Result<Manifest> {
     Ok(manifest)
 }
 
-
+#[derive(Deserialize, Serialize, Debug, PartialEq)]
+pub struct PrecopyCommand {
+    pub command: String,
+    pub args: Option<Vec<String>>,
+    pub subdir: Option<String>,
+}
 
 #[cfg(test)]
 impl Source {
@@ -451,6 +458,7 @@ mod test_deserialize {
                     }),
                     layout: Layout::single_dir(3),
                     patch: None,
+                    precopy: None,
                 }),
                 ..Module::default()
             }
@@ -491,6 +499,7 @@ mod test_deserialize {
                     }),
                     layout: Layout::multi_dir(vec!["a".to_string(),"b".to_string()]),
                     patch: None,
+                    precopy: None,
                 }),
                 ..Module::default()
             }
@@ -611,6 +620,7 @@ mod test_deserialize {
                         },
                         encoding: PatchEncoding::UTF8,
                     }),
+                    precopy: None,
                 }),
                 ..Module::default()
             }
@@ -641,6 +651,7 @@ mod test_deserialize {
                         },
                         encoding: PatchEncoding::UTF8,
                     }),
+                    precopy: None,
                 }),
                 ..Module::default()
             }
