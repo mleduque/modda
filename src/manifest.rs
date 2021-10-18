@@ -100,20 +100,7 @@ impl Module {
             Some(desc) => Cow::Owned(format!("{} ({})", self.name, desc)),
         }
     }
-
-    pub fn components_with_warning(&self) -> Vec<&Component> {
-        match &self.components {
-            Components::None => vec![],
-            Components::Ask => vec![],
-            Components::List(components) => components.iter().filter(|comp|
-                match comp {
-                    Component::Simple(_) => false,
-                    Component::Full{ ignore_warn, ..} =>  *ignore_warn,
-                }).collect::<Vec<_>>(),
-        }
-    }
 }
-
 
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
 pub struct ModuleConf {

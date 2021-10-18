@@ -81,32 +81,3 @@ pub fn parse_weidu_log(mod_filter: Option<LwcString>) -> Result<Vec<LogRow>> {
     }).collect();
     result
 }
-
-
-lazy_static! {
-    static ref WARNING_REGEX: Regex = Regex::new(r##"^SUCCESSFULLY INSTALLED\s+(.*)$"##).unwrap();
-}
-pub fn find_components_without_warning(module: &Module) -> Result<Vec<String>> {
-    let filename = format!("setup-{}.debug", module.name);
-    let module_debug = match std::fs::File::open(&filename) { // TODO: handle case variations
-        Err(error) => return Err(
-            anyhow!(format!("Could not open module log file {} - {:?}", filename, error)
-        )),
-        Ok(file) => file,
-    };
-    let reader = BufReadRaw::<BufReader<File>>::from_file(module_debug);
-
-    let mut result = vec![];
-    for line in reader.raw_lines() {
-        match line {
-            Ok(line) => {
-                let line = String::from_utf8_lossy(&line);
-                if let Some(cap) = WARNING_REGEX.captures(&line) {
-                    result.push(cap.get(1).unwrap().as_str().to_owned())
-                }
-            }
-            Err(error) => error!("error reading module debug file line - {:?}", error),
-        }
-    }
-    Ok(result)
-}

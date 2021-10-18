@@ -150,13 +150,8 @@ fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &Cach
                 let (message, color) = if opts.no_stop_on_warn || module.ignore_warnings {
                     ignore_warnings(module, real_index, mod_count)
                 } else {
-                    // need to check if component with warning was flagged with ignore_warnings
-                    if component_failure_allowed(module) {
-                        ignore_warnings(module, real_index, mod_count)
-                    } else {
-                        finished = true;
-                        fail_warnings(module, real_index, mod_count)
-                    }
+                    finished = true;
+                    fail_warnings(module, real_index, mod_count)
                 };
                 if let Some(ref mut file) = log {
                     let _ = writeln!(file, "{}", message);
@@ -203,65 +198,6 @@ fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &Cach
         }
     }
     Ok(())
-}
-
-fn component_failure_allowed(module: &Module) -> bool {
-    let warning_allowed = module.components_with_warning();
-    if warning_allowed.is_empty() {
-        return false;
-    }
-    let components_that_didnt_warn = match find_components_without_warning(module) {
-        Err(error) => {
-            error!("Could not retrieve per-components success state from weidu.log for module {} - {:?}", module.name, error);
-            return false;
-        }
-        Ok(report) => report,
-    };
-
-    // read module installation language index from weidu.log
-    let module_lang_idx = match parse_weidu_log(Some(LwcString::new(&module.name))) {
-        Err(error) => {
-            error!("Couldn't read module installation language from weidu.log\n->{:?}", error);
-            return false;
-        }
-        Ok(report) => match report.first() {
-            None => {
-                error!("Couldn't read module installation language from weidu.log\n-> no row in weidu.log for module {}", module.name);
-                return false;
-            }
-            Some(row) => row.lang_index,
-        }
-    };
-
-    // Ask weidu the list of components in the module in the (module) install language
-    // to match component numbers with their "name"
-    let current = match std::env::current_dir() {
-        Ok(cwd) => cwd,
-        Err(_error) => return false,
-    };
-    let components = match list_components(&current, &module.name, module_lang_idx) {
-        Err(error) => {
-            error!("Couldn't obtain component list for module {} - {:?}", module.name, error);
-            return false;
-        }
-        Ok(list) => list,
-    };
-
-    // get list of names of components that are allowed to have warnings
-    // (we only have indexes until now)
-    let allowed_names = warning_allowed.iter().filter_map(|comp| {
-        match components.iter().find(|weidu_comp| weidu_comp.number == comp.index()) {
-            None => None,
-            Some(weidu_comp) => Some(weidu_comp.name.to_owned())
-        }
-    }).collect::<Vec<_>>();
-
-    for component_name in allowed_names {
-        if !components_that_didnt_warn.contains(&component_name) {
-            return false;
-        }
-    }
-    true
 }
 
 fn ignore_warnings(module: &Module, index: usize, total: usize) -> (String, Colour) {
