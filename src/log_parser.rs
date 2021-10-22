@@ -1,15 +1,17 @@
 
 
 
+use std::collections::HashSet;
 use std::fs::File;
 use std::io::BufReader;
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use lazy_static::lazy_static;
-use log::{error, warn};
+use log::{warn, info};
 use regex::{Regex, RegexBuilder};
 
 use crate::bufread_raw::BufReadRaw;
+use crate::components::Components;
 use crate::lowercase::LwcString;
 use crate::manifest::Module;
 
@@ -20,11 +22,10 @@ pub struct LogRow {
     pub lang_index: u32,
     pub component_index: u32,
     pub component_name: String,
-    pub mod_version: String,
 }
 
 lazy_static! {
-    static ref TP2_REGEX: Regex = RegexBuilder::new(r##"^~(?:.*/)?(?:setup-)?(.*)\.tp2~\s+#([0-9]+)\s+#([0-9]+)\s+//\s+(.*):(.*)$"##)
+    static ref TP2_REGEX: Regex = RegexBuilder::new(r##"^~(?:.*/)?(?:setup-)?(.*)\.tp2~\s+#([0-9]+)\s+#([0-9]+)\s+//\s+(.*)$"##)
                                         .case_insensitive(true).build().unwrap();
 }
 
@@ -45,8 +46,9 @@ pub fn parse_weidu_log(mod_filter: Option<LwcString>) -> Result<Vec<LogRow>> {
         match TP2_REGEX.captures(&line) {
             None => {
                 // probably header comment
-                if !line.starts_with("//") {
+                if !line.starts_with("//") && !line.is_empty() {
                     warn!("potential garbage in weidu.log");
+                    info!("line: =>{}", line);
                 }
                 None
             }
@@ -68,16 +70,36 @@ pub fn parse_weidu_log(mod_filter: Option<LwcString>) -> Result<Vec<LogRow>> {
                     Ok(value) => value,
                 };
                 let component_name = cap.get(3).unwrap().as_str().to_owned();
-                let mod_version = cap.get(4).unwrap().as_str().to_owned();
                 Some(Ok(LogRow {
                     module,
                     lang_index,
                     component_index,
                     component_name,
-                    mod_version,
                 }))
             }
         }
     }).collect();
     result
+}
+
+pub fn check_installed_components(module: &Module) -> Result<Vec<u32>> {
+    match &module.components {
+        Components::None => Ok(vec![]),
+        Components::Ask => Ok(vec![]),
+        Components::List(components) => {
+            let log_rows = match parse_weidu_log(Some(LwcString::new(&module.name))) {
+                Ok(log_rows) => log_rows,
+                Err(err) => bail!("Could not check installed components\n -> {:?}", err),
+            };
+            let installed = log_rows.iter().map(|row| row.component_index).collect::<HashSet<_>>();
+            info!("installed={:?}", installed);
+
+            let missing = components.iter().filter(|component|
+                !installed.contains(&component.index())
+            )
+            .map(|component| component.index())
+            .collect::<Vec<_>>();
+            Ok(missing)
+        }
+    }
 }

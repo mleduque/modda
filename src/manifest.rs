@@ -9,7 +9,7 @@ use anyhow::{bail, Result};
 use crate::archive_layout::Layout;
 use crate::download::Downloader;
 use crate::patch_source::PatchDesc;
-use crate::components::{Component, Components};
+use crate::components::{Components};
 use crate::post_install::PostInstall;
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -92,7 +92,14 @@ pub struct Module {
     /// - `none` (the default) immediately starts the next mod installation.
     #[serde(default)]
     pub post_install: Option<PostInstall>,
+
+    // Below: unused, sort of inert metadata
+    pub comment: Option<String>,
+    pub original_thread: Option<String>,
+    pub original_dl: Option<String>,
+    pub installation: Option<InstallationComments>,
 }
+
 impl Module {
     pub fn describe(&self) -> Cow<String> {
         match &self.description {
@@ -316,6 +323,13 @@ pub struct PrecopyCommand {
     pub subdir: Option<String>,
 }
 
+#[derive(Deserialize, Serialize, Debug, PartialEq)]
+pub struct InstallationComments {
+    pub general: Option<String>,
+    pub before: Option<String>,
+    pub after: Option<String>,
+}
+
 #[cfg(test)]
 impl Source {
     pub fn http_source() -> Source {
@@ -350,7 +364,7 @@ impl Source {
 mod test_deserialize {
 
     use crate::patch_source::{PatchDesc, PatchEncoding, PatchSource};
-    use crate::components::{ Components };
+    use crate::components::{ Component, Components };
     use crate::post_install::PostInstall;
     use super::{Source, GithubDescriptor};
 
@@ -463,7 +477,7 @@ mod test_deserialize {
 
     #[test]
     fn deserialize_module_usual() {
-        use crate::manifest::{Module, Location, Source, Layout, Github, Component};
+        use crate::manifest::{Module, Location, Source, Layout, Github};
         let yaml = r#"
         name: DlcMerger
         location:
@@ -503,7 +517,7 @@ mod test_deserialize {
 
     #[test]
     fn deserialize_multi_module() {
-        use crate::manifest::{Module, Location, Source, Layout, Github, Component};
+        use crate::manifest::{Module, Location, Source, Layout, Github};
         let yaml = r#"
         name: DlcMerger
         location:
@@ -545,7 +559,7 @@ mod test_deserialize {
     #[test]
     fn deserialize_module_with_add_conf_and_content() {
 
-        use crate::manifest::{Module, Component, ModuleConf, ModuleContent};
+        use crate::manifest::{Module, ModuleConf, ModuleContent};
         let yaml = r#"
         name: DlcMerger
         add_conf:
@@ -572,7 +586,7 @@ mod test_deserialize {
     #[test]
     fn deserialize_module_with_add_conf_and_multiline_content() {
 
-        use crate::manifest::{Module, Component, ModuleConf, ModuleContent};
+        use crate::manifest::{Module, ModuleConf, ModuleContent};
         let yaml = r#"
         name: DlcMerger
         add_conf:
@@ -601,7 +615,7 @@ mod test_deserialize {
     #[test]
     fn deserialize_module_with_add_conf_with_prompt() {
 
-        use crate::manifest::{Module, Component, ModuleConf, ModuleContent};
+        use crate::manifest::{Module, ModuleConf, ModuleContent};
         let yaml = r#"
         name: DlcMerger
         add_conf:
@@ -627,7 +641,7 @@ mod test_deserialize {
 
     #[test]
     fn deserialize_module_with_http_patch() {
-        use crate::manifest::{ Module, Component, Location, Layout };
+        use crate::manifest::{ Module, Location, Layout };
 
         let yaml = r#"
         name: DlcMerger
@@ -665,7 +679,7 @@ mod test_deserialize {
 
     #[test]
     fn deserialize_module_with_inline_patch() {
-        use crate::manifest::{ Module, Component, Location, Layout };
+        use crate::manifest::{ Module, Location, Layout };
 
         let yaml = include_str!("../resources/test/read_inline_patch/module_with_inline_patch.yaml");
         let module: Module = serde_yaml::from_str(yaml).unwrap();
@@ -696,7 +710,7 @@ mod test_deserialize {
 
     #[test]
     fn serialize_mod_with_continue() {
-        use crate::manifest::{ Module, Component };
+        use crate::manifest::{ Module };
         let module = Module {
             name: "DlcMerger".to_string(),
             components: Components::List(vec! [ Component::Simple(1) ]),
@@ -708,7 +722,7 @@ mod test_deserialize {
 
     #[test]
     fn deserialize_mod_with_post_install_interrupt() {
-        use crate::manifest::{ Module, Component };
+        use crate::manifest::{ Module };
 
         let yaml = r#"
         name: DlcMerger
@@ -730,7 +744,7 @@ mod test_deserialize {
 
     #[test]
     fn deserialize_mod_with_post_install_none() {
-        use crate::manifest::{ Module, Component };
+        use crate::manifest::{ Module };
 
         let yaml = r#"
         name: DlcMerger
@@ -752,7 +766,7 @@ mod test_deserialize {
 
     #[test]
     fn serialize_mod_with_post_install_wait() {
-        use crate::manifest::{ Module, Component };
+        use crate::manifest::{ Module };
         let module = Module {
             name: "DlcMerger".to_string(),
             components: Components::List(vec! [ Component::Simple(1) ]),
@@ -764,7 +778,7 @@ mod test_deserialize {
 
     #[test]
     fn deserialize_mod_with_post_install_wait() {
-        use crate::manifest::{ Module, Component };
+        use crate::manifest::{ Module };
 
         let yaml = r#"
         name: DlcMerger

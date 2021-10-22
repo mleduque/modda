@@ -1,4 +1,4 @@
-use std::path::{PathBuf, Path};
+use std::path::{PathBuf};
 
 use anyhow::{bail, Result};
 use path_clean::PathClean;
@@ -100,7 +100,13 @@ mod test_retrieve_location {
 
     use std::{path::PathBuf};
 
-    use crate::{manifest::{Location, Github, Module, Global}, download::{Downloader}, args::{Install}, get_module::ModuleDownload, settings::Config, archive_extractor::Extractor, canon_path::CanonPath, cache::Cache};
+    use crate::manifest::{Location, Github, Module, Global};
+    use crate::download::{Downloader};
+    use crate::args::{Install};
+    use crate::get_module::ModuleDownload;
+    use crate:: settings::Config;
+    use crate::canon_path::CanonPath;
+    use crate::cache::Cache;
 
     use anyhow::bail;
     use faux::when;

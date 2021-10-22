@@ -28,11 +28,12 @@ mod settings;
 mod tp2;
 mod weidu;
 
+use std::env::set_current_dir;
 use std::io::{BufReader, BufWriter};
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 
-use ansi_term::{Colour, Colour::{Green, Red, Yellow, Blue}};
+use ansi_term::{Colour, Colour::{Blue, Green, Red, Yellow}};
 use anyhow::{anyhow, bail, Result};
 use args::{ Opts, Install };
 use cache::Cache;
@@ -41,10 +42,7 @@ use clap::Clap;
 use download::Downloader;
 use env_logger::{Env, Target};
 use get_module::ModuleDownload;
-use log::{debug, error, info};
-use log_parser::{find_components_without_warning, parse_weidu_log};
-use lowercase::LwcString;
-use list_components::list_components;
+use log::{debug, info};
 use manifest::{ Module, ModuleContent, read_manifest };
 use settings::{read_settings, Config};
 use sub::list_components::sub_list_components;
@@ -52,17 +50,20 @@ use sub::search::search;
 use tp2::find_tp2;
 use weidu::{run_weidu, write_run_result};
 
-use crate::post_install::{PostInstall, PostInstallOutcome, PostInstallExec};
+use crate::post_install::{PostInstallOutcome, PostInstallExec};
+use crate::log_parser::check_installed_components;
 
 
 
 fn main() -> Result<()> {
-    env_logger::Builder::from_env(Env::default().default_filter_or("info")).target(Target::Stdout).init();
+    env_logger::Builder::from_env(Env::default().default_filter_or("info"))
+                            .target(Target::Stdout)
+                            .init();
 
     let current_dir = std::env::current_dir()?;
     let current_dir = CanonPath::new(current_dir)?;
 
-    if !current_dir.join("chitin.key").exists() {
+    if ensure_chitin_key().is_err() {
         bail!("Must be run from the game directory (where chitin.key is)");
     } else {
         info!("chitin.key found");
@@ -76,6 +77,23 @@ fn main() -> Result<()> {
         Opts::ListComponents(ref params) => sub_list_components(params),
         Opts::Invalidate(ref params) => sub::invalidate::invalidate(params, &cache),
     }
+}
+
+fn ensure_chitin_key() -> Result<()> {
+    if !PathBuf::from("chitin.key").exists() {
+        if PathBuf::from("game/chitin.key").exists() {
+            if let Err(err) = set_current_dir("game") {
+                bail!("Could not enter game directory 'game' {:?}", err)
+            } else {
+                info!("./game//chitin.key found, entered game subdir");
+            }
+        } else {
+            bail!("no chitin.key of game/chitin.key file");
+        }
+    } else {
+        info!("./chitin.key found");
+    }
+    Ok(())
 }
 
 fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &Cache) -> Result<()> {
@@ -194,6 +212,13 @@ fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &Cach
                     return Ok(());
                 }
                 PostInstallOutcome::Continue => {}
+            }
+        }
+        // Now check we actually installed all requested components
+        match check_installed_components(&module) {
+            Err(err) => return Err(err),
+            Ok(missing) => if !missing.is_empty() {
+                bail!("All requested components for mod {} could not be installed.\nMissing: {:?}", module.name, missing);
             }
         }
     }
