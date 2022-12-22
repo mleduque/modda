@@ -13,6 +13,7 @@ mod log_parser;
 #[macro_use]
 mod lowercase;
 mod manifest;
+mod components;
 mod patch_source;
 mod progname;
 mod sub;

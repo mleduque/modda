@@ -8,6 +8,7 @@ use anyhow::{bail, Result};
 
 use crate::archive_layout::Layout;
 use crate::patch_source::PatchDesc;
+use crate::components::{Component, Components};
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct VersionDetect {
@@ -47,7 +48,8 @@ pub struct Module {
     /// Which language index to use (has precedence over manifest-level lang_prefs)
     pub language: Option<u32>,
     /// List of components to be auto-installed. In None or empty list, run interactively
-    pub components: Option<Vec<Component>>,
+    #[serde(deserialize_with = "crate::components::component_deser")]
+    pub components: Components,
     #[serde(default)]
     pub ignore_warnings: bool,
     pub add_conf: Option<ModuleConf>,
@@ -66,29 +68,17 @@ impl Module {
 
     pub fn components_with_warning(&self) -> Vec<&Component> {
         match &self.components {
-            None => vec![],
-            Some(components) => components.iter().filter(|comp| match comp {
-                Component::Simple(_) => false,
-                Component::Full{ ignore_warn, ..} =>  *ignore_warn,
-            }).collect::<Vec<_>>(),
+            Components::None => vec![],
+            Components::Ask => vec![],
+            Components::List(components) => components.iter().filter(|comp|
+                match comp {
+                    Component::Simple(_) => false,
+                    Component::Full{ ignore_warn, ..} =>  *ignore_warn,
+                }).collect::<Vec<_>>(),
         }
     }
 }
 
-#[derive(Deserialize, Serialize, Debug, PartialEq)]
-#[serde(untagged)]
-pub enum Component {
-    Simple(u32),
-    Full { index: u32, ignore_warn: bool },
-}
-impl Component {
-    pub fn index(&self) -> u32 {
-        match &self {
-            Component::Simple(index) => *index,
-            Component::Full { index, ..} => *index,
-        }
-    }
-}
 
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
 pub struct ModuleConf {
@@ -316,6 +306,7 @@ impl Source {
 mod test_deserialize {
 
     use crate::patch_source::{PatchDesc, PatchEncoding, PatchSource};
+    use crate::components::{ Components };
     use super::{Source, GithubDescriptor};
 
     #[test]
@@ -446,7 +437,7 @@ mod test_deserialize {
             module,
             Module {
                 name: "DlcMerger".to_string(),
-                components: Some(vec! [ Component::Simple(1) ]),
+                components: Components::List(vec! [ Component::Simple(1) ]),
                 location: Some(Location {
                     source: Source::Github(Github {
                         github_user: "Argent77".to_string(),
@@ -487,7 +478,7 @@ mod test_deserialize {
             module,
             Module {
                 name: "DlcMerger".to_string(),
-                components: Some(vec! [ Component::Simple(1) ]),
+                components: Components::List(vec! [ Component::Simple(1) ]),
                 location: Some(Location {
                     source: Source::Github(Github {
                         github_user: "Argent77".to_string(),
@@ -523,7 +514,7 @@ mod test_deserialize {
             module,
             Module {
                 name: "DlcMerger".to_string(),
-                components: Some(vec! [ Component::Simple(1) ]),
+                components: Components::List(vec! [ Component::Simple(1) ]),
                 add_conf: Some(ModuleConf {
                     file_name: "toto".to_string(),
                     content: ModuleContent::Content { content: "whatever".to_string() },
@@ -552,7 +543,7 @@ mod test_deserialize {
             module,
             Module {
                 name: "DlcMerger".to_string(),
-                components: Some(vec! [ Component::Simple(1) ]),
+                components: Components::List(vec! [ Component::Simple(1) ]),
                 add_conf: Some(ModuleConf {
                     file_name: "toto".to_string(),
                     content: ModuleContent::Content { content: "line 1\nline 2\n".to_string() },
@@ -579,7 +570,7 @@ mod test_deserialize {
             module,
             Module {
                 name: "DlcMerger".to_string(),
-                components: Some(vec! [ Component::Simple(1) ]),
+                components: Components::List(vec! [ Component::Simple(1) ]),
                 add_conf: Some(ModuleConf {
                     file_name: "toto".to_string(),
                     content: ModuleContent::Prompt { prompt: "prompt".to_string() },
@@ -607,7 +598,7 @@ mod test_deserialize {
             module,
             Module {
                 name: "DlcMerger".to_string(),
-                components: Some(vec! [ Component::Simple(1) ]),
+                components: Components::List(vec! [ Component::Simple(1) ]),
                 location: Some(Location {
                     source: Source::Http {
                         http: "https://module.location".to_owned(),
@@ -638,7 +629,7 @@ mod test_deserialize {
             module,
             Module {
                 name: "modulename".to_string(),
-                components: Some(vec! [ Component::Simple(1) ]),
+                components: Components::List(vec! [ Component::Simple(1) ]),
                 location: Some(Location {
                     source: Source::Http {
                         http: "https://module.location".to_owned(),

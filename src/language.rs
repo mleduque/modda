@@ -65,7 +65,7 @@ pub fn select_language(tp2:&str, module: &Module, lang_preferences: &Option<Vec<
                                 if candidate.to_lowercase() == name.to_lowercase() {
                                     return Ok(Selected(*index));
                                 }
-                            }                            
+                            }
                         }
                     }
                 }
@@ -86,7 +86,7 @@ fn list_available_languages(tp2: &str, module: &Module) -> Result<Vec<LanguageOp
     command.args(&args);
     let output = command.output()?;
 
-    // the first line show a version string starting with [weidu], then some lines 
+    // the first line show a version string starting with [weidu], then some lines
     // with [<some file name>] ...
     // then n language lines in the form
     // <integer>COLON<string(language name)>
@@ -95,7 +95,7 @@ fn list_available_languages(tp2: &str, module: &Module) -> Result<Vec<LanguageOp
     let mut lines_ok = vec![];
     for line in lines {
         match line {
-            Err(err) => bail!("Couldn't obtain language list for module '{}' [error reading output] _ {:?}", 
+            Err(err) => bail!("Couldn't obtain language list for module '{}' [error reading output] _ {:?}",
                             module.name, err),
             Ok(line) => {
                 lines_ok.push(line);

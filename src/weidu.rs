@@ -8,7 +8,8 @@ use log::{error};
 
 use crate::args::Install;
 use crate::language::{LanguageOption, LanguageSelection, select_language};
-use crate::manifest::{Module, Component, Global};
+use crate::manifest::{Module, Global};
+use crate::components::{Component, Components};
 use crate::run_result::RunResult;
 
 
@@ -22,9 +23,10 @@ pub fn run_weidu(tp2: &str, module: &Module, opts: &Install, global: &Global) ->
         Err(err) => return Err(err),
     };
     match &module.components {
-        None => run_weidu_interactive(tp2, module, opts, &global.game_language),
-        Some(comp) if comp.is_empty() => run_weidu_interactive(tp2, module, opts, &global.game_language),
-        Some(components) => run_weidu_auto(tp2, module, components, opts, &global.game_language, language_id)
+        Components::None => Ok(RunResult::Dry("Explicitly requested no components to be installed".to_string())),
+        Components::Ask => run_weidu_interactive(tp2, module, opts, &global.game_language),
+        Components::List(comp) if comp.is_empty() => run_weidu_interactive(tp2, module, opts, &global.game_language),
+        Components::List(components) => run_weidu_auto(tp2, module, components, opts, &global.game_language, language_id)
     }
 }
 
