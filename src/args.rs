@@ -12,7 +12,7 @@ pub enum Opts {
     Invalidate(Invalidate)
 }
 
-#[derive(Clap, Debug)]
+#[derive(Clap, Debug, Default)]
 pub struct Install {
 
     #[clap(long, short)]

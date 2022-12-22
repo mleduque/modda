@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use anyhow::{bail, Result};
 
 use crate::archive_layout::Layout;
+use crate::download::Downloader;
 use crate::patch_source::PatchDesc;
 use crate::components::{Component, Components};
 
@@ -23,7 +24,7 @@ pub struct Manifest {
     pub modules: Vec<Module>,
 }
 
-#[derive(Deserialize, Serialize, Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Default)]
 pub struct Global {
     #[serde(rename = "lang_dir")]
     pub game_language: String,
@@ -36,6 +37,10 @@ pub struct Global {
     ///   syntax here https://docs.rs/regex/1.5.4/regex/#syntax
     ///   ex. ["#rx#^fran[cç]ais", french, english]
     pub lang_preferences: Option<Vec<String>>,
+    #[serde(default)]
+    pub patch_path: Option<String>,
+    #[serde(default)]
+    pub local_mods: Option<String>,
 }
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Default)]
@@ -95,7 +100,7 @@ pub enum ModuleContent {
     /// Interrupt and ask the user to input the content (value of `prompt` is shown)
     Prompt { prompt: String },
 }
-#[derive(Deserialize, Serialize, Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Default, Clone)]
 pub struct Location {
     #[serde(flatten)]
     pub source: Source,
@@ -110,12 +115,19 @@ pub struct Location {
 }
 
 
-#[derive(Deserialize, Serialize, Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum Source {
     Http { http: String, rename: Option<String> },
-    Local { path: String },
     Github(Github),
+    Absolute { path: String },
+    Local { local: String },
+}
+
+impl Default for Source {
+    fn default() -> Self {
+        Source::Local { local: String::new() }
+    }
 }
 
 impl Source {
@@ -136,9 +148,9 @@ impl Source {
                 };
                 Ok(PathBuf::from("http").join(&*host))
             }
-            Local { .. } => Ok(PathBuf::new()),
+            Absolute { .. } | Local { .. }=> Ok(PathBuf::new()),
             Github(self::Github { github_user, repository, .. }) =>
-                Ok(PathBuf::from("github").join(github_user).join(repository))
+                Ok(PathBuf::from("github").join(github_user).join(repository)),
         }
     }
 
@@ -165,7 +177,7 @@ impl Source {
                     }
                 }
             }
-            Local { .. } => Ok(PathBuf::new()),
+            Absolute { .. } | Local { .. } => Ok(PathBuf::new()),
             Github(self::Github { descriptor, .. }) => match descriptor {
                 GithubDescriptor::Release { asset , ..} =>
                                                     Ok(PathBuf::from(asset.to_owned())),
@@ -189,21 +201,36 @@ impl Source {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Default, Clone)]
 pub struct Github {
     pub github_user: String,
     pub repository: String,
     #[serde(flatten)]
     pub descriptor: GithubDescriptor
 }
+impl Github {
+    pub async fn get_github(&self, downloader: &Downloader, dest: &PathBuf, save_name: PathBuf) -> Result<PathBuf> {
+        downloader.download(
+            &self.descriptor.get_url(&self.github_user, &self.repository),
+            dest,
+            save_name,
+        ).await
+    }
+}
 
-#[derive(Deserialize, Serialize, Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum GithubDescriptor {
     Release { release: Option<String>, asset: String },
     Commit { commit: String },
     Branch { branch: String },
     Tag { tag: String },
+}
+
+impl Default for GithubDescriptor {
+    fn default() -> Self {
+        GithubDescriptor::Tag { tag: "".to_string() }
+    }
 }
 
 impl GithubDescriptor {
@@ -265,7 +292,7 @@ pub fn read_manifest(path: &str) -> Result<Manifest> {
     Ok(manifest)
 }
 
-#[derive(Deserialize, Serialize, Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
 pub struct PrecopyCommand {
     pub command: String,
     pub args: Option<Vec<String>>,
@@ -660,6 +687,8 @@ mod test_deserialize {
                 global : super::Global {
                     game_language: "fr_FR".to_string(),
                     lang_preferences: Some(vec!["french".to_string()]),
+                    patch_path: None,
+                    local_mods: None,
                 },
                 modules : vec![],
             }

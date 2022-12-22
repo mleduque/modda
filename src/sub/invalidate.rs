@@ -1,10 +1,10 @@
-use crate::{args::Invalidate, get_module::{get_cache}, manifest::{Location, Module, read_manifest}, settings::Config};
+use crate::{args::Invalidate, manifest::{Location, Module, read_manifest}, cache::Cache};
 
 use anyhow::{bail, Result};
 
 use crate::lowercase::LwcString;
 
-pub fn invalidate(params: &Invalidate, config: &Config) -> Result<()> {
+pub fn invalidate(params: &Invalidate, cache: &Cache) -> Result<()> {
     let manifest = match read_manifest(&params.manifest_path) {
         Ok(manifest) => manifest,
         Err(error) => bail!("Could not read manifest\n -> {:?}", error),
@@ -15,17 +15,16 @@ pub fn invalidate(params: &Invalidate, config: &Config) -> Result<()> {
             match &item.location {
                 None => {}
                 Some(location) => {
-                    clear_mod_archive(location, &item, config)?;
+                    clear_mod_archive(location, &item, cache)?;
                     return Ok(())
                 }
             }
         }
     }
-    bail!("Module {} not found or location not provided");
+    bail!("Module {} not found or location not provided", modname);
 }
 
-fn clear_mod_archive(location: &Location, module :&Module, config: &Config) -> Result<()> {
-    let cache = get_cache(config)?;
+fn clear_mod_archive(location: &Location, module :&Module, cache: &Cache) -> Result<()> {
 
     let dest = cache.join(location.source.save_subdir()?);
     let save_name = location.source.save_name(&module.name)?;

@@ -5,7 +5,7 @@ use std::{borrow::Cow, fmt::Debug};
 use encoding_rs::{Encoding};
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Serialize, Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
 pub struct PatchDesc {
     #[serde(flatten)]
     pub patch_source: PatchSource,
@@ -13,7 +13,7 @@ pub struct PatchDesc {
     pub encoding: PatchEncoding,
 }
 
-#[derive(Deserialize, Serialize, Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum PatchSource {
     /// Inline content inside the yaml file

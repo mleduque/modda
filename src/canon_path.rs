@@ -1,5 +1,5 @@
 
-use std::{fmt::Debug, path::{Path, PathBuf}};
+use std::{fmt::Debug, path::{Path, PathBuf}, ffi::OsStr};
 
 use anyhow::Result;
 use path_absolutize::*;
@@ -15,6 +15,12 @@ impl CanonPath {
 impl AsRef<Path> for CanonPath {
     fn as_ref(&self) -> &Path {
         &self.0
+    }
+}
+
+impl AsRef<OsStr> for CanonPath {
+    fn as_ref(&self) -> &OsStr {
+        &self.0.as_os_str()
     }
 }
 

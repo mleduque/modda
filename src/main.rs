@@ -1,10 +1,13 @@
 
 mod pathext;
+mod archive_extractor;
 mod apply_patch;
 mod args;
 mod bufread_raw;
+mod cache;
 mod canon_path;
 mod download;
+mod fs_ops;
 mod get_module;
 mod language;
 mod archive_layout;
@@ -29,9 +32,13 @@ use std::path::{Path, PathBuf};
 use ansi_term::{Colour, Colour::{Green, Red, Yellow, Blue}};
 use anyhow::{anyhow, bail, Result};
 use args::{ Opts, Install };
+use cache::Cache;
+use canon_path::CanonPath;
 use clap::Clap;
+use download::Downloader;
 use env_logger::{Env, Target};
-use get_module::get_module;
+use fs_ops::Fs;
+use get_module::ModuleDownload;
 use log::{debug, error, info};
 use log_parser::{find_components_without_warning, parse_weidu_log};
 use lowercase::LwcString;
@@ -48,22 +55,26 @@ use weidu::{run_weidu, write_run_result};
 fn main() -> Result<()> {
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).target(Target::Stdout).init();
 
-    if !PathBuf::from("chitin.key").exists() {
+    let current_dir = std::env::current_dir()?;
+    let current_dir = CanonPath::new(current_dir)?;
+
+    if !current_dir.join("chitin.key").exists() {
         bail!("Must be run from the game directory (where chitin.key is)");
     } else {
         info!("chitin.key found");
     }
     let settings = read_settings();
     let opts: Opts = Opts::parse();
+    let cache = Cache::ensure_from_config(&settings).unwrap();
     match opts {
-        Opts::Install(ref install_opts) => install(install_opts, &settings),
+        Opts::Install(ref install_opts) => install(install_opts, &settings, &current_dir, &cache),
         Opts::Search(ref search_opts) => search(search_opts),
         Opts::ListComponents(ref params) => sub_list_components(params),
-        Opts::Invalidate(ref params) => sub::invalidate::invalidate(params, &settings),
+        Opts::Invalidate(ref params) => sub::invalidate::invalidate(params, &cache),
     }
 }
 
-fn install(opts: &Install, settings: &Config) -> Result<()> {
+fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &Cache) -> Result<()> {
 
     let manifest = read_manifest(&opts.manifest_path)?;
     check_weidu_conf_lang(&manifest.global.game_language)?;
@@ -95,6 +106,9 @@ fn install(opts: &Install, settings: &Config) -> Result<()> {
         Err(error) => bail!("Failed to obtain current directory\n -> {:?}", error),
     };
     let mut finished = false;
+    let downloader = Downloader::new();
+    let module_downloader = ModuleDownload::new(&settings, &manifest.global, &opts,
+                                                                        &downloader, &game_dir, cache);
     for (index, module) in modules.iter().enumerate() {
         let real_index = index + opts.from_index.unwrap_or(0);
         info!("module {} - {}", real_index, module.describe());
@@ -102,7 +116,7 @@ fn install(opts: &Install, settings: &Config) -> Result<()> {
         let tp2 = match find_tp2(&current, &module.name) {
             Ok(tp2) => tp2,
             Err(_) => {
-                get_module(&module, settings, opts)?;
+                module_downloader.get_module(&module)?;
                 find_tp2(&current, &module.name)?
             }
         };
