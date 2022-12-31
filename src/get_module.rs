@@ -158,11 +158,94 @@ mod test_retrieve_location {
         )
     }
 
-    #[test]
-    fn retrieve_http_location() {}
+    /**
+     * Check http location.
+     * Should be <cache_path>/http/<host_name>/<file_name>
+    * */
+    #[tokio::test]
+    async fn retrieve_http_location() {
+        let location = Location {
+            source: crate::manifest::Source::Http {
+                http: "http://example.com/some_mod.zip".to_string(),
+                rename: None
+            },
+            ..Location::default()
+        };
+        let module = Module {
+            location: Some(location.clone()),
+            ..Module::default()
+        };
+        let global = Global::default();
+        let opts = Install::default();
+        let config = Config {
+            archive_cache: Some("/cache_path".to_string()),
+            extract_location: Some("/tmp".to_string())
+        };
 
-    #[test]
-    fn retrieve_absolute_location() {}
+        let expected_dest = PathBuf::from("/cache_path/http/example.com");
+
+        let game_dir = CanonPath::new("some_dir").unwrap();
+        let cache = Cache::Path(PathBuf::from("/cache_path"));
+
+        let mut downloader = Downloader::faux();
+        when!(
+            downloader.download(_, {expected_dest}, _)
+        ).then(|(_, _, _)| Ok(PathBuf::from("/cache_path/http/example.com/some_mod.zip")));
+        when!(
+            downloader.download_partial(_, _, _)
+        ).then(|(_, _, _)| bail!("Should not be called"));
+        when!(
+            downloader.rename_partial(_, _)
+        ).then(|(_, _)| bail!("Should not be called"));
+
+        let module_download = ModuleDownload::new(&config, &global, &opts,
+                                                                            &downloader, &game_dir, &cache);
+
+        let result = module_download.retrieve_location(&location, &module);
+        assert_eq!(
+            result.await.unwrap(),
+            PathBuf::from("/cache_path/http/example.com/some_mod.zip")
+        )
+    }
+
+    /**
+     * Check absolute location.
+     * Should just be the path in the location.
+     */
+    #[tokio::test]
+    async fn retrieve_absolute_location() {
+        let location = Location {
+            source: crate::manifest::Source::Absolute { path: "/some/path/file.zip".to_string() },
+            ..Location::default()
+        };
+        let module = Module {
+            location: Some(location.clone()),
+            ..Module::default()
+        };
+        let global = Global {
+            local_mods: Some("my_mods".to_string()),
+            ..Default::default()
+        };
+        let opts = Install {
+            manifest_path: "/home/me/my_install.yaml".to_string(),
+            ..Install::default()
+        };
+        let config = Config::default();
+
+        let game_dir = CanonPath::new("some_dir").unwrap();
+        let cache = Cache::Path(PathBuf::from("/cache_path"));
+
+        let downloader = Downloader::faux();
+
+        let module_download = ModuleDownload::new(&config, &global, &opts,
+                                                                            &downloader, &game_dir, &cache);
+
+        let result = module_download.retrieve_location(&location, &module);
+        assert_eq!(
+            result.await.unwrap(),
+            PathBuf::from("/some/path/file.zip")
+        );
+    }
 
     /**
      * Checks local mods.
