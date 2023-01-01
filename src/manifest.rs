@@ -18,14 +18,18 @@ pub struct VersionDetect {
 
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
 pub struct Manifest {
+    /** Manifest format version */
     pub version: String,
+    /** Manifest-wide definitions. */
     pub global: Global,
     #[serde(default)]
+    /** List of mods */
     pub modules: Vec<Module>,
 }
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Default)]
 pub struct Global {
+    /// The "language code" configured in the game e.g. en_US, es_ES, fr_FR
     #[serde(rename = "lang_dir")]
     pub game_language: String,
 
@@ -39,12 +43,20 @@ pub struct Global {
     pub lang_preferences: Option<Vec<String>>,
     #[serde(default)]
     pub patch_path: Option<String>,
+    /// Path from manifest root (yml file location directory) where "local" mods can be found.
     #[serde(default)]
     pub local_mods: Option<String>,
 }
 
+/** Definition of a mod. */
 #[derive(Deserialize, Serialize, Debug, PartialEq, Default)]
 pub struct Module {
+    /**
+     * Unique identifier of a mod.
+     * This is the weidu mod name: name of the tp2 file without `setup-` ot the tp2 extension.
+     * This is also the name as used in `weidu.log`.
+     * This is case-insensitive.
+     */
     pub name: String,
     /// Unused at the moment
     pub version: Option<String>,
@@ -52,13 +64,26 @@ pub struct Module {
     pub description: Option<String>,
     /// Which language index to use (has precedence over manifest-level lang_prefs)
     pub language: Option<u32>,
-    /// List of components to be auto-installed. In None or empty list, run interactively
+    /// List of components to be auto-installed.
+    /// Can be `ask`, `none`, a list of components or absent/not set/null (which is the same as `ask`)
+    ///   - `ask` (or empty) will use weidu in interactive mode (weidu itself asks how to install components)
+    ///   - `none` will just copy the mod filesin the game dir without installing anything
+    ///   - a list of components will call weidu and provide the list of components on the command line
     #[serde(deserialize_with = "crate::components::component_deser")]
     pub components: Components,
+    /// Whether warnings returned by weidu (exit code) will interrupt the whole installation.
+    ///
+    /// (defaults to _not_ ignoring warnings)..
+    /// - If set to true, warning are ignored and the installation proceed with the followinf mods
+    /// - If set to false (or absent), weidu warnings will stop the installation.
     #[serde(default)]
     pub ignore_warnings: bool,
     pub add_conf: Option<ModuleConf>,
-    /// Where we can obtain the module. If absent, it is assumed to be in the game install
+    /// Where we can obtain the module.
+    ///
+    /// If absent, it is assumed to be in the game install.
+    /// In that case, it checks a `<mod_name.tp2>`,`setup-mod_name>.tp2` in the game dir and in
+    /// `<nod_name>` sub-directory. If it is not found, the installation aborts.
     pub location: Option<Location>,
     #[serde(default)]
     pub interrupt: bool,
