@@ -10,6 +10,7 @@ use crate::archive_layout::Layout;
 use crate::download::Downloader;
 use crate::patch_source::PatchDesc;
 use crate::components::{Component, Components};
+use crate::post_install::PostInstall;
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct VersionDetect {
@@ -85,8 +86,12 @@ pub struct Module {
     /// In that case, it checks a `<mod_name.tp2>`,`setup-mod_name>.tp2` in the game dir and in
     /// `<nod_name>` sub-directory. If it is not found, the installation aborts.
     pub location: Option<Location>,
+    /// Decides what will be done after the mod installation (in case of success).
+    /// - `interrupt` will stop the installation and exist the program
+    /// - `wait_seconds: xxx will wait xxx second before continuing to the next mod
+    /// - `none` (the default) immediately starts the next mod installation.
     #[serde(default)]
-    pub interrupt: bool,
+    pub post_install: Option<PostInstall>,
 }
 impl Module {
     pub fn describe(&self) -> Cow<String> {
@@ -359,6 +364,7 @@ mod test_deserialize {
 
     use crate::patch_source::{PatchDesc, PatchEncoding, PatchSource};
     use crate::components::{ Components };
+    use crate::post_install::PostInstall;
     use super::{Source, GithubDescriptor};
 
     #[test]
@@ -696,6 +702,97 @@ mod test_deserialize {
                     }),
                     precopy: None,
                 }),
+                ..Module::default()
+            }
+        );
+    }
+
+    #[test]
+    fn serialize_mod_with_continue() {
+        use crate::manifest::{ Module, Component };
+        let module = Module {
+            name: "DlcMerger".to_string(),
+            components: Components::List(vec! [ Component::Simple(1) ]),
+            post_install: Some(PostInstall::None),
+            ..Module::default()
+        };
+        println!("{}", serde_yaml::to_string(&module).unwrap());
+    }
+
+    #[test]
+    fn deserialize_mod_with_post_install_interrupt() {
+        use crate::manifest::{ Module, Component };
+
+        let yaml = r#"
+        name: DlcMerger
+        components:
+            - 1
+        post_install: interrupt
+        "#;
+        let module: Module = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(
+            module,
+            Module {
+                name: "DlcMerger".to_string(),
+                components: Components::List(vec! [ Component::Simple(1) ]),
+                post_install: Some(PostInstall::Interrupt),
+                ..Module::default()
+            }
+        );
+    }
+
+    #[test]
+    fn deserialize_mod_with_post_install_none() {
+        use crate::manifest::{ Module, Component };
+
+        let yaml = r#"
+        name: DlcMerger
+        components:
+            - 1
+        post_install: none
+        "#;
+        let module: Module = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(
+            module,
+            Module {
+                name: "DlcMerger".to_string(),
+                components: Components::List(vec! [ Component::Simple(1) ]),
+                post_install: Some(PostInstall::None),
+                ..Module::default()
+            }
+        );
+    }
+
+    #[test]
+    fn serialize_mod_with_post_install_wait() {
+        use crate::manifest::{ Module, Component };
+        let module = Module {
+            name: "DlcMerger".to_string(),
+            components: Components::List(vec! [ Component::Simple(1) ]),
+            post_install: Some(PostInstall::WaitSeconds { wait_seconds: 10 }),
+            ..Module::default()
+        };
+        println!("{}", serde_yaml::to_string(&module).unwrap());
+    }
+
+    #[test]
+    fn deserialize_mod_with_post_install_wait() {
+        use crate::manifest::{ Module, Component };
+
+        let yaml = r#"
+        name: DlcMerger
+        components:
+            - 1
+        post_install:
+            wait_seconds: 10
+        "#;
+        let module: Module = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(
+            module,
+            Module {
+                name: "DlcMerger".to_string(),
+                components: Components::List(vec! [ Component::Simple(1) ]),
+                post_install: Some(PostInstall::WaitSeconds { wait_seconds: 10 }),
                 ..Module::default()
             }
         );

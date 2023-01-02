@@ -6,6 +6,7 @@ mod args;
 mod bufread_raw;
 mod cache;
 mod canon_path;
+mod components;
 mod download;
 mod fs_ops;
 mod get_module;
@@ -16,8 +17,10 @@ mod log_parser;
 #[macro_use]
 mod lowercase;
 mod manifest;
-mod components;
+#[macro_use]
+mod named_unit_variant;
 mod patch_source;
+mod post_install;
 mod progname;
 mod sub;
 mod run_result;
@@ -37,7 +40,6 @@ use canon_path::CanonPath;
 use clap::Clap;
 use download::Downloader;
 use env_logger::{Env, Target};
-use fs_ops::Fs;
 use get_module::ModuleDownload;
 use log::{debug, error, info};
 use log_parser::{find_components_without_warning, parse_weidu_log};
@@ -49,6 +51,8 @@ use sub::list_components::sub_list_components;
 use sub::search::search;
 use tp2::find_tp2;
 use weidu::{run_weidu, write_run_result};
+
+use crate::post_install::{PostInstall, PostInstallOutcome, PostInstallExec};
 
 
 
@@ -187,9 +191,15 @@ fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &Cach
         }
         if finished {
             bail!("Program interrupted on error on non-whitelisted warning");
-        } else if module.interrupt {
-            info!("{}",  Blue.bold().paint(format!("Interruption requested for module {} - {}", real_index + 1, module.describe())));
-            return Ok(());
+        } else {
+            match module.post_install.exec(&module.name) {
+                PostInstallOutcome::Stop => {
+                    info!("{}",  Blue.bold().paint(format!("Interruption requested for module {} - {}",
+                                                            real_index + 1, module.describe())));
+                    return Ok(());
+                }
+                PostInstallOutcome::Continue => {}
+            }
         }
     }
     Ok(())
