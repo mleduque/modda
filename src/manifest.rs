@@ -11,6 +11,7 @@ use crate::download::Downloader;
 use crate::patch_source::PatchDesc;
 use crate::components::{Components};
 use crate::post_install::PostInstall;
+use crate::replace::ReplaceSpec;
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct VersionDetect {
@@ -134,6 +135,9 @@ pub struct Location {
     pub layout: Layout,
     #[serde(default)]
     pub patch: Option<PatchDesc>,
+    /// regex-based search and replace, runs after patch.
+    #[serde(default)]
+    pub replace: Option<Vec<ReplaceSpec>>,
     #[serde(default)]
     pub precopy: Option<PrecopyCommand>,
 }
@@ -507,8 +511,7 @@ mod test_deserialize {
                         },
                     }),
                     layout: Layout::single_dir(3),
-                    patch: None,
-                    precopy: None,
+                    ..Location::default()
                 }),
                 ..Module::default()
             }
@@ -548,8 +551,7 @@ mod test_deserialize {
                         },
                     }),
                     layout: Layout::multi_dir(vec!["a".to_string(),"b".to_string()]),
-                    patch: None,
-                    precopy: None,
+                    ..Location::default()
                 }),
                 ..Module::default()
             }
@@ -670,7 +672,7 @@ mod test_deserialize {
                         },
                         encoding: PatchEncoding::UTF8,
                     }),
-                    precopy: None,
+                    ..Location::default()
                 }),
                 ..Module::default()
             }
@@ -701,7 +703,7 @@ mod test_deserialize {
                         },
                         encoding: PatchEncoding::UTF8,
                     }),
-                    precopy: None,
+                    ..Location::default()
                 }),
                 ..Module::default()
             }

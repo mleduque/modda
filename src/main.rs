@@ -22,6 +22,7 @@ mod named_unit_variant;
 mod patch_source;
 mod post_install;
 mod progname;
+mod replace;
 mod sub;
 mod run_result;
 mod settings;

@@ -10,6 +10,7 @@ use crate::cache::Cache;
 use crate::canon_path::CanonPath;
 use crate::download::Downloader;
 use crate::manifest::{Location, Module, Source, Global};
+use crate::replace::ReplaceSpec;
 use crate::settings::Config;
 
 pub struct ModuleDownload<'a> {
@@ -51,6 +52,7 @@ impl <'a> ModuleDownload<'a> {
                 let dest = CanonPath::new(dest)?;
                 self.extractor.extract_files(&archive, &module.name, location)?;
                 patch_module(&dest, &module.name, &location.patch, &self.opts).await?;
+                replace_module(&dest, &module.name, &location.replace)?;
                 Ok(())
             }
         }
@@ -92,6 +94,17 @@ impl <'a> ModuleDownload<'a> {
             Some(path) => PathBuf::from(path),
         }
     }
+}
+
+
+fn replace_module(game_dir: &CanonPath, module_name: &str, replace: &Option<Vec<ReplaceSpec>>) -> Result<()> {
+    if let Some(specs) = replace {
+        for spec in specs {
+            let mod_path = game_dir.join(&module_name);
+            spec.exec(&mod_path)?;
+        }
+    }
+    Ok(())
 }
 
 #[cfg(test)]

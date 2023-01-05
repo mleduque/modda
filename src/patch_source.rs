@@ -21,8 +21,8 @@ pub enum PatchSource {
     /// Downloaded from an HTTP resource
     Http { http: String },
     /// From a local file ; path is relative and searched in the order:
-    /// - in the same location asthemanifest file (or subdirs)
-    /// - in thegame dir (or subdirs)
+    /// - in the same location as the manifest file (or subdirs)
+    /// - in the game dir (or subdirs)
     Relative { relative: String },
     // /// From any file on the filesystem
     //Path { path: String },
