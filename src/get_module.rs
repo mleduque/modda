@@ -9,7 +9,9 @@ use crate::args::Install;
 use crate::cache::Cache;
 use crate::canon_path::CanonPath;
 use crate::download::Downloader;
-use crate::manifest::{Location, Module, Source, Global};
+use crate::location::Location;
+use crate::manifest::Global;
+use crate::module::WeiduMod;
 use crate::replace::ReplaceSpec;
 use crate::settings::Config;
 
@@ -39,7 +41,7 @@ impl <'a> ModuleDownload<'a> {
     // at some point, I'd like to have a pool of downloads with installations done
     // concurrently as soon as modules are there
     #[tokio::main]
-    pub async fn get_module(&self, module: &Module) -> Result<()> {
+    pub async fn get_module(&self, module: &WeiduMod) -> Result<()> {
         match &module.location {
             None => bail!("No location provided to retrieve missing module {}", module.name),
             Some(location) => {
@@ -58,8 +60,8 @@ impl <'a> ModuleDownload<'a> {
         }
     }
 
-    pub async fn retrieve_location(&self, loc: &Location, module: &Module) -> Result<PathBuf> {
-        use Source::*;
+    pub async fn retrieve_location(&self, loc: &Location, module: &WeiduMod) -> Result<PathBuf> {
+        use crate::location::Source::*;
 
         let dest = self.cache.join(loc.source.save_subdir()?);
         let save_name = loc.source.save_name(&module.name)?;
@@ -113,10 +115,12 @@ mod test_retrieve_location {
 
     use std::{path::PathBuf};
 
-    use crate::manifest::{Location, Github, Module, Global};
+    use crate::location::{Location, Github};
+    use crate::manifest::Global;
     use crate::download::{Downloader};
     use crate::args::{Install};
     use crate::get_module::ModuleDownload;
+    use crate::module::WeiduMod;
     use crate:: settings::Config;
     use crate::canon_path::CanonPath;
     use crate::cache::Cache;
@@ -129,20 +133,22 @@ mod test_retrieve_location {
      */
     #[tokio::test]
     async fn retrieve_github_location() {
+        use crate::location::GithubDescriptor::Release;
+
         let location = Location {
-            source: crate::manifest::Source::Github(Github {
+            source: crate::location::Source::Github(Github {
                 github_user: "username".to_string(),
                 repository: "repository".to_string(),
-                descriptor: crate::manifest::GithubDescriptor::Release {
+                descriptor: Release {
                     release: Some("V1".to_string()),
                     asset: "repository_v1.zip".to_string(),
                 },
             }),
             ..Location::default()
         };
-        let module = Module {
+        let module = WeiduMod {
             location: Some(location.clone()),
-            ..Module::default()
+            ..WeiduMod::default()
         };
         let global = Global::default();
         let opts = Install::default();
@@ -183,16 +189,18 @@ mod test_retrieve_location {
     * */
     #[tokio::test]
     async fn retrieve_http_location() {
+        use crate::location::Source::Http;
+
         let location = Location {
-            source: crate::manifest::Source::Http {
+            source: Http {
                 http: "http://example.com/some_mod.zip".to_string(),
                 rename: None
             },
             ..Location::default()
         };
-        let module = Module {
+        let module = WeiduMod {
             location: Some(location.clone()),
-            ..Module::default()
+            ..WeiduMod::default()
         };
         let global = Global::default();
         let opts = Install::default();
@@ -233,13 +241,14 @@ mod test_retrieve_location {
      */
     #[tokio::test]
     async fn retrieve_absolute_location() {
+        use crate::location::Source::Absolute;
         let location = Location {
-            source: crate::manifest::Source::Absolute { path: "/some/path/file.zip".to_string() },
+            source: Absolute { path: "/some/path/file.zip".to_string() },
             ..Location::default()
         };
-        let module = Module {
+        let module = WeiduMod {
             location: Some(location.clone()),
-            ..Module::default()
+            ..WeiduMod::default()
         };
         let global = Global {
             local_mods: Some("my_mods".to_string()),
@@ -272,13 +281,14 @@ mod test_retrieve_location {
      */
     #[tokio::test]
     async fn retrieve_local_location() {
+        use crate::location::Source::Local;
         let location = Location {
-            source: crate::manifest::Source::Local { local: "some/path/file.zip".to_string() },
+            source: Local { local: "some/path/file.zip".to_string() },
             ..Location::default()
         };
-        let module = Module {
+        let module = WeiduMod {
             location: Some(location.clone()),
-            ..Module::default()
+            ..WeiduMod::default()
         };
         let global = Global {
             local_mods: Some("my_mods".to_string()),

@@ -13,10 +13,12 @@ mod get_module;
 mod language;
 mod archive_layout;
 mod list_components;
+mod location;
 mod log_parser;
 #[macro_use]
 mod lowercase;
 mod manifest;
+mod module;
 #[macro_use]
 mod named_unit_variant;
 mod patch_source;
@@ -44,7 +46,8 @@ use download::Downloader;
 use env_logger::{Env, Target};
 use get_module::ModuleDownload;
 use log::{debug, info};
-use manifest::{ Module, ModuleContent, read_manifest };
+use manifest::Manifest;
+use module::{WeiduMod, ModuleContent};
 use settings::{read_settings, Config};
 use sub::list_components::sub_list_components;
 use sub::search::search;
@@ -99,7 +102,7 @@ fn ensure_chitin_key() -> Result<()> {
 
 fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &Cache) -> Result<()> {
 
-    let manifest = read_manifest(&opts.manifest_path)?;
+    let manifest = Manifest::read_path(&opts.manifest_path)?;
     check_weidu_conf_lang(&manifest.global.game_language)?;
     let modules = &manifest.modules;
     let mod_count = modules.len();
@@ -226,19 +229,19 @@ fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &Cach
     Ok(())
 }
 
-fn ignore_warnings(module: &Module, index: usize, total: usize) -> (String, Colour) {
+fn ignore_warnings(module: &WeiduMod, index: usize, total: usize) -> (String, Colour) {
     let message = format!("module {modname} (index={idx}/{total}) finished with warning (status=3), ignoring as requested",
                                 modname =  module.name, idx = index, total = total);
     (message, Yellow)
 }
 
-fn fail_warnings(module: &Module, index: usize, total: usize) -> (String, Colour) {
+fn fail_warnings(module: &WeiduMod, index: usize, total: usize) -> (String, Colour) {
     let message = format!("module {modname} (index={idx}/{total}) finished with warning (status=3), stopping as requested",
                                 modname =  module.name, idx = index, total = total);
     (message, Red)
 }
 
-fn configure_module(module: &Module) -> Result<()> {
+fn configure_module(module: &WeiduMod) -> Result<()> {
     if let Some(conf) = &module.add_conf {
         let conf_path = Path::new(&module.name).join(&conf.file_name);
         let file = match std::fs::OpenOptions::new()

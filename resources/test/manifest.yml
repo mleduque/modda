@@ -1,7 +1,7 @@
 version: "1"
 global:
   lang_dir: "fr_FR"
-  lang_preferences: 
+  lang_preferences:
     - french
 
 

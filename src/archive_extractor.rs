@@ -9,8 +9,10 @@ use globwalk::GlobWalkerBuilder;
 use log::{debug, info};
 use anyhow::{bail, Result};
 
-use crate::manifest::PrecopyCommand;
-use crate::{canon_path::CanonPath, manifest::Location, settings::Config};
+use crate::canon_path::CanonPath;
+use crate::location::Location;
+use crate::module::PrecopyCommand;
+use crate::settings::Config;
 
 
 #[cfg_attr(test, faux::create)]

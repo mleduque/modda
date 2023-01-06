@@ -1,7 +1,8 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::manifest::Source;
+use crate::location::Source;
+
 
 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Default)]

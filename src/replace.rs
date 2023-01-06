@@ -1,9 +1,8 @@
 
-use std::{path::PathBuf, fs::{File, OpenOptions, rename, copy, FileType}, io::{Read, Seek, Write}};
+use std::{path::PathBuf, fs::{File, OpenOptions, rename, copy}, io::{Read, Write}};
 
 use anyhow::{Result, bail};
-use chardetng::EncodingDetector;
-use encoding_rs::UTF_8;
+
 use globwalk::{GlobWalker, GlobWalkerBuilder};
 use log::{info, error, warn};
 use regex::Regex;

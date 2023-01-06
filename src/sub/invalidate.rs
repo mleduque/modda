@@ -1,11 +1,15 @@
-use crate::{args::Invalidate, manifest::{Location, Module, read_manifest}, cache::Cache};
+use crate::args::Invalidate;
+use crate::cache::Cache;
+use crate::location::Location;
+use crate::manifest::Manifest;
+use crate::module::WeiduMod;
 
 use anyhow::{bail, Result};
 
 use crate::lowercase::LwcString;
 
 pub fn invalidate(params: &Invalidate, cache: &Cache) -> Result<()> {
-    let manifest = match read_manifest(&params.manifest_path) {
+    let manifest = match Manifest::read_path(&params.manifest_path) {
         Ok(manifest) => manifest,
         Err(error) => bail!("Could not read manifest\n -> {:?}", error),
     };
@@ -24,7 +28,7 @@ pub fn invalidate(params: &Invalidate, cache: &Cache) -> Result<()> {
     bail!("Module {} not found or location not provided", modname);
 }
 
-fn clear_mod_archive(location: &Location, module :&Module, cache: &Cache) -> Result<()> {
+fn clear_mod_archive(location: &Location, module :&WeiduMod, cache: &Cache) -> Result<()> {
 
     let dest = cache.join(location.source.save_subdir()?);
     let save_name = location.source.save_name(&module.name)?;

@@ -2,12 +2,11 @@
 
 use anyhow::{Result};
 
-use crate::args::Search;
+use crate::{args::Search, manifest::Manifest};
 
-use crate::manifest::{read_manifest};
 
 pub fn search(opts: &Search) -> Result<()> {
-    let manifest = read_manifest(&opts.manifest_path)?;
+    let manifest = Manifest::read_path(&opts.manifest_path)?;
     let mut found = false;
     for (idx, module) in manifest.modules.iter().enumerate() {
         if module.name.to_lowercase() == opts.name.to_lowercase() {

@@ -104,8 +104,9 @@ where
 #[cfg(test)]
 mod test_deserialize {
 
+    use crate::module::WeiduMod;
+
     use super::{Component, Components};
-    use crate::manifest:: Module;
 
     #[test]
     fn deserialize_ask() {
@@ -113,10 +114,10 @@ mod test_deserialize {
         name: mod_name
         components: ask
         "#;
-        let module: Module = serde_yaml::from_str(yaml).unwrap();
+        let module: WeiduMod = serde_yaml::from_str(yaml).unwrap();
         assert_eq!(
             module,
-            Module {
+            WeiduMod {
                 name: "mod_name".to_string(),
                 components: Components::Ask,
                 ..Default::default()
@@ -130,10 +131,10 @@ mod test_deserialize {
         name: mod_name
         components: none
         "#;
-        let module: Module = serde_yaml::from_str(yaml).unwrap();
+        let module: WeiduMod = serde_yaml::from_str(yaml).unwrap();
         assert_eq!(
             module,
-            Module {
+            WeiduMod {
                 name: "mod_name".to_string(),
                 components: Components::None,
                 ..Default::default()
@@ -149,10 +150,10 @@ mod test_deserialize {
             - 1
         "#;
 
-        let module: Module = serde_yaml::from_str(yaml).unwrap();
+        let module: WeiduMod = serde_yaml::from_str(yaml).unwrap();
         assert_eq!(
             module,
-            Module {
+            WeiduMod {
                 name: "mod_name".to_string(),
                 components: Components::List(vec![Component::Simple(1)]),
                 ..Default::default()

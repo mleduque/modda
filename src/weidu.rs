@@ -4,16 +4,17 @@ use std::io::{BufRead, BufWriter, Write};
 use std::process::{Command, Stdio};
 
 use anyhow::{bail, Result};
-use log::{error};
+use log::error;
 
 use crate::args::Install;
 use crate::language::{LanguageOption, LanguageSelection, select_language};
-use crate::manifest::{Module, Global};
+use crate::manifest::Global;
 use crate::components::{Component, Components};
+use crate::module::WeiduMod;
 use crate::run_result::RunResult;
 
 
-pub fn run_weidu(tp2: &str, module: &Module, opts: &Install, global: &Global) -> Result<RunResult> {
+pub fn run_weidu(tp2: &str, module: &WeiduMod, opts: &Install, global: &Global) -> Result<RunResult> {
     use LanguageSelection::*;
     let language_id = match select_language(tp2, module, &global.lang_preferences) {
         Ok(Selected(id)) => id,
@@ -30,7 +31,7 @@ pub fn run_weidu(tp2: &str, module: &Module, opts: &Install, global: &Global) ->
     }
 }
 
-fn handle_no_language_selected(available: Vec<LanguageOption>, module: &Module,
+fn handle_no_language_selected(available: Vec<LanguageOption>, module: &WeiduMod,
                                 global: &Global) -> Result<u32> {
     // may one day prompt user for selection and (if ok) same in the yaml file
     bail!(
@@ -40,7 +41,7 @@ fn handle_no_language_selected(available: Vec<LanguageOption>, module: &Module,
         module.name, &global.lang_preferences, available);
 }
 
-fn run_weidu_auto(tp2: &str, module: &Module, components: &[Component], opts: &Install,
+fn run_weidu_auto(tp2: &str, module: &WeiduMod, components: &[Component], opts: &Install,
                     game_lang: &str, language_id: u32) -> Result<RunResult> {
 
     let mut command = Command::new("weidu");
@@ -71,7 +72,7 @@ fn run_weidu_auto(tp2: &str, module: &Module, components: &[Component], opts: &I
     }
 }
 
-fn run_weidu_interactive(tp2: &str, module: &Module, opts: &Install,
+fn run_weidu_interactive(tp2: &str, module: &WeiduMod, opts: &Install,
                             game_lang: &str) -> Result<RunResult> {
     let mut command = Command::new("weidu");
     let args = vec![
@@ -95,7 +96,7 @@ fn run_weidu_interactive(tp2: &str, module: &Module, opts: &Install,
     }
 }
 
-pub fn write_run_result(result: &RunResult, file: &mut BufWriter<std::fs::File>, module: &Module) -> Result<()> {
+pub fn write_run_result(result: &RunResult, file: &mut BufWriter<std::fs::File>, module: &WeiduMod) -> Result<()> {
     match result {
         RunResult::Real(result) => {
             let _ = file.write(&result.stdout)?;

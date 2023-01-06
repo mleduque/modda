@@ -6,7 +6,8 @@ use anyhow::Result;
 use lazy_static::lazy_static;
 use regex::Regex;
 
-use crate::manifest::Module;
+use crate::module::WeiduMod;
+
 
 lazy_static! {
     static ref LANGUAGE_REGEX: Regex = Regex::new("^([0-9]*):(.*)$").unwrap();
@@ -25,7 +26,7 @@ pub enum LanguageSelection {
     NoMatch(Vec<LanguageOption>),
 }
 
-pub fn select_language(tp2:&str, module: &Module, lang_preferences: &Option<Vec<String>>) -> Result<LanguageSelection> {
+pub fn select_language(tp2:&str, module: &WeiduMod, lang_preferences: &Option<Vec<String>>) -> Result<LanguageSelection> {
     use LanguageSelection::*;
 
     if let Some(idx) = module.language {
@@ -76,7 +77,7 @@ pub fn select_language(tp2:&str, module: &Module, lang_preferences: &Option<Vec<
     }
 }
 
-fn list_available_languages(tp2: &str, module: &Module) -> Result<Vec<LanguageOption>> {
+fn list_available_languages(tp2: &str, module: &WeiduMod) -> Result<Vec<LanguageOption>> {
     let mut command = Command::new("weidu");
     let args = vec![
         "--no-exit-pause".to_owned(),
