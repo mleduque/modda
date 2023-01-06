@@ -46,15 +46,15 @@ use env_logger::{Env, Target};
 use get_module::ModuleDownload;
 use log::{debug, info};
 use manifest::Manifest;
-use module::{WeiduMod, ModuleContent};
+use module::{WeiduMod, ModuleContent, Module};
 use settings::{read_settings, Config};
 use sub::list_components::sub_list_components;
 use sub::search::search;
 use tp2::find_tp2;
 use weidu::{run_weidu, write_run_result};
 
-use crate::post_install::{PostInstallOutcome, PostInstallExec};
-use crate::log_parser::check_installed_components;
+use crate::post_install::PostInstallOutcome;
+use crate::log_parser::check_install_complete;
 
 
 
@@ -130,7 +130,6 @@ fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &Cach
         Ok(cwd) => cwd,
         Err(error) => bail!("Failed to obtain current directory\n -> {:?}", error),
     };
-    let mut finished = false;
     let downloader = Downloader::new();
     let module_downloader = ModuleDownload::new(&settings, &manifest.global, &opts,
                                                                         &downloader, &game_dir, cache);
@@ -138,77 +137,16 @@ fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &Cach
         let real_index = index + opts.from_index.unwrap_or(0);
         info!("module {} - {}", real_index, module.describe());
         debug!("{:?}", module);
-        let tp2 = match find_tp2(&current, &module.name) {
-            Ok(tp2) => tp2,
-            Err(_) => {
-                module_downloader.get_module(&module)?;
-                find_tp2(&current, &module.name)?
-            }
-        };
-        let tp2_string = match tp2.into_os_string().into_string() {
-            Ok(string) => string,
-            Err(os_string) => {
-                let os_str = os_string.as_os_str();
-                let msg = os_str.to_string_lossy().to_owned();
-                return Err(anyhow!(format!("{}", msg)));
-            }
-        };
-        configure_module(module)?;
-        let single_result = run_weidu(&tp2_string, module, &opts, &manifest.global)?;
-        if let Some(ref mut file) = log {
-            let _ = write_run_result(&single_result, file, module);
+        let finished = match module {
+            Module::Mod { weidu_mod } => process_weidu_mod(weidu_mod, &module_downloader, &current, opts, &manifest,
+                                                                        &mut log, real_index, mod_count)?,
+            Module::File { .. } => bail!("not implemented"),
         }
-        match single_result.status_code() {
-            Some(0) => {
-                let message = format!("module {name} (index={index}/{len}) finished with success.",
-                                name = module.name, index = real_index + 1, len = mod_count);
-                if let Some(ref mut file) = log {
-                    let _ = writeln!(file, "{}", message);
-                }
-                info!("{}", Green.bold().paint(message));
-            }
-            Some(3) => {
-                let (message, color) = if opts.no_stop_on_warn || module.ignore_warnings {
-                    ignore_warnings(module, real_index, mod_count)
-                } else {
-                    finished = true;
-                    fail_warnings(module, real_index, mod_count)
-                };
-                if let Some(ref mut file) = log {
-                    let _ = writeln!(file, "{}", message);
-                }
-                info!("{}", color.bold().paint(message));
-            }
-            Some(value) => {
-                finished = true;
-                let message = format!("module {name} (index={idx}/{len}) finished with error (status={status}), stopping.",
-                                        name = module.name, idx = real_index + 1, len = mod_count, status = value);
-                if let Some(ref mut file) = log {
-                    let _ = writeln!(file, "{}", message);
-                }
-                info!("{}", Red.bold().paint(message));
-            }
-            None => if !single_result.success() {
-                let message = format!("module {name} (index={idx}/{len}) finished with success.",
-                                        name = module.name, idx = real_index + 1, len = mod_count);
-                if let Some(ref mut file) = log {
-                    let _ = writeln!(file, "{}", message);
-                }
-                info!("{}", Green.bold().paint(message));
-            } else {
-                finished = true;
-                let message = format!("module {name} (index={idx}/{len}) finished with error, stopping.",
-                                    name = module.name, idx = real_index + 1, len = mod_count);
-                if let Some(ref mut file) = log {
-                    let _ = writeln!(file, "{}", message);
-                }
-                info!("{}", Red.bold().paint(message));
-            }
-        }
+        ;
         if finished {
             bail!("Program interrupted on error on non-whitelisted warning");
         } else {
-            match module.post_install.exec(&module.name) {
+            match module.exec_post_install(&module.get_name()) {
                 PostInstallOutcome::Stop => {
                     info!("{}",  Blue.bold().paint(format!("Interruption requested for module {} - {}",
                                                             real_index + 1, module.describe())));
@@ -218,14 +156,85 @@ fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &Cach
             }
         }
         // Now check we actually installed all requested components
-        match check_installed_components(&module) {
-            Err(err) => return Err(err),
-            Ok(missing) => if !missing.is_empty() {
-                bail!("All requested components for mod {} could not be installed.\nMissing: {:?}", module.name, missing);
-            }
-        }
+        check_install_complete(&module)?
     }
     Ok(())
+}
+
+fn process_weidu_mod(weidu_mod: &WeiduMod, module_downloader: &ModuleDownload, current: &PathBuf, opts: &Install, manifest: &Manifest,
+                    log: &mut Option<BufWriter<std::fs::File>>, real_index: usize, mod_count: usize) -> Result<bool, anyhow::Error> {
+    let tp2 = match find_tp2(current, &weidu_mod.name) {
+        Ok(tp2) => tp2,
+        Err(_) => {
+            // if tp2 not found, mod must be fetched from location (if any)
+            module_downloader.get_module(&weidu_mod)?;
+            find_tp2(current, &weidu_mod.name)?
+        }
+    };
+    let tp2_string = match tp2.into_os_string().into_string() {
+        Ok(string) => string,
+        Err(os_string) => {
+            let os_str = os_string.as_os_str();
+            let msg = os_str.to_string_lossy().to_owned();
+            return Err(anyhow!(format!("{}", msg)));
+        }
+    };
+    configure_module(weidu_mod)?;
+    let single_result = run_weidu(&tp2_string, weidu_mod, &opts, &manifest.global)?;
+    if let Some(ref mut file) = *log {
+        let _ = write_run_result(&single_result, file, weidu_mod);
+    }
+    match single_result.status_code() {
+        Some(0) => {
+            let message = format!("module {name} (index={index}/{len}) finished with success.",
+                            name = weidu_mod.name, index = real_index + 1, len = mod_count);
+            if let Some(ref mut file) = *log {
+                let _ = writeln!(file, "{}", message);
+            }
+            info!("{}", Green.bold().paint(message));
+            Ok(false)
+        }
+        Some(3) => {
+            let mut finished = false;
+            let (message, color) = if opts.no_stop_on_warn || weidu_mod.ignore_warnings {
+                ignore_warnings(weidu_mod, real_index, mod_count)
+            } else {
+                finished = true;
+                fail_warnings(weidu_mod, real_index, mod_count)
+            };
+            if let Some(ref mut file) = *log {
+                let _ = writeln!(file, "{}", message);
+            }
+            info!("{}", color.bold().paint(message));
+            Ok(finished)
+        }
+        Some(value) => {
+            let message = format!("module {name} (index={idx}/{len}) finished with error (status={status}), stopping.",
+                                    name = weidu_mod.name, idx = real_index + 1, len = mod_count, status = value);
+            if let Some(ref mut file) = *log {
+                let _ = writeln!(file, "{}", message);
+            }
+            info!("{}", Red.bold().paint(message));
+            Ok(true)
+        }
+        None => if !single_result.success() {
+            let message = format!("module {name} (index={idx}/{len}) finished with success.",
+                                    name = weidu_mod.name, idx = real_index + 1, len = mod_count);
+            if let Some(ref mut file) = *log {
+                let _ = writeln!(file, "{}", message);
+            }
+            info!("{}", Green.bold().paint(message));
+            Ok(false)
+        } else {
+            let message = format!("module {name} (index={idx}/{len}) finished with error, stopping.",
+                                name = weidu_mod.name, idx = real_index + 1, len = mod_count);
+            if let Some(ref mut file) = *log {
+                let _ = writeln!(file, "{}", message);
+            }
+            info!("{}", Red.bold().paint(message));
+            Ok(true)
+        }
+    }
 }
 
 fn ignore_warnings(module: &WeiduMod, index: usize, total: usize) -> (String, Colour) {

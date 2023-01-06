@@ -13,7 +13,7 @@ use regex::{Regex, RegexBuilder};
 use crate::bufread_raw::BufReadRaw;
 use crate::components::Components;
 use crate::lowercase::LwcString;
-use crate::module::WeiduMod;
+use crate::module::{WeiduMod, Module};
 
 // doesn't support --quick-log generated logs ATM
 // just need to actually look at then and set field as optional and update regexes
@@ -82,6 +82,17 @@ pub fn parse_weidu_log(mod_filter: Option<&LwcString>) -> Result<Vec<LogRow>> {
     result
 }
 
+pub fn check_install_complete(module: &Module) -> Result<()> {
+    match module {
+        Module::Mod { weidu_mod } => match check_installed_components(weidu_mod) {
+            Err(err) => return Err(err),
+            Ok(missing) => if !missing.is_empty() {
+                bail!("All requested components for mod {} could not be installed.\nMissing: {:?}", module.get_name(), missing);
+            } else { Ok(()) }
+        }
+        Module::File { file } => Ok(()),
+    }
+}
 pub fn check_installed_components(module: &WeiduMod) -> Result<Vec<u32>> {
     match &module.components {
         Components::None => Ok(vec![]),

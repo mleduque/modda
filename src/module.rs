@@ -7,13 +7,43 @@ use serde::{Deserialize, Serialize};
 use crate::components::Components;
 use crate::location::Location;
 use crate::lowercase::LwcString;
-use crate::post_install::PostInstall;
+use crate::post_install::{PostInstall, PostInstallExec, PostInstallOutcome};
 
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum Module {
     Mod { weidu_mod: WeiduMod },
     File { file: FileModule },
+}
+
+impl Module {
+    pub fn get_name(&self) -> &LwcString {
+        match self {
+            Module::Mod { weidu_mod } => &weidu_mod.name,
+            Module::File { file } => &file.name,
+        }
+    }
+
+    pub fn get_description(&self) -> &Option<String> {
+        match self {
+            Module::Mod { weidu_mod } => &weidu_mod.description,
+            Module::File { file } => &file.description,
+        }
+    }
+
+    pub fn describe(&self) -> Cow<String> {
+        match &self.get_description() {
+            None => Cow::Borrowed(self.get_name().as_ref()),
+            Some(desc) => Cow::Owned(format!("{} ({})", self.get_name().as_ref(), desc)),
+        }
+    }
+
+    pub fn exec_post_install(&self, mod_name: &LwcString) -> PostInstallOutcome {
+        match self {
+            Module::Mod { weidu_mod } => weidu_mod.post_install.exec(mod_name),
+            Module::File { file } => file.post_install.exec(mod_name),
+        }
+    }
 }
 
 /** Definition of a mod. */
@@ -67,15 +97,6 @@ pub struct WeiduMod {
     pub installation: Option<InstallationComments>,
 }
 
-impl WeiduMod {
-    pub fn describe(&self) -> Cow<String> {
-        match &self.description {
-            None => Cow::Borrowed(self.name.as_ref()),
-            Some(desc) => Cow::Owned(format!("{} ({})", self.name.as_ref(), desc)),
-        }
-    }
-}
-
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
 pub struct ModuleConf {
     pub file_name:String,
@@ -99,7 +120,7 @@ pub struct PrecopyCommand {
     pub subdir: Option<String>,
 }
 
-#[derive(Deserialize, Serialize, Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Default)]
 pub struct InstallationComments {
     pub general: Option<String>,
     pub before: Option<String>,
@@ -108,7 +129,10 @@ pub struct InstallationComments {
 
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
 pub struct FileModule {
-    origin: FileModuleOrigin,
+    pub name: LwcString,
+    pub description: Option<String>,
+    pub origin: FileModuleOrigin,
+    pub post_install: Option<PostInstall>,
 }
 
 #[derive(Deserialize, Serialize, Debug, PartialEq)]

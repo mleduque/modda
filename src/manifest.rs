@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use anyhow::{bail, Result};
 
-use crate::module::{WeiduMod};
+use crate::module::Module;
 
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -20,7 +20,7 @@ pub struct Manifest {
     pub global: Global,
     #[serde(default)]
     /** List of mods */
-    pub modules: Vec<WeiduMod>,
+    pub modules: Vec<Module>,
 }
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Default)]
@@ -73,7 +73,7 @@ mod test_deserialize {
     use crate::components::{Component, Components};
     use crate::location::Location;
     use crate::lowercase::lwc;
-    use crate::module::WeiduMod;
+    use crate::module::{WeiduMod, Module};
 
     use super::Manifest;
 
@@ -111,15 +111,17 @@ mod test_deserialize {
                     local_mods: Some("mods".to_string()),
                 },
                 modules : vec![
-                    WeiduMod {
-                        name: lwc!("aaa"),
-                        components: Components::List(vec! [ Component::Simple(1) ]),
-                        location: Some(Location {
-                            source: crate::location::Source::Http { http: "http://example.com/my-mod".to_string(), rename: None },
+                    Module::Mod {
+                        weidu_mod: WeiduMod {
+                            name: lwc!("aaa"),
+                            components: Components::List(vec! [ Component::Simple(1) ]),
+                            location: Some(Location {
+                                source: crate::location::Source::Http { http: "http://example.com/my-mod".to_string(), rename: None },
+                                ..Default::default()
+                            }),
                             ..Default::default()
-                        }),
-                        ..Default::default()
-                    }
+                        },
+                    },
                 ],
             }
         )
