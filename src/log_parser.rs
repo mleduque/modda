@@ -29,7 +29,7 @@ lazy_static! {
                                         .case_insensitive(true).build().unwrap();
 }
 
-pub fn parse_weidu_log(mod_filter: Option<LwcString>) -> Result<Vec<LogRow>> {
+pub fn parse_weidu_log(mod_filter: Option<&LwcString>) -> Result<Vec<LogRow>> {
     let weidu_log = match std::fs::File::open("weidu.log") { // TODO: handle case variations
         Err(error) => return Err(
             anyhow!(format!("Could not open weidu.log - {:?}", error)
@@ -55,7 +55,7 @@ pub fn parse_weidu_log(mod_filter: Option<LwcString>) -> Result<Vec<LogRow>> {
             Some(cap) => {
                 let module = cap.get(1).unwrap().as_str().to_owned();
                 if let Some(filter) = &mod_filter {
-                    if filter != &module { // no need to unpack the rest
+                    if *filter != &module { // no need to unpack the rest
                         return None; // return from filter_map
                     }
                 }
@@ -87,7 +87,7 @@ pub fn check_installed_components(module: &WeiduMod) -> Result<Vec<u32>> {
         Components::None => Ok(vec![]),
         Components::Ask => Ok(vec![]),
         Components::List(components) => {
-            let log_rows = match parse_weidu_log(Some(LwcString::new(&module.name))) {
+            let log_rows = match parse_weidu_log(Some(&module.name)) {
                 Ok(log_rows) => log_rows,
                 Err(err) => bail!("Could not check installed components\n -> {:?}", err),
             };

@@ -1,12 +1,12 @@
 use crate::args::Invalidate;
 use crate::cache::Cache;
 use crate::location::Location;
+use crate::lowercase::lwc;
 use crate::manifest::Manifest;
 use crate::module::WeiduMod;
 
 use anyhow::{bail, Result};
 
-use crate::lowercase::LwcString;
 
 pub fn invalidate(params: &Invalidate, cache: &Cache) -> Result<()> {
     let manifest = match Manifest::read_path(&params.manifest_path) {

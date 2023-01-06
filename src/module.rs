@@ -4,7 +4,10 @@ use std::borrow::Cow;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{components::Components, post_install::PostInstall, location::Location};
+use crate::components::Components;
+use crate::location::Location;
+use crate::lowercase::LwcString;
+use crate::post_install::PostInstall;
 
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
 #[serde(untagged)]
@@ -22,7 +25,7 @@ pub struct WeiduMod {
      * This is also the name as used in `weidu.log`.
      * This is case-insensitive.
      */
-    pub name: String,
+    pub name: LwcString,
     /// Unused at the moment
     pub version: Option<String>,
     /// Optional description, used to disambiguate multiple occurrences of the same mod
@@ -67,8 +70,8 @@ pub struct WeiduMod {
 impl WeiduMod {
     pub fn describe(&self) -> Cow<String> {
         match &self.description {
-            None => Cow::Borrowed(&self.name),
-            Some(desc) => Cow::Owned(format!("{} ({})", self.name, desc)),
+            None => Cow::Borrowed(self.name.as_ref()),
+            Some(desc) => Cow::Owned(format!("{} ({})", self.name.as_ref(), desc)),
         }
     }
 }
@@ -115,6 +118,7 @@ pub enum FileModuleOrigin {
 
 #[cfg(test)]
 mod test_deserialize {
+    use crate::lowercase::lwc;
     use crate::module::{WeiduMod, ModuleConf, ModuleContent};
     use crate::components::{Components, Component};
     use crate::post_install::PostInstall;
@@ -141,7 +145,7 @@ mod test_deserialize {
         assert_eq!(
             module,
             WeiduMod {
-                name: "DlcMerger".to_string(),
+                name: lwc!("DlcMerger"),
                 components: Components::List(vec! [ Component::Simple(1) ]),
                 location: Some(Location {
                     source: Source::Github(Github {
@@ -180,7 +184,7 @@ mod test_deserialize {
         assert_eq!(
             module,
             WeiduMod {
-                name: "DlcMerger".to_string(),
+                name: lwc!("DlcMerger"),
                 components: Components::List(vec! [ Component::Simple(1) ]),
                 location: Some(Location {
                     source: Source::Github(Github {
@@ -213,7 +217,7 @@ mod test_deserialize {
         assert_eq!(
             module,
             WeiduMod {
-                name: "DlcMerger".to_string(),
+                name: lwc!("DlcMerger"),
                 components: Components::List(vec! [ Component::Simple(1) ]),
                 add_conf: Some(ModuleConf {
                     file_name: "toto".to_string(),
@@ -240,7 +244,7 @@ mod test_deserialize {
         assert_eq!(
             module,
             WeiduMod {
-                name: "DlcMerger".to_string(),
+                name: lwc!("DlcMerger"),
                 components: Components::List(vec! [ Component::Simple(1) ]),
                 add_conf: Some(ModuleConf {
                     file_name: "toto".to_string(),
@@ -265,7 +269,7 @@ mod test_deserialize {
         assert_eq!(
             module,
             WeiduMod {
-                name: "DlcMerger".to_string(),
+                name: lwc!("DlcMerger"),
                 components: Components::List(vec! [ Component::Simple(1) ]),
                 add_conf: Some(ModuleConf {
                     file_name: "toto".to_string(),
@@ -291,7 +295,7 @@ mod test_deserialize {
         assert_eq!(
             module,
             WeiduMod {
-                name: "DlcMerger".to_string(),
+                name: lwc!("DlcMerger"),
                 components: Components::List(vec! [ Component::Simple(1) ]),
                 location: Some(Location {
                     source: Source::Http {
@@ -320,7 +324,7 @@ mod test_deserialize {
         assert_eq!(
             module,
             WeiduMod {
-                name: "modulename".to_string(),
+                name: lwc!("modulename"),
                 components: Components::List(vec! [ Component::Simple(1) ]),
                 location: Some(Location {
                     source: Source::Http {
@@ -344,7 +348,7 @@ mod test_deserialize {
     #[test]
     fn serialize_mod_with_continue() {
         let module = WeiduMod {
-            name: "DlcMerger".to_string(),
+            name: lwc!("DlcMerger"),
             components: Components::List(vec! [ Component::Simple(1) ]),
             post_install: Some(PostInstall::None),
             ..WeiduMod::default()
@@ -364,7 +368,7 @@ mod test_deserialize {
         assert_eq!(
             module,
             WeiduMod {
-                name: "DlcMerger".to_string(),
+                name: lwc!("DlcMerger"),
                 components: Components::List(vec! [ Component::Simple(1) ]),
                 post_install: Some(PostInstall::Interrupt),
                 ..WeiduMod::default()
@@ -384,7 +388,7 @@ mod test_deserialize {
         assert_eq!(
             module,
             WeiduMod {
-                name: "DlcMerger".to_string(),
+                name: lwc!("DlcMerger"),
                 components: Components::List(vec! [ Component::Simple(1) ]),
                 post_install: Some(PostInstall::None),
                 ..WeiduMod::default()
@@ -395,7 +399,7 @@ mod test_deserialize {
     #[test]
     fn serialize_mod_with_post_install_wait() {
         let module = WeiduMod {
-            name: "DlcMerger".to_string(),
+            name: lwc!("DlcMerger"),
             components: Components::List(vec! [ Component::Simple(1) ]),
             post_install: Some(PostInstall::WaitSeconds { wait_seconds: 10 }),
             ..WeiduMod::default()
@@ -416,7 +420,7 @@ mod test_deserialize {
         assert_eq!(
             module,
             WeiduMod {
-                name: "DlcMerger".to_string(),
+                name: lwc!("DlcMerger"),
                 components: Components::List(vec! [ Component::Simple(1) ]),
                 post_install: Some(PostInstall::WaitSeconds { wait_seconds: 10 }),
                 ..WeiduMod::default()

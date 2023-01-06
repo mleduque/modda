@@ -11,6 +11,7 @@ use anyhow::{bail, Result};
 
 use crate::canon_path::CanonPath;
 use crate::location::Location;
+use crate::lowercase::LwcString;
 use crate::module::PrecopyCommand;
 use crate::settings::Config;
 
@@ -31,14 +32,14 @@ impl <'a> Extractor<'a> {
         }
     }
 
-    pub fn extract_files(&self, archive: &Path, module_name:&str, location: &Location,) -> Result<()> {
+    pub fn extract_files(&self, archive: &Path, module_name: &LwcString, location: &Location,) -> Result<()> {
         debug!("extract_files from archive {:?} for {}", archive, module_name);
         let result = self._extract_files(archive, module_name, location);
         debug!("done extracting files, ended in {}", result.as_ref().map(|_| "success".to_owned()).unwrap_or_else(|_| "failure".to_owned()));
         result
     }
 
-    fn _extract_files(&self, archive: &Path, module_name: &str, location: &Location) -> Result<()> {
+    fn _extract_files(&self, archive: &Path, module_name: &LwcString, location: &Location) -> Result<()> {
         match archive.extension() {
             Some(ext) =>  match ext.to_str() {
                 None => bail!("Couldn't determine archive type for file {:?}", archive),
@@ -68,7 +69,7 @@ impl <'a> Extractor<'a> {
         }
     }
 
-    fn extract_zip(&self, archive: &Path,  module_name: &str, location: &Location) -> Result<()> {
+    fn extract_zip(&self, archive: &Path,  module_name: &LwcString, location: &Location) -> Result<()> {
         let file = match File::open(archive) {
             Ok(file) => file,
             Err(error) => bail!("Could not open archive {:?} - {:?}", archive, error)
@@ -101,7 +102,7 @@ impl <'a> Extractor<'a> {
         Ok(())
     }
 
-    fn extract_rar(&self, archive: &Path, module_name:&str, location: &Location) -> Result<()> {
+    fn extract_rar(&self, archive: &Path, module_name: &LwcString, location: &Location) -> Result<()> {
         let string_path = match archive.as_os_str().to_str() {
             None => bail!("invalid path for archive {:?}", archive),
             Some(value) => value.to_owned(),
@@ -128,7 +129,7 @@ impl <'a> Extractor<'a> {
         Ok(())
     }
 
-    fn extract_tgz(&self, archive: &Path, module_name:&str, location: &Location) -> Result<()> {
+    fn extract_tgz(&self, archive: &Path, module_name: &LwcString, location: &Location) -> Result<()> {
         let tar_gz = File::open(archive)?;
         let tar = flate2::read::GzDecoder::new(tar_gz);
         let mut tar_archive = tar::Archive::new(tar);
@@ -168,7 +169,7 @@ impl <'a> Extractor<'a> {
     }
 
 
-    fn move_from_temp_dir(&self, temp_dir: &Path, module_name: &str, location: &Location) -> Result<()> {
+    fn move_from_temp_dir(&self, temp_dir: &Path, module_name: &LwcString, location: &Location) -> Result<()> {
         let items = match self.files_to_move(temp_dir, module_name, location) {
             Ok(items) => items,
             Err(error) => bail!("Failed to prepare list of files to move\n -> {:?}", error),
@@ -182,7 +183,7 @@ impl <'a> Extractor<'a> {
         Ok(())
     }
 
-    fn files_to_move(&self, base: &Path, module_name: &str, location:&Location) -> Result<HashSet<PathBuf>> {
+    fn files_to_move(&self, base: &Path, module_name: &LwcString, location:&Location) -> Result<HashSet<PathBuf>> {
         let mut items = HashSet::new();
         debug!("move_from_temp_dir temp dir={:?}", base);
 

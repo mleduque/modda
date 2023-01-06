@@ -72,6 +72,7 @@ mod test_deserialize {
 
     use crate::components::{Component, Components};
     use crate::location::Location;
+    use crate::lowercase::lwc;
     use crate::module::WeiduMod;
 
     use super::Manifest;
@@ -111,7 +112,7 @@ mod test_deserialize {
                 },
                 modules : vec![
                     WeiduMod {
-                        name: "aaa".to_string(),
+                        name: lwc!("aaa"),
                         components: Components::List(vec! [ Component::Simple(1) ]),
                         location: Some(Location {
                             source: crate::location::Source::Http { http: "http://example.com/my-mod".to_string(), rename: None },

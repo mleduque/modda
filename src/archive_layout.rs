@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::location::Source;
-
+use crate::lowercase::{LwcString, lwc};
 
 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Default)]
@@ -54,16 +54,16 @@ impl GlobDesc {
 }
 
 impl Layout {
-    pub fn to_glob(&self, module_name: &str, location_source: &Source) -> GlobDesc {
+    pub fn to_glob(&self, module_name: &LwcString, location_source: &Source) -> GlobDesc {
         use LayoutContent::*;
 
         let strip_level = self.strip_level(location_source);
         match &self.layout {
-            SingleDir => GlobDesc::single(module_name, strip_level),
-            SingleDirPlusTp2 { tp2: Some(tp2) } => GlobDesc::from(&vec![module_name, &tp2], strip_level),
-            SingleDirPlusTp2 { tp2: None } => GlobDesc::from(&vec![
-                module_name,
-                &format!("setup-{}.tp2",module_name)
+            SingleDir => GlobDesc::single(module_name.as_ref(), strip_level),
+            SingleDirPlusTp2 { tp2: Some(tp2) } => GlobDesc::from(&[module_name.as_ref(), &tp2], strip_level),
+            SingleDirPlusTp2 { tp2: None } => GlobDesc::from(&[
+                module_name.as_ref(),
+                &format!("setup-{}.tp2", module_name)
                 ], strip_level),
             MultipleDirs { dirs } => GlobDesc::with(&dirs, strip_level),
         }
@@ -138,70 +138,71 @@ impl Layout {
 
 #[test]
 fn test_to_glob() {
+
     let http_source = Source::http_source();
 
-    assert_eq!(Layout::default().to_glob("toto", &http_source), GlobDesc::single("toto", 0));
-    assert_eq!(Layout::single_dir(0).to_glob("toto", &http_source), GlobDesc::single("toto", 0));
-    assert_eq!(Layout::single_dir(1).to_glob("toto", &http_source), GlobDesc::single("toto", 1));
-    assert_eq!(Layout::single_dir(2).to_glob("toto", &http_source), GlobDesc::single("toto", 2));
-    assert_eq!(Layout::single_dir(3).to_glob("toto", &http_source), GlobDesc::single("toto", 3));
+    assert_eq!(Layout::default().to_glob(&lwc!("toto"), &http_source), GlobDesc::single("toto", 0));
+    assert_eq!(Layout::single_dir(0).to_glob(&lwc!("toto"), &http_source), GlobDesc::single("toto", 0));
+    assert_eq!(Layout::single_dir(1).to_glob(&lwc!("toto"), &http_source), GlobDesc::single("toto", 1));
+    assert_eq!(Layout::single_dir(2).to_glob(&lwc!("toto"), &http_source), GlobDesc::single("toto", 2));
+    assert_eq!(Layout::single_dir(3).to_glob(&lwc!("toto"), &http_source), GlobDesc::single("toto", 3));
 
     let gh_release_source = Source::gh_release_source();
 
-    assert_eq!(Layout::default().to_glob("toto", &gh_release_source), GlobDesc::single("toto", 0));
-    assert_eq!(Layout::single_dir(0).to_glob("toto", &gh_release_source), GlobDesc::single("toto", 0));
-    assert_eq!(Layout::single_dir(1).to_glob("toto", &gh_release_source), GlobDesc::single("toto", 1));
-    assert_eq!(Layout::single_dir(2).to_glob("toto", &gh_release_source), GlobDesc::single("toto", 2));
-    assert_eq!(Layout::single_dir(3).to_glob("toto", &gh_release_source), GlobDesc::single("toto", 3));
+    assert_eq!(Layout::default().to_glob(&lwc!("toto"), &gh_release_source), GlobDesc::single("toto", 0));
+    assert_eq!(Layout::single_dir(0).to_glob(&lwc!("toto"), &gh_release_source), GlobDesc::single("toto", 0));
+    assert_eq!(Layout::single_dir(1).to_glob(&lwc!("toto"), &gh_release_source), GlobDesc::single("toto", 1));
+    assert_eq!(Layout::single_dir(2).to_glob(&lwc!("toto"), &gh_release_source), GlobDesc::single("toto", 2));
+    assert_eq!(Layout::single_dir(3).to_glob(&lwc!("toto"), &gh_release_source), GlobDesc::single("toto", 3));
 
     let gh_branch_source = Source::gh_branch_source();
 
-    assert_eq!(Layout::default().to_glob("toto", &gh_branch_source), GlobDesc::single("toto", 1));
-    assert_eq!(Layout::single_dir(0).to_glob("toto", &gh_branch_source), GlobDesc::single("toto", 0));
-    assert_eq!(Layout::single_dir(1).to_glob("toto", &gh_branch_source), GlobDesc::single("toto", 1));
-    assert_eq!(Layout::single_dir(2).to_glob("toto", &gh_branch_source), GlobDesc::single("toto", 2));
-    assert_eq!(Layout::single_dir(3).to_glob("toto", &gh_branch_source), GlobDesc::single("toto", 3));
+    assert_eq!(Layout::default().to_glob(&lwc!("toto"), &gh_branch_source), GlobDesc::single("toto", 1));
+    assert_eq!(Layout::single_dir(0).to_glob(&lwc!("toto"), &gh_branch_source), GlobDesc::single("toto", 0));
+    assert_eq!(Layout::single_dir(1).to_glob(&lwc!("toto"), &gh_branch_source), GlobDesc::single("toto", 1));
+    assert_eq!(Layout::single_dir(2).to_glob(&lwc!("toto"), &gh_branch_source), GlobDesc::single("toto", 2));
+    assert_eq!(Layout::single_dir(3).to_glob(&lwc!("toto"), &gh_branch_source), GlobDesc::single("toto", 3));
 
-    assert_eq!(Layout::with_tp2("a".to_owned()).to_glob("toto",&http_source),
+    assert_eq!(Layout::with_tp2("a".to_owned()).to_glob(&lwc!("toto"),&http_source),
                                 GlobDesc::from(&["toto", "a"], 0));
-    assert_eq!(Layout::with_tp2_and_strip("a".to_owned(), 0).to_glob("toto",&http_source),
+    assert_eq!(Layout::with_tp2_and_strip("a".to_owned(), 0).to_glob(&lwc!("toto"),&http_source),
                                 GlobDesc::from(&["toto", "a"], 0));
-    assert_eq!(Layout::with_tp2_and_strip("a".to_owned(), 1).to_glob("toto",&http_source),
+    assert_eq!(Layout::with_tp2_and_strip("a".to_owned(), 1).to_glob(&lwc!("toto"),&http_source),
                                 GlobDesc::from(&["toto", "a"], 1));
-    assert_eq!(Layout::with_tp2_and_strip("a".to_owned(), 2).to_glob("toto",&http_source),
+    assert_eq!(Layout::with_tp2_and_strip("a".to_owned(), 2).to_glob(&lwc!("toto"),&http_source),
                                 GlobDesc::from(&["toto", "a"], 2));
-    assert_eq!(Layout::with_tp2_and_strip("a".to_owned(), 3).to_glob("toto",&http_source),
+    assert_eq!(Layout::with_tp2_and_strip("a".to_owned(), 3).to_glob(&lwc!("toto"),&http_source),
                                 GlobDesc::from(&["toto", "a"], 3));
 
 
     assert_eq!(
-        Layout::with_tp2_default().to_glob("toto",&http_source),
+        Layout::with_tp2_default().to_glob(&lwc!("toto"),&http_source),
         GlobDesc::from(&["toto", "setup-toto.tp2"], 0)
     );
     assert_eq!(
-        Layout::with_tp2_default_and_strip(1).to_glob("toto",&http_source),
+        Layout::with_tp2_default_and_strip(1).to_glob(&lwc!("toto"),&http_source),
         GlobDesc::from(&["toto", "setup-toto.tp2"], 1)
     );
 
     let dirs = vec!["a".to_owned(), "b".to_owned()];
     assert_eq!(
-        Layout::multi_dir(dirs.clone()).to_glob("toto",&http_source),
+        Layout::multi_dir(dirs.clone()).to_glob(&lwc!("toto"),&http_source),
         GlobDesc::from(&["a", "b"], 0)
     );
     assert_eq!(
-        Layout::multi_dir_and_strip(dirs.clone(), 0).to_glob("toto",&http_source),
+        Layout::multi_dir_and_strip(dirs.clone(), 0).to_glob(&lwc!("toto"),&http_source),
         GlobDesc::from(&["a", "b"], 0)
     );
     assert_eq!(
-        Layout::multi_dir_and_strip(dirs.clone(), 1).to_glob("toto",&http_source),
+        Layout::multi_dir_and_strip(dirs.clone(), 1).to_glob(&lwc!("toto"),&http_source),
         GlobDesc::from(&["a", "b"], 1)
     );
     assert_eq!(
-        Layout::multi_dir_and_strip(dirs.clone(), 2).to_glob("toto",&http_source),
+        Layout::multi_dir_and_strip(dirs.clone(), 2).to_glob(&lwc!("toto"),&http_source),
         GlobDesc::from(&["a", "b"], 2)
     );
     assert_eq!(
-        Layout::multi_dir_and_strip(dirs.clone(), 3).to_glob("toto",&http_source),
+        Layout::multi_dir_and_strip(dirs.clone(), 3).to_glob(&lwc!("toto"),&http_source),
         GlobDesc::from(&["a", "b"], 3)
     );
 }

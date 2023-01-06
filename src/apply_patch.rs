@@ -8,9 +8,10 @@ use patch::{Patch, Line};
 
 use crate::args::{Install};
 use crate::canon_path::CanonPath;
+use crate::lowercase::LwcString;
 use crate::patch_source::{PatchDesc, PatchEncoding, PatchSource};
 
-pub async fn patch_module(game_dir: &CanonPath, module_name: &str, patch_loc: &Option<PatchDesc>, opts: &Install) -> Result<()> {
+pub async fn patch_module(game_dir: &CanonPath, module_name: &LwcString, patch_loc: &Option<PatchDesc>, opts: &Install) -> Result<()> {
     match patch_loc {
         None => Ok(()),
         Some(patch) => {
@@ -32,7 +33,7 @@ pub async fn patch_module(game_dir: &CanonPath, module_name: &str, patch_loc: &O
     }
 }
 
-fn patch_module_with_content(game_dir: &CanonPath, module_name: &str, patch: &str, encoding: PatchEncoding) -> Result<()> {
+fn patch_module_with_content(game_dir: &CanonPath, module_name: &LwcString, patch: &str, encoding: PatchEncoding) -> Result<()> {
     let diff = match Patch::from_multiple(&patch) {
         Ok(diff) => diff,
         Err(error) => bail!("Couldn't parse patch for module {}\n -> {:?}", module_name, error),
@@ -205,6 +206,7 @@ mod apply_patch_tests {
     use patch::Patch;
 
     use crate::apply_patch::apply_patch;
+    use crate::lowercase::lwc;
 
     const SIMPLEST_PATCH: &str = indoc!(r#"
         --- modulename.tp2
@@ -387,7 +389,7 @@ mod apply_patch_tests {
         let origin = Path::new(env!("CARGO_MANIFEST_DIR")).join("resources/test/patch/modulename.tp2");
         std::fs::copy(&origin, &game_dir.join("modulename.tp2")).unwrap();
 
-        super::patch_module_with_content(&game_dir, "modulename", SIMPLEST_PATCH,
+        super::patch_module_with_content(&game_dir, &lwc!("modulename"), SIMPLEST_PATCH,
                                     crate::patch_source::PatchEncoding::UTF8).unwrap();
 
         // file modulename.tp2.old must exist and contain OLD content

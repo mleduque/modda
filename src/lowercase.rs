@@ -1,8 +1,12 @@
 
 use std::fmt::{Display, Formatter, Result};
 
+use serde::{Serialize, Deserialize};
+
 /// A string that is guaranteed to be lowercase
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[serde(into = "String")]
+#[serde(from = "String")]
 pub struct LwcString(String);
 
 impl LwcString {
@@ -16,8 +20,8 @@ impl LwcString {
     }
 }
 
-impl AsRef<str> for LwcString {
-    fn as_ref(&self) -> &str {
+impl AsRef<String> for LwcString {
+    fn as_ref(&self) -> &String {
         &self.0
     }
 }
@@ -57,14 +61,25 @@ impl std::ops::Add<&str> for LwcString {
         Self(self.0 + &other.to_lowercase())
     }
 }
+impl Into<String> for LwcString {
+    fn into(self) -> String {
+        self.0
+    }
+}
+impl From<String> for LwcString {
+    fn from(input: String) -> Self {
+        LwcString::new(&input)
+    }
+}
 
 macro_rules! lwc {
     () => { LwcString::from("") };
     ($e: expr) => {{
         let base: &str = $e;
-        LwcString::from(base)
+        crate::lowercase::LwcString::from(base)
     }};
 }
+pub(crate) use lwc;
 
 pub trait ContainsStr {
     fn contains_str(&self, value: &str) -> bool;
@@ -76,5 +91,31 @@ impl ContainsStr for Vec<LwcString> {
     }
     fn find_str(&self, value: &str) -> Option<usize> {
         self.iter().enumerate().find(|(_, item)| item == &&value).map(|(idx, _)| idx)
+    }
+}
+
+
+
+#[cfg(test)]
+mod lowercase_string_tests {
+    use super::LwcString;
+
+    #[test]
+    fn deserialize() {
+        let result: LwcString = serde_yaml::from_str("AaBb123").unwrap();
+        assert_eq!(
+            result,
+            lwc!("aabb123")
+        )
+    }
+
+    #[test]
+    fn serialize() {
+        let input = lwc!("aabb123");
+        let result = serde_yaml::to_string(&input).unwrap();
+        assert_eq!(
+            result,
+            "aabb123\n"
+        )
     }
 }

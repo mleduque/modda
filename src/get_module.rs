@@ -10,6 +10,7 @@ use crate::cache::Cache;
 use crate::canon_path::CanonPath;
 use crate::download::Downloader;
 use crate::location::Location;
+use crate::lowercase::LwcString;
 use crate::manifest::Global;
 use crate::module::WeiduMod;
 use crate::replace::ReplaceSpec;
@@ -99,10 +100,10 @@ impl <'a> ModuleDownload<'a> {
 }
 
 
-fn replace_module(game_dir: &CanonPath, module_name: &str, replace: &Option<Vec<ReplaceSpec>>) -> Result<()> {
+fn replace_module(game_dir: &CanonPath, module_name: &LwcString, replace: &Option<Vec<ReplaceSpec>>) -> Result<()> {
     if let Some(specs) = replace {
         for spec in specs {
-            let mod_path = game_dir.join(&module_name);
+            let mod_path = game_dir.join(module_name.as_ref());
             spec.exec(&mod_path)?;
         }
     }

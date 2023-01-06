@@ -4,6 +4,7 @@ use std::{path::PathBuf, borrow::Cow};
 use anyhow::{bail, Result};
 use serde::{Deserialize, Serialize};
 
+use crate::lowercase::LwcString;
 use crate::{archive_layout::Layout, patch_source::PatchDesc, replace::ReplaceSpec, download::Downloader, module::PrecopyCommand};
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Default, Clone)]
@@ -63,7 +64,7 @@ impl Source {
         }
     }
 
-    pub fn save_name(&self, module_name:&str) -> Result<PathBuf> {
+    pub fn save_name(&self, module_name: &LwcString) -> Result<PathBuf> {
         use Source::*;
         match self {
             Http { ref http, ref rename } => {
@@ -91,10 +92,10 @@ impl Source {
                 GithubDescriptor::Release { asset , ..} =>
                                                     Ok(PathBuf::from(asset.to_owned())),
                 GithubDescriptor::Commit { commit } =>
-                                                    Ok(PathBuf::from(format!("{}-{}.zip",module_name, commit))),
+                                                    Ok(PathBuf::from(format!("{}-{}.zip", module_name, commit))),
                 GithubDescriptor::Branch { branch } =>
-                                                    Ok(PathBuf::from(format!("{}-{}.zip",module_name, branch))),
-                GithubDescriptor::Tag { tag } => Ok(PathBuf::from(format!("{}-{}.zip",module_name, tag))),
+                                                    Ok(PathBuf::from(format!("{}-{}.zip", module_name, branch))),
+                GithubDescriptor::Tag { tag } => Ok(PathBuf::from(format!("{}-{}.zip", module_name, tag))),
             }
         }
     }

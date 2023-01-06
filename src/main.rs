@@ -15,7 +15,6 @@ mod archive_layout;
 mod list_components;
 mod location;
 mod log_parser;
-#[macro_use]
 mod lowercase;
 mod manifest;
 mod module;
@@ -243,7 +242,7 @@ fn fail_warnings(module: &WeiduMod, index: usize, total: usize) -> (String, Colo
 
 fn configure_module(module: &WeiduMod) -> Result<()> {
     if let Some(conf) = &module.add_conf {
-        let conf_path = Path::new(&module.name).join(&conf.file_name);
+        let conf_path = Path::new(module.name.as_ref()).join(&conf.file_name);
         let file = match std::fs::OpenOptions::new()
                         .create(true).write(true).truncate(true)
                         .open(&conf_path) {

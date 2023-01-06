@@ -104,6 +104,7 @@ where
 #[cfg(test)]
 mod test_deserialize {
 
+    use crate::lowercase::lwc;
     use crate::module::WeiduMod;
 
     use super::{Component, Components};
@@ -118,7 +119,7 @@ mod test_deserialize {
         assert_eq!(
             module,
             WeiduMod {
-                name: "mod_name".to_string(),
+                name: lwc!("mod_name"),
                 components: Components::Ask,
                 ..Default::default()
             }
@@ -135,7 +136,7 @@ mod test_deserialize {
         assert_eq!(
             module,
             WeiduMod {
-                name: "mod_name".to_string(),
+                name: lwc!("mod_name"),
                 components: Components::None,
                 ..Default::default()
             }
@@ -154,7 +155,7 @@ mod test_deserialize {
         assert_eq!(
             module,
             WeiduMod {
-                name: "mod_name".to_string(),
+                name: lwc!("mod_name"),
                 components: Components::List(vec![Component::Simple(1)]),
                 ..Default::default()
             }

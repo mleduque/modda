@@ -1,9 +1,10 @@
 use std::time::Duration;
 
 use ansi_term::Colour::Green;
-use anyhow::bail;
 use log::info;
 use serde::{Deserialize, Serialize};
+
+use crate::lowercase::LwcString;
 
 
 mod post_install_variants {
@@ -28,11 +29,11 @@ impl Default for PostInstall {
 }
 
 pub trait PostInstallExec {
-    fn exec(&self, mod_name:&str) -> PostInstallOutcome;
+    fn exec(&self, mod_name: &LwcString) -> PostInstallOutcome;
 }
 
 impl PostInstallExec for PostInstall {
-    fn exec(&self, mod_name:&str) -> PostInstallOutcome {
+    fn exec(&self, mod_name: &LwcString) -> PostInstallOutcome {
         match self {
             PostInstall::None => PostInstallOutcome::Continue,
             PostInstall::Interrupt => PostInstallOutcome::Stop,
@@ -49,7 +50,7 @@ impl PostInstallExec for PostInstall {
 }
 
 impl PostInstallExec for Option<PostInstall> {
-    fn exec(&self, mod_name:&str) -> PostInstallOutcome {
+    fn exec(&self, mod_name: &LwcString) -> PostInstallOutcome {
         match self {
             None => PostInstallOutcome::Continue,
             Some(post_install) => post_install.exec(mod_name),
