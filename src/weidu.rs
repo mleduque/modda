@@ -7,8 +7,8 @@ use anyhow::{bail, Result};
 use log::error;
 
 use crate::args::Install;
+use crate::global::Global;
 use crate::language::{LanguageOption, LanguageSelection, select_language};
-use crate::manifest::Global;
 use crate::components::{Component, Components};
 use crate::module::WeiduMod;
 use crate::run_result::RunResult;
@@ -31,8 +31,7 @@ pub fn run_weidu(tp2: &str, module: &WeiduMod, opts: &Install, global: &Global) 
     }
 }
 
-fn handle_no_language_selected(available: Vec<LanguageOption>, module: &WeiduMod,
-                                global: &Global) -> Result<u32> {
+fn handle_no_language_selected(available: Vec<LanguageOption>, module: &WeiduMod, global: &Global) -> Result<u32> {
     // may one day prompt user for selection and (if ok) same in the yaml file
     bail!(
         r#"No matching language found for module {} with language preferences {:?}

@@ -1,5 +1,5 @@
 
-mod pathext;
+mod archive_layout;
 mod archive_extractor;
 mod apply_patch;
 mod args;
@@ -9,8 +9,8 @@ mod canon_path;
 mod components;
 mod download;
 mod get_module;
+mod global;
 mod language;
-mod archive_layout;
 mod list_components;
 mod location;
 mod log_parser;
@@ -20,6 +20,7 @@ mod module;
 #[macro_use]
 mod named_unit_variant;
 mod patch_source;
+mod pathext;
 mod post_install;
 mod progname;
 mod replace;

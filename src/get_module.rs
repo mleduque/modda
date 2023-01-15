@@ -9,9 +9,9 @@ use crate::args::Install;
 use crate::cache::Cache;
 use crate::canon_path::CanonPath;
 use crate::download::Downloader;
+use crate::global::Global;
 use crate::location::Location;
 use crate::lowercase::LwcString;
-use crate::manifest::Global;
 use crate::module::WeiduMod;
 use crate::replace::ReplaceSpec;
 use crate::settings::Config;
@@ -116,8 +116,8 @@ mod test_retrieve_location {
 
     use std::{path::PathBuf};
 
+    use crate::global::Global;
     use crate::location::{Location, Github};
-    use crate::manifest::Global;
     use crate::download::{Downloader};
     use crate::args::{Install};
     use crate::get_module::ModuleDownload;
