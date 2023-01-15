@@ -70,6 +70,7 @@ mod test_deserialize {
                     lang_preferences: Some(vec!["french".to_string()]),
                     patch_path: None,
                     local_mods: None,
+                    local_files: None,
                 },
                 modules : vec![],
             }
@@ -89,6 +90,7 @@ mod test_deserialize {
                     lang_preferences: Some(vec!["french".to_string()]),
                     patch_path: None,
                     local_mods: Some("mods".to_string()),
+                    local_files: None,
                 },
                 modules : vec![
                     Module::Mod {

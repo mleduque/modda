@@ -21,4 +21,6 @@ pub struct Global {
     /// Path from manifest root (yml file location directory) where "local" mods can be found.
     #[serde(default)]
     pub local_mods: Option<String>,
+    #[serde(default)]
+    pub local_files: Option<String>,
 }
