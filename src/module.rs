@@ -133,7 +133,7 @@ pub struct InstallationComments {
 pub struct FileModule {
     pub file_mod: LwcString,
     pub description: Option<String>,
-    pub origin: FileModuleOrigin,
+    pub from: FileModuleOrigin,
     pub post_install: Option<PostInstall>,
 }
 
@@ -488,7 +488,7 @@ mod test_deserialize {
     fn serialize_filemodule() {
         let module = FileModule {
             file_mod: lwc!("DlcMerger"),
-            origin: FileModuleOrigin::Local { local: "dir/file.bcs".to_string() },
+            from: FileModuleOrigin::Local { local: "dir/file.bcs".to_string() },
             description: None,
             post_install: None,
         };
@@ -499,7 +499,7 @@ mod test_deserialize {
     fn deserialize_file_mod() {
         let yaml = r#"
         file_mod: configure_whatever
-        origin:
+        from:
             local: path/file.idk
         "#;
         let module: FileModule = serde_yaml::from_str(yaml).unwrap();
@@ -508,7 +508,7 @@ mod test_deserialize {
             FileModule {
                 file_mod: lwc!("configure_whatever"),
                 description: None,
-                origin: FileModuleOrigin::Local { local: "path/file.idk".to_string() },
+                from: FileModuleOrigin::Local { local: "path/file.idk".to_string() },
                 post_install: None,
             }
         );
@@ -520,7 +520,7 @@ mod test_deserialize {
             - name: DlcMerger
               components: ask
             - file_mod: configure_whatever
-              origin:
+              from:
                 local: path/file.idk
         "#;
         let modules: Vec<Module> = serde_yaml::from_str(yaml).unwrap();
@@ -535,7 +535,7 @@ mod test_deserialize {
                 Module::File { file: FileModule {
                     file_mod: lwc!("configure_whatever"),
                     description: None,
-                    origin: FileModuleOrigin::Local { local: "path/file.idk".to_string() },
+                    from: FileModuleOrigin::Local { local: "path/file.idk".to_string() },
                     post_install: None,
                 }},
             ],
@@ -548,7 +548,7 @@ mod test_deserialize {
             name: DlcMerger
             components: ask
             file_mod: some_name
-            origin:
+            from:
               local: path/file.idk
         "#;
         let error: Result<Module, serde_yaml::Error> = serde_yaml::from_str(yaml);

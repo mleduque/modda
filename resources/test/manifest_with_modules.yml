@@ -10,5 +10,5 @@ modules:
     location:
       http: http://example.com/my-mod
   - file_mod: bbb
-    origin:
+    from:
       local: files/my-file.itm
