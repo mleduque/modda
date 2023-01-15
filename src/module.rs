@@ -158,7 +158,6 @@ impl <'de> Deserialize<'de> for Module {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
             where D: serde::Deserializer<'de> {
         let helper = ModuleHelper::deserialize(deserializer)?;
-        println!("helper={:?}\n\n", helper);
         match helper {
             ModuleHelper { weidu: None, file: None, unknown } => Err(serde::de::Error::custom(
                 format!("Incorrect module definition found ; could not recognize weidu mod or file module definition in {:?}", unknown)
