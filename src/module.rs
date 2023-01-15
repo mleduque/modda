@@ -134,6 +134,8 @@ pub struct FileModule {
     pub file_mod: LwcString,
     pub description: Option<String>,
     pub from: FileModuleOrigin,
+    /// Path from game directory (location of chitin.key)
+    pub to: String,
     pub post_install: Option<PostInstall>,
 }
 
@@ -141,9 +143,8 @@ pub struct FileModule {
 #[serde(untagged)]
 pub enum FileModuleOrigin {
     Local { local: String },
+    Absolute { absolute: String },
 }
-
-
 
 #[derive(Deserialize, Debug)]
 struct ModuleHelper {
@@ -489,6 +490,7 @@ mod test_deserialize {
         let module = FileModule {
             file_mod: lwc!("DlcMerger"),
             from: FileModuleOrigin::Local { local: "dir/file.bcs".to_string() },
+            to: "override/".to_string(),
             description: None,
             post_install: None,
         };
@@ -501,6 +503,7 @@ mod test_deserialize {
         file_mod: configure_whatever
         from:
             local: path/file.idk
+        to: override/
         "#;
         let module: FileModule = serde_yaml::from_str(yaml).unwrap();
         assert_eq!(
@@ -509,6 +512,7 @@ mod test_deserialize {
                 file_mod: lwc!("configure_whatever"),
                 description: None,
                 from: FileModuleOrigin::Local { local: "path/file.idk".to_string() },
+                to: "override/".to_string(),
                 post_install: None,
             }
         );
@@ -522,6 +526,7 @@ mod test_deserialize {
             - file_mod: configure_whatever
               from:
                 local: path/file.idk
+              to: override/
         "#;
         let modules: Vec<Module> = serde_yaml::from_str(yaml).unwrap();
         assert_eq!(
@@ -536,6 +541,7 @@ mod test_deserialize {
                     file_mod: lwc!("configure_whatever"),
                     description: None,
                     from: FileModuleOrigin::Local { local: "path/file.idk".to_string() },
+                    to: "override/".to_string(),
                     post_install: None,
                 }},
             ],
@@ -550,6 +556,7 @@ mod test_deserialize {
             file_mod: some_name
             from:
               local: path/file.idk
+            to: override
         "#;
         let error: Result<Module, serde_yaml::Error> = serde_yaml::from_str(yaml);
         let err = error.unwrap_err();

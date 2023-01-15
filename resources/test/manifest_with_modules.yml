@@ -12,3 +12,4 @@ modules:
   - file_mod: bbb
     from:
       local: files/my-file.itm
+    to: override

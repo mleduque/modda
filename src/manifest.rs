@@ -126,6 +126,7 @@ mod test_deserialize {
                         file: FileModule {
                             file_mod: lwc!("bbb"),
                             from: FileModuleOrigin::Local { local:"files/my-file.itm".to_string() },
+                            to: "override".to_string(),
                             description: None,
                             post_install: None,
                         }
