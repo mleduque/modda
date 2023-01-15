@@ -8,7 +8,6 @@ mod cache;
 mod canon_path;
 mod components;
 mod download;
-mod fs_ops;
 mod get_module;
 mod language;
 mod archive_layout;
