@@ -1,10 +1,10 @@
 
-use std::fmt::{Display, Formatter, Result};
+use std::fmt::{Display, Formatter, Result, Debug};
 
 use serde::{Serialize, Deserialize};
 
 /// A string that is guaranteed to be lowercase
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Default)]
 #[serde(into = "String")]
 #[serde(from = "String")]
 pub struct LwcString(String);
@@ -69,6 +69,12 @@ impl Into<String> for LwcString {
 impl From<String> for LwcString {
     fn from(input: String) -> Self {
         LwcString::new(&input)
+    }
+}
+
+impl Debug for LwcString {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        f.write_str(&self.0)
     }
 }
 

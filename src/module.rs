@@ -1,15 +1,17 @@
 
 
 use std::borrow::Cow;
+use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
+use serde_yaml::Value;
 
 use crate::components::Components;
 use crate::location::Location;
 use crate::lowercase::LwcString;
 use crate::post_install::{PostInstall, PostInstallExec, PostInstallOutcome};
 
-#[derive(Deserialize, Serialize, Debug, PartialEq)]
+#[derive(Serialize, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum Module {
     Mod { weidu_mod: WeiduMod },
@@ -20,7 +22,7 @@ impl Module {
     pub fn get_name(&self) -> &LwcString {
         match self {
             Module::Mod { weidu_mod } => &weidu_mod.name,
-            Module::File { file } => &file.name,
+            Module::File { file } => &file.file_mod,
         }
     }
 
@@ -72,7 +74,7 @@ pub struct WeiduMod {
     /// Whether warnings returned by weidu (exit code) will interrupt the whole installation.
     ///
     /// (defaults to _not_ ignoring warnings)..
-    /// - If set to true, warning are ignored and the installation proceed with the followinf mods
+    /// - If set to true, warning are ignored and the installation proceed with the following mods
     /// - If set to false (or absent), weidu warnings will stop the installation.
     #[serde(default)]
     pub ignore_warnings: bool,
@@ -129,21 +131,52 @@ pub struct InstallationComments {
 
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
 pub struct FileModule {
-    pub name: LwcString,
+    pub file_mod: LwcString,
     pub description: Option<String>,
     pub origin: FileModuleOrigin,
     pub post_install: Option<PostInstall>,
 }
 
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
+#[serde(untagged)]
 pub enum FileModuleOrigin {
     Local { local: String },
+}
+
+
+
+#[derive(Deserialize, Debug)]
+struct ModuleHelper {
+    #[serde(flatten)]
+    weidu: Option<WeiduMod>,
+    #[serde(flatten)]
+    file: Option<FileModule>,
+    #[serde(flatten)]
+    unknown: HashMap<String, Value>,
+}
+impl <'de> Deserialize<'de> for Module {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where D: serde::Deserializer<'de> {
+        let helper = ModuleHelper::deserialize(deserializer)?;
+        println!("helper={:?}\n\n", helper);
+        match helper {
+            ModuleHelper { weidu: None, file: None, unknown } => Err(serde::de::Error::custom(
+                format!("Incorrect module definition found ; could not recognize weidu mod or file module definition in {:?}", unknown)
+            )),
+            ModuleHelper { weidu: Some(weidu), file: Some(file), unknown } => Err(serde::de::Error::custom(
+                format!("Incorrect module definition found ; could not decide module kind, either {:?} or {:?} with additional data {:?}",
+                            weidu, file, unknown)
+            )),
+            ModuleHelper { file: Some(file), .. } => Ok(Module::File { file }),
+            ModuleHelper { weidu: Some(weidu_mod), .. } => Ok(Module::Mod { weidu_mod }),
+        }
+    }
 }
 
 #[cfg(test)]
 mod test_deserialize {
     use crate::lowercase::lwc;
-    use crate::module::{WeiduMod, ModuleConf, ModuleContent};
+    use crate::module::{WeiduMod, ModuleConf, ModuleContent, FileModule, FileModuleOrigin, Module};
     use crate::components::{Components, Component};
     use crate::post_install::PostInstall;
     use crate::location::{Location, Source, GithubDescriptor, Github};
@@ -450,5 +483,77 @@ mod test_deserialize {
                 ..WeiduMod::default()
             }
         );
+    }
+
+    #[test]
+    fn serialize_filemodule() {
+        let module = FileModule {
+            file_mod: lwc!("DlcMerger"),
+            origin: FileModuleOrigin::Local { local: "dir/file.bcs".to_string() },
+            description: None,
+            post_install: None,
+        };
+        println!("{}", serde_yaml::to_string(&module).unwrap());
+    }
+
+    #[test]
+    fn deserialize_file_mod() {
+        let yaml = r#"
+        file_mod: configure_whatever
+        origin:
+            local: path/file.idk
+        "#;
+        let module: FileModule = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(
+            module,
+            FileModule {
+                file_mod: lwc!("configure_whatever"),
+                description: None,
+                origin: FileModuleOrigin::Local { local: "path/file.idk".to_string() },
+                post_install: None,
+            }
+        );
+    }
+
+    #[test]
+    fn deserialize_modules_with_weidu_mod_and_file_mod() {
+        let yaml = r#"
+            - name: DlcMerger
+              components: ask
+            - file_mod: configure_whatever
+              origin:
+                local: path/file.idk
+        "#;
+        let modules: Vec<Module> = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(
+            modules,
+            vec![
+                Module::Mod { weidu_mod: WeiduMod {
+                    name: lwc!("DlcMerger"),
+                    components: Components::Ask,
+                    ..Default::default()
+                }},
+                Module::File { file: FileModule {
+                    file_mod: lwc!("configure_whatever"),
+                    description: None,
+                    origin: FileModuleOrigin::Local { local: "path/file.idk".to_string() },
+                    post_install: None,
+                }},
+            ],
+        );
+    }
+
+    #[test]
+    fn deserialize_mixed_module() {
+        let yaml = r#"
+            name: DlcMerger
+            components: ask
+            file_mod: some_name
+            origin:
+              local: path/file.idk
+        "#;
+        let error: Result<Module, serde_yaml::Error> = serde_yaml::from_str(yaml);
+        let err = error.unwrap_err();
+        println!("deserialize_mixed_module error is {:?}", err)
     }
 }

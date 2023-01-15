@@ -14,12 +14,12 @@ pub struct VersionDetect {
 
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
 pub struct Manifest {
-    /** Manifest format version */
+    /// Manifest format version
     pub version: String,
-    /** Manifest-wide definitions. */
+    /// Manifest-wide definitions
     pub global: Global,
     #[serde(default)]
-    /** List of mods */
+    /// List of modules
     pub modules: Vec<Module>,
 }
 
@@ -32,10 +32,10 @@ pub struct Global {
     /// List of language _names_ that should be selected if available, in decreasing order of priority
     /// items in the list are used as regexp (case insensitive by default)
     /// - the simplest case is just putting the expected language names
-    ///   ex. [français, french, english]
+    ///   ex. `[français, french, english]`
     /// - items in the list that start with `#rx#`are interpreted as regexes
     ///   syntax here https://docs.rs/regex/1.5.4/regex/#syntax
-    ///   ex. ["#rx#^fran[cç]ais", french, english]
+    ///   ex. `["#rx#^fran[cç]ais", french, english]`
     pub lang_preferences: Option<Vec<String>>,
     #[serde(default)]
     pub patch_path: Option<String>,
@@ -73,7 +73,7 @@ mod test_deserialize {
     use crate::components::{Component, Components};
     use crate::location::Location;
     use crate::lowercase::lwc;
-    use crate::module::{WeiduMod, Module};
+    use crate::module::{WeiduMod, Module, FileModule, FileModuleOrigin};
 
     use super::Manifest;
 
@@ -122,6 +122,14 @@ mod test_deserialize {
                             ..Default::default()
                         },
                     },
+                    Module::File {
+                        file: FileModule {
+                            file_mod: lwc!("bbb"),
+                            origin: FileModuleOrigin::Local { local:"files/my-file.itm".to_string() },
+                            description: None,
+                            post_install: None,
+                        }
+                    }
                 ],
             }
         )

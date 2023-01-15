@@ -22,17 +22,22 @@ pub struct ReplaceSpec {
     pub replace: String,
     /// the replacement string (may use capture group as positional/integer or named capture group)
     pub with: String,
-    pub max_depth: usize,
+    pub max_depth: Option<usize>,
 }
 
 impl ReplaceSpec {
     fn find_matching_files(&self, root: &PathBuf) -> Result<GlobWalker> {
         let walker = GlobWalkerBuilder::from_patterns(root, &self.file_globs)
-        .case_insensitive(true)
-            .max_depth(self.max_depth)
-            .file_type(globwalk::FileType::FILE)
-            .build()?;
-        Ok(walker)
+            .case_insensitive(true)
+            .max_depth(self.max_depth.unwrap_or(0))
+            .file_type(globwalk::FileType::FILE);
+
+        let walker = match self.max_depth {
+            None => walker,
+            Some(depth) => walker.max_depth(depth),
+        };
+
+        Ok(walker.build()?)
     }
 
     fn apply_replace(&self, file_path: &PathBuf, regex: &Regex) -> Result<String> {

@@ -9,3 +9,6 @@ modules:
     components: [1]
     location:
       http: http://example.com/my-mod
+  - file_mod: bbb
+    origin:
+      local: files/my-file.itm

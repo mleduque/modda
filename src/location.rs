@@ -216,6 +216,9 @@ impl Source {
 #[cfg(test)]
 mod test_deserialize {
     use crate::location::{Github, Source, GithubDescriptor};
+    use crate::replace::ReplaceSpec;
+
+    use super::Location;
 
     #[test]
     fn deserialize_source_github_branch() {
@@ -319,4 +322,36 @@ mod test_deserialize {
         );
     }
 
+    #[test]
+    fn deserialize_location_with_replace_property() {
+        let yaml = r#"
+            github_user: "pseudo"
+            repository: my-big-project
+            tag: v1
+            replace:
+                - file_globs: [README.md]
+                  replace: typpo
+                  with: typo
+        "#;
+        let location : Location = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(
+            location,
+            Location {
+                source: Source::Github(Github {
+                    github_user: "pseudo".to_string(),
+                    repository: "my-big-project".to_string(),
+                    descriptor: GithubDescriptor::Tag { tag: "v1".to_string() },
+                }),
+                replace: Some(vec![
+                    ReplaceSpec {
+                        file_globs: vec!["README.md".to_string()],
+                        replace: "typpo".to_string(),
+                        with: "typo".to_string(),
+                        ..Default::default()
+                    }
+                ]),
+                ..Default::default()
+            }
+        )
+    }
 }
