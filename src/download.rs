@@ -31,9 +31,13 @@ impl Downloader {
 
         let partial_name = get_partial_filename(&file_name)?;
 
-        self.download_partial(url, &partial_name, &dest_dir).await?;
+        if let Err(error) = self.download_partial(url, &partial_name, &dest_dir).await {
+            bail!("download_partial failed for {} to {:?}\n  {}", url, partial_name, error);
+        };
 
-        self.rename_partial(&partial_name, &file_name)?;
+        if let Err(error) = self.rename_partial(&partial_name, &file_name) {
+            bail!("rename_partial failed for {:?} to {:?}\n  {}", partial_name, file_name, error);
+        };
 
         Ok(file_name)
     }
@@ -72,8 +76,8 @@ impl Downloader {
     }
 
     pub fn rename_partial(&self, partial_file_name: &PathBuf, final_file_name: &PathBuf) -> Result<()> {
-        if let Err(error) = std::fs::rename(final_file_name, final_file_name.clone()) {
-            bail!("Failed to rename partial file to {:?}\n -> {:?}", final_file_name, error);
+        if let Err(error) = std::fs::rename(partial_file_name, final_file_name.clone()) {
+            bail!("Failed to rename partial file {:?} to {:?}\n -> {:?}", partial_file_name, final_file_name, error);
         } else {
             debug!("renamed partial download file to {:?}", final_file_name);
         }

@@ -8,6 +8,7 @@ mod cache;
 mod canon_path;
 mod components;
 mod download;
+mod file_module_install;
 mod get_module;
 mod global;
 mod language;
@@ -53,6 +54,7 @@ use sub::search::search;
 use tp2::find_tp2;
 use weidu::{run_weidu, write_run_result};
 
+use crate::file_module_install::FileModuleInstaller;
 use crate::post_install::PostInstallOutcome;
 use crate::log_parser::check_install_complete;
 
@@ -133,6 +135,8 @@ fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &Cach
     let downloader = Downloader::new();
     let module_downloader = ModuleDownload::new(&settings, &manifest.global, &opts,
                                                                         &downloader, &game_dir, cache);
+    let file_module_installer = FileModuleInstaller::new(&manifest.global, &opts, &game_dir);
+
     for (index, module) in modules.iter().enumerate() {
         let real_index = index + opts.from_index.unwrap_or(0);
         info!("module {} - {}", real_index, module.describe());
@@ -140,7 +144,7 @@ fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &Cach
         let finished = match module {
             Module::Mod { weidu_mod } => process_weidu_mod(weidu_mod, &module_downloader, &current, opts, &manifest,
                                                                         &mut log, real_index, mod_count)?,
-            Module::File { .. } => bail!("not implemented"),
+            Module::File { file } => file_module_installer.file_module_install(file)?,
         }
         ;
         if finished {
