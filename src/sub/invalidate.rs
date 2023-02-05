@@ -27,6 +27,7 @@ pub fn invalidate(params: &Invalidate, cache: &Cache) -> Result<()> {
                     }
                 }
                 Module::File { .. } => return Ok(()), // don't try with other modules with same name
+                Module::Generated { .. } => return Ok(()), // generated, not downloaded
             }
         }
     }

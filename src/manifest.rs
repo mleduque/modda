@@ -107,10 +107,11 @@ mod test_deserialize {
                     Module::File {
                         file: FileModule {
                             file_mod: lwc!("bbb"),
-                            from: FileModuleOrigin::Local { local:"files/my-file.itm".to_string() },
+                            from: FileModuleOrigin::Local { local:"files/my-file.itm".to_string(), glob: None },
                             to: "override".to_string(),
                             description: None,
                             post_install: None,
+                            allow_overwrite: false,
                         }
                     }
                 ],

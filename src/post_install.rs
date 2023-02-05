@@ -12,7 +12,7 @@ mod post_install_variants {
     named_unit_variant!(none);
 }
 
-#[derive(Deserialize, Serialize, Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum PostInstall {
     #[serde(with = "post_install_variants::none")]

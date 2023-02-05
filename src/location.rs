@@ -58,7 +58,7 @@ impl Source {
                 };
                 Ok(PathBuf::from("http").join(&*host))
             }
-            Absolute { .. } | Local { .. }=> Ok(PathBuf::new()),
+            Absolute { .. } | Local { .. } => Ok(PathBuf::new()),
             Github(self::Github { github_user, repository, .. }) =>
                 Ok(PathBuf::from("github").join(github_user).join(repository)),
         }

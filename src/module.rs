@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
 
-use crate::components::Components;
+use crate::components::{Components, Component};
 use crate::location::Location;
 use crate::lowercase::LwcString;
 use crate::post_install::{PostInstall, PostInstallExec, PostInstallOutcome};
@@ -16,6 +16,7 @@ use crate::post_install::{PostInstall, PostInstallExec, PostInstallOutcome};
 pub enum Module {
     Mod { weidu_mod: WeiduMod },
     File { file: FileModule },
+    Generated { gen: GeneratedMod }
 }
 
 impl Module {
@@ -23,6 +24,7 @@ impl Module {
         match self {
             Module::Mod { weidu_mod } => &weidu_mod.name,
             Module::File { file } => &file.file_mod,
+            Module::Generated { gen } => &gen.gen_mod,
         }
     }
 
@@ -30,6 +32,7 @@ impl Module {
         match self {
             Module::Mod { weidu_mod } => &weidu_mod.description,
             Module::File { file } => &file.description,
+            Module::Generated { gen } => &gen.description,
         }
     }
 
@@ -44,6 +47,7 @@ impl Module {
         match self {
             Module::Mod { weidu_mod } => weidu_mod.post_install.exec(mod_name),
             Module::File { file } => file.post_install.exec(mod_name),
+            Module::Generated { gen } => gen.post_install.exec(mod_name),
         }
     }
 }
@@ -137,13 +141,70 @@ pub struct FileModule {
     /// Path from game directory (location of chitin.key)
     pub to: String,
     pub post_install: Option<PostInstall>,
+    #[serde(default)]
+    pub allow_overwrite: bool,
 }
 
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum FileModuleOrigin {
-    Local { local: String },
-    Absolute { absolute: String },
+    /// A path in manifest `global.local_files`
+    /// Interpreted as glob from this location.
+    Local {
+        local: String,
+        glob: Option<String>,
+    },
+    /// Any path on the computer.
+    Absolute {
+        absolute: String,
+        glob: Option<String>,
+    },
+}
+
+impl FileModuleOrigin {
+    pub fn glob(&self) -> Option<&str> {
+        match self {
+            Self::Local { glob, .. } => glob.as_ref().map(|glob| glob.as_str()),
+            Self::Absolute { glob, .. } => glob.as_ref().map(|glob| glob.as_str()),
+        }
+    }
+}
+
+/// Generates a skeleton weidu mod that just copies a bunch of files into `games/override`
+#[derive(Deserialize, Serialize, Debug, PartialEq)]
+pub struct GeneratedMod {
+    pub gen_mod: LwcString,
+    pub description: Option<String>,
+    /// files that will be
+    pub files: Vec<FileModuleOrigin>,
+    pub post_install: Option<PostInstall>,
+    #[serde(default)]
+    pub component: GenModComponent,
+    #[serde(default)]
+    pub ignore_warnings: bool,
+    #[serde(default)]
+    pub allow_overwrite: bool,
+}
+
+impl GeneratedMod {
+    pub fn as_weidu(&self) -> WeiduMod {
+        WeiduMod {
+            name: self.gen_mod.clone(),
+            description: self.description.clone(),
+            components: Components::List(vec![
+                Component::Simple(self.component.index),
+            ]),
+            ignore_warnings: self.ignore_warnings,
+            post_install: self.post_install.clone(),
+            ..Default::default()
+        }
+    }
+}
+#[derive(Deserialize, Serialize, Debug, PartialEq, Default)]
+pub struct GenModComponent {
+    #[serde(default)]
+    pub index: u32,
+    pub name: String,
 }
 
 #[derive(Deserialize, Debug)]
@@ -153,6 +214,8 @@ struct ModuleHelper {
     #[serde(flatten)]
     file: Option<FileModule>,
     #[serde(flatten)]
+    gen_mod: Option<GeneratedMod>,
+    #[serde(flatten)]
     unknown: HashMap<String, Value>,
 }
 impl <'de> Deserialize<'de> for Module {
@@ -160,15 +223,18 @@ impl <'de> Deserialize<'de> for Module {
             where D: serde::Deserializer<'de> {
         let helper = ModuleHelper::deserialize(deserializer)?;
         match helper {
-            ModuleHelper { weidu: None, file: None, unknown } => Err(serde::de::Error::custom(
+            ModuleHelper { weidu: None, file: None, gen_mod: None, unknown } => Err(serde::de::Error::custom(
                 format!("Incorrect module definition found ; could not recognize weidu mod or file module definition in {:?}", unknown)
             )),
-            ModuleHelper { weidu: Some(weidu), file: Some(file), unknown } => Err(serde::de::Error::custom(
-                format!("Incorrect module definition found ; could not decide module kind, either {:?} or {:?} with additional data {:?}",
-                            weidu, file, unknown)
-            )),
-            ModuleHelper { file: Some(file), .. } => Ok(Module::File { file }),
-            ModuleHelper { weidu: Some(weidu_mod), .. } => Ok(Module::Mod { weidu_mod }),
+            ModuleHelper { file: Some(file), weidu: None, gen_mod:None, .. } => Ok(Module::File { file }),
+            ModuleHelper { weidu: Some(weidu_mod), file: None, gen_mod: None, .. } => Ok(Module::Mod { weidu_mod }),
+            ModuleHelper { gen_mod: Some(gen), file: None, weidu: None, .. } => Ok(Module::Generated { gen }),
+            ModuleHelper { weidu, file, gen_mod, unknown } =>
+                Err(serde::de::Error::custom(
+                    format!("Incorrect module definition found ; could not decide module kind,
+                                weidu={:?} or file={:?} or gen_mod={:?} with additional data {:?}",
+                                weidu, file, gen_mod, unknown)
+                )),
         }
     }
 }
@@ -489,10 +555,11 @@ mod test_deserialize {
     fn serialize_filemodule() {
         let module = FileModule {
             file_mod: lwc!("DlcMerger"),
-            from: FileModuleOrigin::Local { local: "dir/file.bcs".to_string() },
+            from: FileModuleOrigin::Local { local: "dir/file.bcs".to_string(), glob: None },
             to: "override/".to_string(),
             description: None,
             post_install: None,
+            allow_overwrite: false,
         };
         println!("{}", serde_yaml::to_string(&module).unwrap());
     }
@@ -511,9 +578,10 @@ mod test_deserialize {
             FileModule {
                 file_mod: lwc!("configure_whatever"),
                 description: None,
-                from: FileModuleOrigin::Local { local: "path/file.idk".to_string() },
+                from: FileModuleOrigin::Local { local: "path/file.idk".to_string(), glob: None },
                 to: "override/".to_string(),
                 post_install: None,
+                allow_overwrite: false,
             }
         );
     }
@@ -540,9 +608,10 @@ mod test_deserialize {
                 Module::File { file: FileModule {
                     file_mod: lwc!("configure_whatever"),
                     description: None,
-                    from: FileModuleOrigin::Local { local: "path/file.idk".to_string() },
+                    from: FileModuleOrigin::Local { local: "path/file.idk".to_string(), glob: None },
                     to: "override/".to_string(),
                     post_install: None,
+                    allow_overwrite: false,
                 }},
             ],
         );
