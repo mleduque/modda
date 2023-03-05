@@ -1,249 +1,26 @@
 
+pub mod file_mod;
+pub mod file_module_origin;
+pub mod gen_mod;
+pub mod install_comment;
+pub mod module;
+pub mod module_conf;
+pub mod pre_copy_command;
+pub mod weidu_mod;
 
-use std::borrow::Cow;
-use std::collections::HashMap;
-
-use serde::{Deserialize, Serialize};
-use serde_yaml::Value;
-
-use crate::components::{Components, Component};
-use crate::location::Location;
-use crate::lowercase::LwcString;
-use crate::post_install::{PostInstall, PostInstallExec, PostInstallOutcome};
-
-#[derive(Serialize, Debug, PartialEq)]
-#[serde(untagged)]
-pub enum Module {
-    Mod { weidu_mod: WeiduMod },
-    File { file: FileModule },
-    Generated { gen: GeneratedMod }
-}
-
-impl Module {
-    pub fn get_name(&self) -> &LwcString {
-        match self {
-            Module::Mod { weidu_mod } => &weidu_mod.name,
-            Module::File { file } => &file.file_mod,
-            Module::Generated { gen } => &gen.gen_mod,
-        }
-    }
-
-    pub fn get_description(&self) -> &Option<String> {
-        match self {
-            Module::Mod { weidu_mod } => &weidu_mod.description,
-            Module::File { file } => &file.description,
-            Module::Generated { gen } => &gen.description,
-        }
-    }
-
-    pub fn describe(&self) -> Cow<String> {
-        match &self.get_description() {
-            None => Cow::Borrowed(self.get_name().as_ref()),
-            Some(desc) => Cow::Owned(format!("{} ({})", self.get_name().as_ref(), desc)),
-        }
-    }
-
-    pub fn exec_post_install(&self, mod_name: &LwcString) -> PostInstallOutcome {
-        match self {
-            Module::Mod { weidu_mod } => weidu_mod.post_install.exec(mod_name),
-            Module::File { file } => file.post_install.exec(mod_name),
-            Module::Generated { gen } => gen.post_install.exec(mod_name),
-        }
-    }
-}
-
-/** Definition of a mod. */
-#[derive(Deserialize, Serialize, Debug, PartialEq, Default)]
-pub struct WeiduMod {
-    /**
-     * Unique identifier of a mod.
-     * This is the weidu mod name: name of the tp2 file without `setup-` ot the tp2 extension.
-     * This is also the name as used in `weidu.log`.
-     * This is case-insensitive.
-     */
-    pub name: LwcString,
-    /// Unused at the moment
-    pub version: Option<String>,
-    /// Optional description, used to disambiguate multiple occurrences of the same mod
-    pub description: Option<String>,
-    /// Which language index to use (has precedence over manifest-level lang_prefs)
-    pub language: Option<u32>,
-    /// List of components to be auto-installed.
-    /// Can be `ask`, `none`, a list of components or absent/not set/null (which is the same as `ask`)
-    ///   - `ask` (or empty) will use weidu in interactive mode (weidu itself asks how to install components)
-    ///   - `none` will just copy the mod filesin the game dir without installing anything
-    ///   - a list of components will call weidu and provide the list of components on the command line
-    #[serde(deserialize_with = "crate::components::component_deser")]
-    pub components: Components,
-    /// Whether warnings returned by weidu (exit code) will interrupt the whole installation.
-    ///
-    /// (defaults to _not_ ignoring warnings)..
-    /// - If set to true, warning are ignored and the installation proceed with the following mods
-    /// - If set to false (or absent), weidu warnings will stop the installation.
-    #[serde(default)]
-    pub ignore_warnings: bool,
-    pub add_conf: Option<ModuleConf>,
-    /// Where we can obtain the module.
-    ///
-    /// If absent, it is assumed to be in the game install.
-    /// In that case, it checks a `<mod_name.tp2>`,`setup-mod_name>.tp2` in the game dir and in
-    /// `<nod_name>` sub-directory. If it is not found, the installation aborts.
-    pub location: Option<Location>,
-    /// Decides what will be done after the mod installation (in case of success).
-    /// - `interrupt` will stop the installation and exist the program
-    /// - `wait_seconds: xxx will wait xxx second before continuing to the next mod
-    /// - `none` (the default) immediately starts the next mod installation.
-    #[serde(default)]
-    pub post_install: Option<PostInstall>,
-
-    // Below: unused, sort of inert metadata
-    pub comment: Option<String>,
-    pub original_thread: Option<String>,
-    pub original_dl: Option<String>,
-    pub installation: Option<InstallationComments>,
-}
-
-#[derive(Deserialize, Serialize, Debug, PartialEq)]
-pub struct ModuleConf {
-    pub file_name:String,
-    #[serde(flatten)]
-    pub content: ModuleContent,
-}
-
-#[derive(Deserialize, Serialize, Debug, PartialEq)]
-#[serde(untagged)]
-pub enum ModuleContent {
-    /// The actual content of thefile is provided
-    Content { content: String },
-    /// Interrupt and ask the user to input the content (value of `prompt` is shown)
-    Prompt { prompt: String },
-}
-
-#[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
-pub struct PrecopyCommand {
-    pub command: String,
-    pub args: Option<Vec<String>>,
-    pub subdir: Option<String>,
-}
-
-#[derive(Deserialize, Serialize, Debug, PartialEq, Default)]
-pub struct InstallationComments {
-    pub general: Option<String>,
-    pub before: Option<String>,
-    pub after: Option<String>,
-}
-
-#[derive(Deserialize, Serialize, Debug, PartialEq)]
-pub struct FileModule {
-    pub file_mod: LwcString,
-    pub description: Option<String>,
-    pub from: FileModuleOrigin,
-    /// Path from game directory (location of chitin.key)
-    pub to: String,
-    pub post_install: Option<PostInstall>,
-    #[serde(default)]
-    pub allow_overwrite: bool,
-}
-
-#[derive(Deserialize, Serialize, Debug, PartialEq)]
-#[serde(untagged)]
-pub enum FileModuleOrigin {
-    /// A path in manifest `global.local_files`
-    /// Interpreted as glob from this location.
-    Local {
-        local: String,
-        glob: Option<String>,
-    },
-    /// Any path on the computer.
-    Absolute {
-        absolute: String,
-        glob: Option<String>,
-    },
-}
-
-impl FileModuleOrigin {
-    pub fn glob(&self) -> Option<&str> {
-        match self {
-            Self::Local { glob, .. } => glob.as_ref().map(|glob| glob.as_str()),
-            Self::Absolute { glob, .. } => glob.as_ref().map(|glob| glob.as_str()),
-        }
-    }
-}
-
-/// Generates a skeleton weidu mod that just copies a bunch of files into `games/override`
-#[derive(Deserialize, Serialize, Debug, PartialEq)]
-pub struct GeneratedMod {
-    pub gen_mod: LwcString,
-    pub description: Option<String>,
-    /// files that will be
-    pub files: Vec<FileModuleOrigin>,
-    pub post_install: Option<PostInstall>,
-    #[serde(default)]
-    pub component: GenModComponent,
-    #[serde(default)]
-    pub ignore_warnings: bool,
-    #[serde(default)]
-    pub allow_overwrite: bool,
-}
-
-impl GeneratedMod {
-    pub fn as_weidu(&self) -> WeiduMod {
-        WeiduMod {
-            name: self.gen_mod.clone(),
-            description: self.description.clone(),
-            components: Components::List(vec![
-                Component::Simple(self.component.index),
-            ]),
-            ignore_warnings: self.ignore_warnings,
-            post_install: self.post_install.clone(),
-            ..Default::default()
-        }
-    }
-}
-#[derive(Deserialize, Serialize, Debug, PartialEq, Default)]
-pub struct GenModComponent {
-    #[serde(default)]
-    pub index: u32,
-    pub name: String,
-}
-
-#[derive(Deserialize, Debug)]
-struct ModuleHelper {
-    #[serde(flatten)]
-    weidu: Option<WeiduMod>,
-    #[serde(flatten)]
-    file: Option<FileModule>,
-    #[serde(flatten)]
-    gen_mod: Option<GeneratedMod>,
-    #[serde(flatten)]
-    unknown: HashMap<String, Value>,
-}
-impl <'de> Deserialize<'de> for Module {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-            where D: serde::Deserializer<'de> {
-        let helper = ModuleHelper::deserialize(deserializer)?;
-        match helper {
-            ModuleHelper { weidu: None, file: None, gen_mod: None, unknown } => Err(serde::de::Error::custom(
-                format!("Incorrect module definition found ; could not recognize weidu mod or file module definition in {:?}", unknown)
-            )),
-            ModuleHelper { file: Some(file), weidu: None, gen_mod:None, .. } => Ok(Module::File { file }),
-            ModuleHelper { weidu: Some(weidu_mod), file: None, gen_mod: None, .. } => Ok(Module::Mod { weidu_mod }),
-            ModuleHelper { gen_mod: Some(gen), file: None, weidu: None, .. } => Ok(Module::Generated { gen }),
-            ModuleHelper { weidu, file, gen_mod, unknown } =>
-                Err(serde::de::Error::custom(
-                    format!("Incorrect module definition found ; could not decide module kind,
-                                weidu={:?} or file={:?} or gen_mod={:?} with additional data {:?}",
-                                weidu, file, gen_mod, unknown)
-                )),
-        }
-    }
-}
 
 #[cfg(test)]
 mod test_deserialize {
+    use serde_yaml::Deserializer;
+
     use crate::lowercase::lwc;
-    use crate::module::{WeiduMod, ModuleConf, ModuleContent, FileModule, FileModuleOrigin, Module};
     use crate::components::{Components, Component};
+    use crate::module::file_mod::FileModule;
+    use crate::module::file_module_origin::FileModuleOrigin;
+    use crate::module::gen_mod::{GeneratedMod, GenModComponent};
+    use crate::module::module::Module;
+    use crate::module::module_conf::{ModuleConf, ModuleContent};
+    use crate::module::weidu_mod::WeiduMod;
     use crate::post_install::PostInstall;
     use crate::location::{Location, Source, GithubDescriptor, Github};
     use crate::patch_source::{PatchEncoding, PatchSource, PatchDesc};
@@ -441,9 +218,9 @@ mod test_deserialize {
 
     #[test]
     fn deserialize_mod_with_inline_patch() {
-        let yaml = include_str!("../resources/test/read_inline_patch/module_with_inline_patch.yaml");
+        let yaml = include_str!("../../resources/test/read_inline_patch/module_with_inline_patch.yaml");
         let module: WeiduMod = serde_yaml::from_str(yaml).unwrap();
-        let expected_content = include_str!("../resources/test/read_inline_patch/inline_patch.diff");
+        let expected_content = include_str!("../../resources/test/read_inline_patch/inline_patch.diff");
         assert_eq!(
             module,
             WeiduMod {
@@ -630,5 +407,39 @@ mod test_deserialize {
         let error: Result<Module, serde_yaml::Error> = serde_yaml::from_str(yaml);
         let err = error.unwrap_err();
         println!("deserialize_mixed_module error is {:?}", err)
+    }
+
+    #[test]
+    fn deserialize_gen_mod() {
+        let yaml = r#"
+        gen_mod: some_name
+        description: some description
+        post_install: interrupt
+        files:
+            - local: some_dir
+            - local: other_dir
+              glob: "*.itm" # must quote because * is a special char
+            - absolute: "/location"
+        allow_overwrite: true
+        ignore_warnings: true
+        "#;
+        let deserializer = Deserializer::from_str(yaml);
+        let module: GeneratedMod = serde_path_to_error::deserialize(deserializer).unwrap();
+        assert_eq!(
+            module,
+            GeneratedMod {
+                gen_mod: lwc!("some_name"),
+                description: Some("some description".to_string()),
+                post_install: Some(PostInstall::Interrupt),
+                files: vec![
+                    FileModuleOrigin::Local { local: "some_dir".to_string(), glob: None },
+                    FileModuleOrigin::Local { local: "other_dir".to_string(), glob: Some("*.itm".to_string()) },
+                    FileModuleOrigin::Absolute { absolute: "/location".to_string(), glob: None },
+                ],
+                component: GenModComponent { index: 0, name: None },
+                allow_overwrite: true,
+                ignore_warnings: true,
+            }
+        );
     }
 }

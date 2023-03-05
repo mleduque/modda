@@ -5,7 +5,8 @@ use anyhow::{bail, Result};
 use serde::{Deserialize, Serialize};
 
 use crate::lowercase::LwcString;
-use crate::{archive_layout::Layout, patch_source::PatchDesc, replace::ReplaceSpec, download::Downloader, module::PrecopyCommand};
+use crate::module::pre_copy_command::PrecopyCommand;
+use crate::{archive_layout::Layout, patch_source::PatchDesc, replace::ReplaceSpec, download::Downloader};
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Default, Clone)]
 pub struct Location {

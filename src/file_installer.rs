@@ -10,7 +10,7 @@ use serde::{Serialize, Deserialize};
 use crate::args::Install;
 use crate::canon_path::CanonPath;
 use crate::global::Global;
-use crate::module::FileModuleOrigin;
+use crate::module::file_module_origin::FileModuleOrigin;
 
 pub struct FileInstaller<'a> {
     global: &'a Global,

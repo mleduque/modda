@@ -12,7 +12,7 @@ use crate::download::Downloader;
 use crate::global::Global;
 use crate::location::Location;
 use crate::lowercase::LwcString;
-use crate::module::WeiduMod;
+use crate::module::weidu_mod::WeiduMod;
 use crate::replace::ReplaceSpec;
 use crate::settings::Config;
 
@@ -121,7 +121,7 @@ mod test_retrieve_location {
     use crate::download::{Downloader};
     use crate::args::{Install};
     use crate::get_module::ModuleDownload;
-    use crate::module::WeiduMod;
+    use crate::module::weidu_mod::WeiduMod;
     use crate:: settings::Config;
     use crate::canon_path::CanonPath;
     use crate::cache::Cache;

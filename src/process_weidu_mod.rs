@@ -11,9 +11,9 @@ use anyhow::bail;
 use log::info;
 
 use crate::manifest::Manifest;
-use crate::module::GeneratedMod;
-use crate::module::ModuleContent;
-use crate::module::WeiduMod;
+use crate::module::gen_mod::GeneratedMod;
+use crate::module::module_conf::ModuleContent;
+use crate::module::weidu_mod::WeiduMod;
 use crate::run_weidu::format_run_result;
 use crate::tp2::find_tp2;
 use crate::tp2_template::create_tp2;
@@ -21,7 +21,8 @@ use crate::run_weidu::run_weidu;
 use crate::weidu_context::WeiduContext;
 
 
-pub fn process_weidu_mod(weidu_mod: &WeiduMod, weidu_context: &WeiduContext, manifest: &Manifest, real_index: usize) -> Result<bool, anyhow::Error> {
+pub fn process_weidu_mod(weidu_mod: &WeiduMod, weidu_context: &WeiduContext, manifest: &Manifest,
+                            real_index: usize) -> Result<bool, anyhow::Error> {
 
     let mod_count = manifest.modules.len();
     let WeiduContext { current, opts, module_downloader, ..} = weidu_context;

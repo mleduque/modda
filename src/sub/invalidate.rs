@@ -4,7 +4,8 @@ use crate::cache::Cache;
 use crate::location::{Location, Source};
 use crate::lowercase::lwc;
 use crate::manifest::Manifest;
-use crate::module::{WeiduMod, Module};
+use crate::module::module::Module;
+use crate::module::weidu_mod::WeiduMod;
 
 use anyhow::{bail, Result};
 

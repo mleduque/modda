@@ -6,8 +6,7 @@ use anyhow::Result;
 use lazy_static::lazy_static;
 use regex::Regex;
 
-use crate::module::WeiduMod;
-
+use crate::module::weidu_mod::WeiduMod;
 
 lazy_static! {
     static ref LANGUAGE_REGEX: Regex = Regex::new("^([0-9]*):(.*)$").unwrap();

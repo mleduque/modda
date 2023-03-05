@@ -53,13 +53,13 @@ use file_installer::FileInstaller;
 use get_module::ModuleDownload;
 use log::{debug, info};
 use manifest::Manifest;
-use module::Module;
 use settings::{read_settings, Config};
 use sub::list_components::sub_list_components;
 use sub::search::search;
 use weidu_context::WeiduContext;
 
 use crate::file_module_install::FileModuleInstaller;
+use crate::module::module::Module;
 use crate::post_install::PostInstallOutcome;
 use crate::log_parser::check_install_complete;
 use crate::process_weidu_mod::{process_generated_mod, process_weidu_mod};

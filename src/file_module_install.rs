@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 use log::{debug, info};
 use crate::file_installer::FileInstaller;
-use crate::module::FileModule;
+use crate::module::file_mod::FileModule;
 
 pub struct FileModuleInstaller<'a> {
     file_installer: &'a FileInstaller<'a>,

@@ -3,9 +3,10 @@ use std::io::{BufReader, Seek, SeekFrom};
 use serde::{Deserialize, Serialize};
 
 use anyhow::{bail, Result};
+use serde_yaml::Deserializer;
 
 use crate::global::Global;
-use crate::module::Module;
+use crate::module::module::Module;
 
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -39,7 +40,9 @@ impl Manifest {
         }
         let _ = file.seek(SeekFrom::Start(0))?;
         let reader = BufReader::new(&file);
-        let manifest: Manifest = match serde_yaml::from_reader(reader) {
+        let deserializer = Deserializer::from_reader(reader);
+        let result: Result<Manifest, _> = serde_path_to_error::deserialize(deserializer);
+        let manifest: Manifest = match result {
             Ok(manifest) => manifest,
             Err(error) => bail!("Failed to parse manifest at {}\n -> {}", path, error),
         };
@@ -53,7 +56,11 @@ mod test_deserialize {
     use crate::components::{Component, Components};
     use crate::location::Location;
     use crate::lowercase::lwc;
-    use crate::module::{WeiduMod, Module, FileModule, FileModuleOrigin};
+    use crate::module::file_mod::FileModule;
+    use crate::module::file_module_origin::FileModuleOrigin;
+    use crate::module::gen_mod::{GeneratedMod, GenModComponent};
+    use crate::module::module::Module;
+    use crate::module::weidu_mod::WeiduMod;
 
     use super::Manifest;
 
@@ -104,18 +111,110 @@ mod test_deserialize {
                             ..Default::default()
                         },
                     },
-                    Module::File {
-                        file: FileModule {
-                            file_mod: lwc!("bbb"),
-                            from: FileModuleOrigin::Local { local:"files/my-file.itm".to_string(), glob: None },
-                            to: "override".to_string(),
-                            description: None,
-                            post_install: None,
-                            allow_overwrite: false,
-                        }
-                    }
+                    //Module::File {
+                    //    file: FileModule {
+                    //        file_mod: lwc!("bbb"),
+                    //        from: FileModuleOrigin::Local { local:"files/my-file.itm".to_string(), glob: None },
+                    //        to: "override".to_string(),
+                    //        description: None,
+                    //        post_install: None,
+                    //        allow_overwrite: false,
+                    //    },
+                    //},
+                    //Module::Generated {
+                    //    gen:  GeneratedMod {
+                    //        gen_mod: lwc!("ccc"),
+                    //        files: vec![
+                    //            FileModuleOrigin::Local { local: "my_subdir".to_string(), glob: None },
+                    //        ],
+                    //        description: None,
+                    //        post_install: None,
+                    //        component: GenModComponent { index: 0, name: None },
+                    //        ignore_warnings: true,
+                    //        allow_overwrite: true,
+                    //    },
+                    //},
+                    //Module::Generated {
+                    //    gen:  GeneratedMod {
+                    //        gen_mod: lwc!("ddd"),
+                    //        files: vec![
+                    //            FileModuleOrigin::Local { local: "my_other_subdir".to_string(), glob: Some("*.itm".to_string()) },
+                    //        ],
+                    //        description: None,
+                    //        post_install: None,
+                    //        component: GenModComponent { index: 10, name: Some("Do whatever".to_string()) },
+                    //        ignore_warnings: true,
+                    //        allow_overwrite: true,
+                    //    },
+                    //},
                 ],
             }
         )
+    }
+
+    #[test]
+    fn serialize_manifest_with_modules() {
+
+        let manifest = super::Manifest {
+            version : "1".to_string(),
+            global : super::Global {
+                game_language: "fr_FR".to_string(),
+                lang_preferences: Some(vec!["french".to_string()]),
+                patch_path: None,
+                local_mods: Some("mods".to_string()),
+                local_files: None,
+            },
+            modules : vec![
+                Module::Mod {
+                    weidu_mod: WeiduMod {
+                        name: lwc!("aaa"),
+                        components: Components::List(vec! [ Component::Simple(1) ]),
+                        location: Some(Location {
+                            source: crate::location::Source::Http { http: "http://example.com/my-mod".to_string(), rename: None },
+                            ..Default::default()
+                        }),
+                        ..Default::default()
+                    },
+                },
+                Module::File {
+                    file: FileModule {
+                        file_mod: lwc!("bbb"),
+                        from: FileModuleOrigin::Local { local:"files/my-file.itm".to_string(), glob: None },
+                        to: "override".to_string(),
+                        description: None,
+                        post_install: None,
+                        allow_overwrite: false,
+                    },
+                },
+                Module::Generated {
+                    gen:  GeneratedMod {
+                        gen_mod: lwc!("ccc"),
+                        files: vec![
+                            FileModuleOrigin::Local { local: "my_subdir".to_string(), glob: None },
+                        ],
+                        description: None,
+                        post_install: None,
+                        component: GenModComponent { index: 0, name: None },
+                        ignore_warnings: true,
+                        allow_overwrite: true,
+                    },
+                },
+                Module::Generated {
+                    gen:  GeneratedMod {
+                        gen_mod: lwc!("ddd"),
+                        files: vec![
+                            FileModuleOrigin::Local { local: "my_other_subdir".to_string(), glob: Some("*.itm".to_string()) },
+                        ],
+                        description: None,
+                        post_install: None,
+                        component: GenModComponent { index: 10, name: Some("Do whatever".to_string()) },
+                        ignore_warnings: true,
+                        allow_overwrite: true,
+                    },
+                },
+            ],
+        };
+
+        println!("{}", serde_yaml::to_string(&manifest).unwrap());
     }
 }

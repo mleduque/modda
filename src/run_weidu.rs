@@ -1,6 +1,6 @@
 
 
-use std::io::{BufRead, BufWriter, Write};
+use std::io::{BufRead};
 use std::process::{Command, Stdio};
 
 use anyhow::{bail, Result};
@@ -10,7 +10,7 @@ use crate::args::Install;
 use crate::global::Global;
 use crate::language::{LanguageOption, LanguageSelection, select_language};
 use crate::components::{Component, Components};
-use crate::module::WeiduMod;
+use crate::module::weidu_mod::WeiduMod;
 use crate::run_result::RunResult;
 
 

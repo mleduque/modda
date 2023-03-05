@@ -105,7 +105,7 @@ where
 mod test_deserialize {
 
     use crate::lowercase::lwc;
-    use crate::module::WeiduMod;
+    use crate::module::weidu_mod::WeiduMod;
 
     use super::{Component, Components};
 

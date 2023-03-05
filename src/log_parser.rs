@@ -13,7 +13,8 @@ use regex::{Regex, RegexBuilder};
 use crate::bufread_raw::BufReadRaw;
 use crate::components::Components;
 use crate::lowercase::LwcString;
-use crate::module::{WeiduMod, Module};
+use crate::module::module::Module;
+use crate::module::weidu_mod::WeiduMod;
 
 // doesn't support --quick-log generated logs ATM
 // just need to actually look at then and set field as optional and update regexes
