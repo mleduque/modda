@@ -1,5 +1,6 @@
 
 use serde::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
 
 use crate::components::{Component, Components};
 use crate::lowercase::LwcString;
@@ -9,6 +10,7 @@ use super::file_module_origin::FileModuleOrigin;
 use super::weidu_mod::WeiduMod;
 
 /// Generates a skeleton weidu mod that just copies a bunch of files into `games/override`
+#[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, PartialEq, Default)]
 pub struct GeneratedMod {
     pub gen_mod: LwcString,
@@ -39,6 +41,7 @@ impl GeneratedMod {
         }
     }
 }
+#[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, PartialEq, Default)]
 pub struct GenModComponent {
     #[serde(default)]

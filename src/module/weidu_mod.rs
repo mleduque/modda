@@ -1,5 +1,6 @@
 
 use serde::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
 
 use crate::components::Components;
 use crate::location::Location;
@@ -10,6 +11,7 @@ use super::install_comment::InstallationComments;
 use super::module_conf::ModuleConf;
 
 /** Definition of a mod. */
+#[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, PartialEq, Default)]
 pub struct WeiduMod {
     /**
@@ -35,7 +37,7 @@ pub struct WeiduMod {
     /// Whether warnings returned by weidu (exit code) will interrupt the whole installation.
     ///
     /// (defaults to _not_ ignoring warnings)..
-    /// - If set to true, warning are ignored and the installation proceed with the following mods
+    /// - If set to true, warning are ignored and the installation proceeds with the following mods
     /// - If set to false (or absent), weidu warnings will stop the installation.
     #[serde(default)]
     pub ignore_warnings: bool,
@@ -50,10 +52,9 @@ pub struct WeiduMod {
     /// - `interrupt` will stop the installation and exist the program
     /// - `wait_seconds: xxx will wait xxx second before continuing to the next mod
     /// - `none` (the default) immediately starts the next mod installation.
-    #[serde(default)]
     pub post_install: Option<PostInstall>,
 
-    // Below: unused, sort of inert metadata
+    // Below: unused (ATM), sort of inert metadata
     pub comment: Option<String>,
     pub original_thread: Option<String>,
     pub original_dl: Option<String>,

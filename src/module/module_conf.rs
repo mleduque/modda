@@ -12,7 +12,7 @@ pub struct ModuleConf {
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
 #[serde(untagged)]
 pub enum ModuleContent {
-    /// The actual content of thefile is provided
+    /// The actual content of the file is provided
     Content { content: String },
     /// Interrupt and ask the user to input the content (value of `prompt` is shown)
     Prompt { prompt: String },

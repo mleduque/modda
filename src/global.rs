@@ -1,7 +1,9 @@
 use serde::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
 
 
 
+#[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, PartialEq, Default)]
 pub struct Global {
     /// The "language code" configured in the game e.g. en_US, es_ES, fr_FR

@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
 
+use serde::de::IntoDeserializer;
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
 
@@ -52,37 +53,40 @@ impl Module {
     }
 }
 
-#[derive(Deserialize, Debug)]
-struct ModuleHelper {
-    #[serde(flatten)]
-    weidu: Option<WeiduMod>,
-    #[serde(flatten)]
-    file: Option<FileModule>,
-    #[serde(flatten)]
-    gen_mod: Option<GeneratedMod>,
-    #[serde(flatten)]
-    unknown: HashMap<String, Value>,
-}
-
 impl <'de> Deserialize<'de> for Module {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
             where D: serde::Deserializer<'de> {
-        let helper = ModuleHelper::deserialize(deserializer)?;
+        let helper = Value::deserialize(deserializer)?;
         match helper {
-            ModuleHelper { weidu: None, file: None, gen_mod: None, unknown } => Err(serde::de::Error::custom(
-                format!("Incorrect module definition found ; could not recognize weidu_mod or file_module or gen_mod definition in [{:?}]", unknown)
-            )),
-            ModuleHelper { file: Some(file), weidu: None, gen_mod:None, .. } => Ok(Module::File { file }),
-            ModuleHelper { weidu: Some(weidu_mod), file: None, gen_mod: None, .. } => Ok(Module::Mod { weidu_mod }),
-            ModuleHelper { gen_mod: Some(gen), file: None, weidu: None, .. } => Ok(Module::Generated { gen }),
-            ModuleHelper { weidu, file, gen_mod, unknown } =>
-                Err(serde::de::Error::custom(
-                    format!("Incorrect module definition found ; could not decide module kind,
-                                weidu={:?} or file={:?} or gen_mod={:?} with additional data {:?}",
-                                weidu, file, gen_mod, unknown)
-                )),
+            Value::Mapping(ref mapping) => {
+                let has_name = mapping.get(Value::String("name".to_string())).is_some();
+                let has_file_name = mapping.get(Value::String("file_mod".to_string())).is_some();
+                let has_gen_mod = mapping.get(Value::String("gen_mod".to_string())).is_some();
+                match (has_name, has_file_name, has_gen_mod) {
+                    (false, false, false) =>
+                        Err(serde::de::Error::custom("'modules' item doesn't have a 'name', 'file_mod' or 'gen_mod' field")),
+                    (true, false, false) => {
+                        WeiduMod::deserialize(helper.into_deserializer())
+                            .map(|weidu_mod| Module::Mod { weidu_mod })
+                            .map_err(serde::de::Error::custom)
+                    }
+                    (false, true, false) => {
+                        FileModule::deserialize(helper.into_deserializer())
+                            .map(|file| Module::File { file })
+                            .map_err(serde::de::Error::custom)
+                    }
+                    (false, false, true) => {
+                        GeneratedMod::deserialize(helper.into_deserializer())
+                            .map(|gen| Module::Generated { gen })
+                            .map_err(serde::de::Error::custom)
+                    }
+                    _ => Err(serde::de::Error::custom("'modules' item must have only one of 'name', 'file_mod' or 'gen_mod'")),
+                }
+            }
+            _ => Err(serde::de::Error::custom("'modules' item is not a map"))
         }
     }
+
 }
 
 impl Serialize for Module {
@@ -95,4 +99,3 @@ impl Serialize for Module {
         }
     }
 }
-

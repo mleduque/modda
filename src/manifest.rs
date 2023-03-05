@@ -22,6 +22,7 @@ pub struct Manifest {
     pub global: Global,
     #[serde(default)]
     /// List of modules
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     pub modules: Vec<Module>,
 }
 
@@ -61,6 +62,7 @@ mod test_deserialize {
     use crate::module::gen_mod::{GeneratedMod, GenModComponent};
     use crate::module::module::Module;
     use crate::module::weidu_mod::WeiduMod;
+    use crate::post_install::PostInstall;
 
     use super::Manifest;
 
@@ -111,42 +113,56 @@ mod test_deserialize {
                             ..Default::default()
                         },
                     },
-                    //Module::File {
-                    //    file: FileModule {
-                    //        file_mod: lwc!("bbb"),
-                    //        from: FileModuleOrigin::Local { local:"files/my-file.itm".to_string(), glob: None },
-                    //        to: "override".to_string(),
-                    //        description: None,
-                    //        post_install: None,
-                    //        allow_overwrite: false,
-                    //    },
-                    //},
-                    //Module::Generated {
-                    //    gen:  GeneratedMod {
-                    //        gen_mod: lwc!("ccc"),
-                    //        files: vec![
-                    //            FileModuleOrigin::Local { local: "my_subdir".to_string(), glob: None },
-                    //        ],
-                    //        description: None,
-                    //        post_install: None,
-                    //        component: GenModComponent { index: 0, name: None },
-                    //        ignore_warnings: true,
-                    //        allow_overwrite: true,
-                    //    },
-                    //},
-                    //Module::Generated {
-                    //    gen:  GeneratedMod {
-                    //        gen_mod: lwc!("ddd"),
-                    //        files: vec![
-                    //            FileModuleOrigin::Local { local: "my_other_subdir".to_string(), glob: Some("*.itm".to_string()) },
-                    //        ],
-                    //        description: None,
-                    //        post_install: None,
-                    //        component: GenModComponent { index: 10, name: Some("Do whatever".to_string()) },
-                    //        ignore_warnings: true,
-                    //        allow_overwrite: true,
-                    //    },
-                    //},
+                    Module::Mod {
+                        weidu_mod: WeiduMod {
+                            name: lwc!("aaaa"),
+                            components: Components::List(vec! [ Component::Simple(1) ]),
+                            location: Some(Location {
+                                source: crate::location::Source::Http { http: "http://example.com/my-mod".to_string(), rename: None },
+                                ..Default::default()
+                            }),
+                            description: Some("some description".to_string()),
+                            post_install: Some(PostInstall::Interrupt),
+                            ignore_warnings: true,
+                            ..Default::default()
+                        },
+                    },
+                    Module::File {
+                        file: FileModule {
+                            file_mod: lwc!("bbb"),
+                            from: FileModuleOrigin::Local { local:"files/my-file.itm".to_string(), glob: None },
+                            to: "override".to_string(),
+                            description: None,
+                            post_install: None,
+                            allow_overwrite: false,
+                        },
+                    },
+                    Module::Generated {
+                        gen:  GeneratedMod {
+                            gen_mod: lwc!("ccc"),
+                            files: vec![
+                                FileModuleOrigin::Local { local: "my_subdir".to_string(), glob: None },
+                            ],
+                            description: None,
+                            component: GenModComponent { index: 0, name: None },
+                            post_install: Some(PostInstall::WaitSeconds { wait_seconds:10 }),
+                            ignore_warnings: true,
+                            allow_overwrite: true,
+                        },
+                    },
+                    Module::Generated {
+                        gen:  GeneratedMod {
+                            gen_mod: lwc!("ddd"),
+                            files: vec![
+                                FileModuleOrigin::Local { local: "my_other_subdir".to_string(), glob: Some("*.itm".to_string()) },
+                            ],
+                            description: None,
+                            post_install: None,
+                            component: GenModComponent { index: 10, name: Some("Do whatever".to_string()) },
+                            ignore_warnings: true,
+                            allow_overwrite: true,
+                        },
+                    },
                 ],
             }
         )
@@ -173,6 +189,7 @@ mod test_deserialize {
                             source: crate::location::Source::Http { http: "http://example.com/my-mod".to_string(), rename: None },
                             ..Default::default()
                         }),
+                        ignore_warnings: true,
                         ..Default::default()
                     },
                 },
@@ -183,7 +200,7 @@ mod test_deserialize {
                         to: "override".to_string(),
                         description: None,
                         post_install: None,
-                        allow_overwrite: false,
+                        allow_overwrite: true,
                     },
                 },
                 Module::Generated {
@@ -195,8 +212,8 @@ mod test_deserialize {
                         description: None,
                         post_install: None,
                         component: GenModComponent { index: 0, name: None },
-                        ignore_warnings: true,
-                        allow_overwrite: true,
+                        ignore_warnings: false,
+                        allow_overwrite: false,
                     },
                 },
                 Module::Generated {
@@ -215,6 +232,11 @@ mod test_deserialize {
             ],
         };
 
-        println!("{}", serde_yaml::to_string(&manifest).unwrap());
+        let serialized = serde_yaml::to_string(&manifest).unwrap();
+        println!("{}", serialized);
+        assert_eq!(
+            manifest,
+            serde_yaml::from_str(&serialized).unwrap()
+        )
     }
 }

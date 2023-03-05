@@ -9,24 +9,30 @@ modules:
     components: [1]
     location:
       http: http://example.com/my-mod
+  - name: aaaa
+    description: some description
+    components: [1]
+    location:
+      http: http://example.com/my-mod
+    ignore_warnings: true
+    post_install: interrupt
+  - file_mod: bbb
+    from:
+      local: files/my-file.itm
+    to: override
+  - gen_mod: ccc
+    files:
+      - local: my_subdir
+    post_install:
+      wait_seconds: 10
     allow_overwrite: true
     ignore_warnings: true
-  #- file_mod: bbb
-  #  from:
-  #    local: files/my-file.itm
-  #  to: override
-  #- gen_mod: ccc
-  #  files:
-  #    - local: my_subdir
-  #  post_install: interrupt
-  #  allow_overwrite: true
-  #  ignore_warnings: true
-  #- gen_mod: ddd
-  #  files:
-  #    - local: my_other_subdir
-  #      glob: "*.itm"
-  #  component:
-  #    index: 10
-  #    name: Do whatever
-  #  ignore_warnings: true
-  #  allow_overwrite: true
+  - gen_mod: ddd
+    files:
+      - local: my_other_subdir
+        glob: "*.itm"
+    component:
+      index: 10
+      name: Do whatever
+    ignore_warnings: true
+    allow_overwrite: true

@@ -3,11 +3,13 @@ use std::{path::PathBuf, borrow::Cow};
 
 use anyhow::{bail, Result};
 use serde::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
 
 use crate::lowercase::LwcString;
 use crate::module::pre_copy_command::PrecopyCommand;
 use crate::{archive_layout::Layout, patch_source::PatchDesc, replace::ReplaceSpec, download::Downloader};
 
+#[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, PartialEq, Default, Clone)]
 pub struct Location {
     #[serde(flatten)]
@@ -26,6 +28,7 @@ pub struct Location {
 }
 
 
+#[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum Source {
