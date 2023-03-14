@@ -1,6 +1,6 @@
 
 
-use std::io::{BufRead, BufWriter, Write};
+use std::io::{BufRead};
 use std::process::{Command, Stdio};
 
 use anyhow::{bail, Result};
@@ -10,7 +10,7 @@ use crate::args::Install;
 use crate::global::Global;
 use crate::language::{LanguageOption, LanguageSelection, select_language};
 use crate::components::{Component, Components};
-use crate::module::WeiduMod;
+use crate::module::weidu_mod::WeiduMod;
 use crate::run_result::RunResult;
 
 
@@ -95,20 +95,22 @@ fn run_weidu_interactive(tp2: &str, module: &WeiduMod, opts: &Install,
     }
 }
 
-pub fn write_run_result(result: &RunResult, file: &mut BufWriter<std::fs::File>, module: &WeiduMod) -> Result<()> {
-    match result {
+
+pub fn format_run_result(result: &RunResult, module: &WeiduMod) -> Vec<u8> {
+    return match result {
         RunResult::Real(result) => {
-            let _ = file.write(&result.stdout)?;
-            let _ = file.write(&result.stderr)?;
-            let _ = writeln!(file, "\n==\nmodule {} finished with status {:?}\n",
-                                module.name, result.status.code());
+            let summary = format!("\n==\nmodule {} finished with status {:?}\n", module.name, result.status.code()).into_bytes();
+            let mut output: Vec<u8> = Vec::with_capacity(result.stdout.len() + result.stderr.len() + summary.len() + 1);
+            output.extend(&result.stdout);
+            output.push('\n' as u8);
+            output.extend(&result.stderr);
+            output.extend(summary);
+            output
         }
         RunResult::Dry(cmd) => {
-            let _ = writeln!(file, "dry-run: {}", cmd)?;
+            format!("dry-run: {}\n", cmd).into_bytes()
         }
     }
-    let _ = file.flush();
-    Ok(())
 }
 
 #[derive(Debug, Clone, serde::Deserialize)]

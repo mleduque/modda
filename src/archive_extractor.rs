@@ -12,7 +12,7 @@ use anyhow::{bail, Result};
 use crate::canon_path::CanonPath;
 use crate::location::Location;
 use crate::lowercase::LwcString;
-use crate::module::PrecopyCommand;
+use crate::module::pre_copy_command::PrecopyCommand;
 use crate::settings::Config;
 
 

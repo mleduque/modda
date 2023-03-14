@@ -1,10 +1,12 @@
 
 use serde::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
 
 use crate::location::Source;
-use crate::lowercase::{LwcString, lwc};
+use crate::lowercase::{LwcString};
 
 
+#[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Default)]
 pub struct Layout {
     pub strip_leading: Option<usize>,
@@ -138,6 +140,7 @@ impl Layout {
 
 #[test]
 fn test_to_glob() {
+    use crate::lowercase::{lwc};
 
     let http_source = Source::http_source();
 

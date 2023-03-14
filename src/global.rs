@@ -1,7 +1,9 @@
 use serde::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
 
 
 
+#[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, PartialEq, Default)]
 pub struct Global {
     /// The "language code" configured in the game e.g. en_US, es_ES, fr_FR
@@ -16,11 +18,8 @@ pub struct Global {
     ///   syntax here https://docs.rs/regex/1.5.4/regex/#syntax
     ///   ex. `["#rx#^fran[cç]ais", french, english]`
     pub lang_preferences: Option<Vec<String>>,
-    #[serde(default)]
     pub patch_path: Option<String>,
     /// Path from manifest root (yml file location directory) where "local" mods can be found.
-    #[serde(default)]
     pub local_mods: Option<String>,
-    #[serde(default)]
     pub local_files: Option<String>,
 }

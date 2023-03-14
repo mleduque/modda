@@ -3,10 +3,13 @@ use std::{path::PathBuf, borrow::Cow};
 
 use anyhow::{bail, Result};
 use serde::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
 
 use crate::lowercase::LwcString;
-use crate::{archive_layout::Layout, patch_source::PatchDesc, replace::ReplaceSpec, download::Downloader, module::PrecopyCommand};
+use crate::module::pre_copy_command::PrecopyCommand;
+use crate::{archive_layout::Layout, patch_source::PatchDesc, replace::ReplaceSpec, download::Downloader};
 
+#[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, PartialEq, Default, Clone)]
 pub struct Location {
     #[serde(flatten)]
@@ -15,16 +18,14 @@ pub struct Location {
     /// Read as a Unix shell style glob pattern (https://docs.rs/glob/0.3.0/glob/struct.Pattern.html)
     #[serde(default)]
     pub layout: Layout,
-    #[serde(default)]
     pub patch: Option<PatchDesc>,
     /// regex-based search and replace, runs after patch.
-    #[serde(default)]
     pub replace: Option<Vec<ReplaceSpec>>,
-    #[serde(default)]
     pub precopy: Option<PrecopyCommand>,
 }
 
 
+#[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum Source {
@@ -58,7 +59,7 @@ impl Source {
                 };
                 Ok(PathBuf::from("http").join(&*host))
             }
-            Absolute { .. } | Local { .. }=> Ok(PathBuf::new()),
+            Absolute { .. } | Local { .. } => Ok(PathBuf::new()),
             Github(self::Github { github_user, repository, .. }) =>
                 Ok(PathBuf::from("github").join(github_user).join(repository)),
         }

@@ -4,7 +4,8 @@ use crate::cache::Cache;
 use crate::location::{Location, Source};
 use crate::lowercase::lwc;
 use crate::manifest::Manifest;
-use crate::module::{WeiduMod, Module};
+use crate::module::module::Module;
+use crate::module::weidu_mod::WeiduMod;
 
 use anyhow::{bail, Result};
 
@@ -27,6 +28,7 @@ pub fn invalidate(params: &Invalidate, cache: &Cache) -> Result<()> {
                     }
                 }
                 Module::File { .. } => return Ok(()), // don't try with other modules with same name
+                Module::Generated { .. } => return Ok(()), // generated, not downloaded
             }
         }
     }
