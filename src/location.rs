@@ -18,12 +18,9 @@ pub struct Location {
     /// Read as a Unix shell style glob pattern (https://docs.rs/glob/0.3.0/glob/struct.Pattern.html)
     #[serde(default)]
     pub layout: Layout,
-    #[serde(default)]
     pub patch: Option<PatchDesc>,
     /// regex-based search and replace, runs after patch.
-    #[serde(default)]
     pub replace: Option<Vec<ReplaceSpec>>,
-    #[serde(default)]
     pub precopy: Option<PrecopyCommand>,
 }
 

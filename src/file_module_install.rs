@@ -1,4 +1,3 @@
-use std::path::PathBuf;
 
 use anyhow::Result;
 use log::{debug, info};
@@ -17,9 +16,10 @@ impl <'a> FileModuleInstaller<'a> {
     }
 
     pub fn file_module_install(&self, file: &FileModule) -> Result<bool>  {
-        info!("Install file module {}{}.", file.file_mod, file.description.as_ref().map_or_else(|| "".to_string(), |desc| format!(" ({})", desc)));
+        let dest = self.file_installer.resolve_from_game_dir(&file.to);
+        info!("Install file module {}({}) to {:?}.", file.file_mod, file.description.as_ref().map_or_else(|| "".to_string(), |desc| format!(" ({})", desc)), dest);
         debug!("{:?}", file);
-        self.file_installer.copy_from_origin(&file.from, &PathBuf::from(&file.to), file.allow_overwrite)?;
+        self.file_installer.copy_from_origin(&file.from, &dest, file.allow_overwrite)?;
         Ok(false)
     }
 }

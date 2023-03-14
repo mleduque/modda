@@ -32,6 +32,9 @@ impl <'a> FileInstaller<'a> {
         let origins = vec![origin];
         self.copy_from_origins(&origins, target, allow_overwrite)
     }
+    pub fn resolve_from_game_dir(&self, rel_path: &str) -> PathBuf {
+        self.game_dir.join(rel_path)
+    }
 
     fn get_file_globs(&self, origins: &[&FileModuleOrigin]) -> Result<Vec<CopyGlob>> {
         let results: Vec<_> = origins.iter().map(|origin| (self.get_origin_base(origin), origin.glob()))
@@ -74,18 +77,6 @@ impl <'a> FileInstaller<'a> {
         Ok(manifest_path.join(local_files).join(file_path))
     }
 
-    fn get_local_files_location(&self) -> Result<PathBuf, anyhow::Error> {
-        let manifest_path = self.get_manifest_root().clean();
-        let local_files = match &self.global.local_files {
-            None => PathBuf::new(),
-            Some(path) => PathBuf::from(path).clean(),
-        };
-        if local_files.is_absolute() || local_files.starts_with("..") {
-            bail!("Invalid local_files value");
-        }
-        Ok(manifest_path.join(local_files))
-    }
-
     fn get_manifest_root(&self) -> PathBuf {
         let manifest = PathBuf::from(&self.opts.manifest_path);
         match manifest.parent() {
@@ -107,13 +98,11 @@ impl <'a> FileInstaller<'a> {
     fn copy_from_glob(&self, copy_glob: &CopyGlob, target: &PathBuf, allow_overwrite: bool) -> Result<()> {
         match &copy_glob.glob {
             None => {
-                let copy_options = fs_extra::dir::CopyOptions {
-                    overwrite: allow_overwrite,
-                    copy_inside: true,
-                    ..Default::default()
-                };
-                let _bytes = fs_extra::copy_items(&vec![&copy_glob.base], target, &copy_options)?;
-                Ok(())
+                if copy_glob.base.is_dir() {
+                    copy_single_dir(&copy_glob.base, target, allow_overwrite)
+                } else {
+                    copy_single_file(&copy_glob.base, target, allow_overwrite)
+                }
             },
             Some(glob) =>  {
                 let glob_builder = GlobWalkerBuilder::from_patterns(&copy_glob.base, &vec![glob])
@@ -123,42 +112,41 @@ impl <'a> FileInstaller<'a> {
                     Ok(glob) => glob,
                 };
                 for item in glob.into_iter().filter_map(Result::ok) {
-                    copy_file(&item.into_path(), &target, false, allow_overwrite)?;
+                    let copy_options = fs_extra::dir::CopyOptions {
+                        overwrite: allow_overwrite,
+                        ..Default::default()
+                    };
+                    let _bytes = fs_extra::copy_items(&vec![&item.into_path()], target, &copy_options)?;
                 }
                 Ok(())
             }
         }
     }
+
 }
 
-
-
-fn copy_file(origin: &PathBuf, target: &PathBuf, ensure_dirs: bool, allow_overwrite: bool) -> Result<()> {
-    // ensure the destination path exists
-    if ensure_dirs {
-        ensure_path(target)?;
-    }
-    // copy the file
-    let copy_options = fs_extra::dir::CopyOptions {
-        overwrite: allow_overwrite,
-        ..Default::default()
-    };
-    let _bytes = fs_extra::copy_items(&vec![origin], target, &copy_options)?;
-    Ok(())
-}
-
-fn copy_directory(origin: &PathBuf, target: &PathBuf, ensure_dirs: bool, allow_overwrite: bool) -> Result<()> {
-    // ensure the destination path exists
-    if ensure_dirs {
-        ensure_path(target)?;
-    }
-    // copy the file
+fn copy_single_file(path: &PathBuf, target: &PathBuf, allow_overwrite: bool) -> Result<()> {
     let copy_options = fs_extra::dir::CopyOptions {
         overwrite: allow_overwrite,
         copy_inside: true,
         ..Default::default()
     };
-    let _bytes = fs_extra::copy_items(&vec![origin], target, &copy_options)?;
+    if let Err(error) = fs_extra::copy_items(&[path], target, &copy_options) {
+        bail!("Could not copy single file {:?} to {:?}\n  {}", path, target, error);
+    }
+    Ok(())
+}
+
+fn copy_single_dir(path: &PathBuf, target: &PathBuf, allow_overwrite: bool) -> Result<()> {
+    let copy_options = fs_extra::dir::CopyOptions {
+        overwrite: allow_overwrite,
+        copy_inside: true,
+        content_only: true,
+        ..Default::default()
+    };
+    if let Err(error) = fs_extra::dir::copy(path, target, &copy_options) {
+        bail!("Could not copy single dir {:?} to {:?}\n  {}", path, target, error);
+    }
     Ok(())
 }
 

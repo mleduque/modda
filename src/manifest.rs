@@ -45,7 +45,7 @@ impl Manifest {
         let result: Result<Manifest, _> = serde_path_to_error::deserialize(deserializer);
         let manifest: Manifest = match result {
             Ok(manifest) => manifest,
-            Err(error) => bail!("Failed to parse manifest at {}\n -> {}", path, error),
+            Err(error) => bail!("Failed to parse manifest at {}\n -> {}\npath:{}", path, error, error.path()),
         };
         Ok(manifest)
     }

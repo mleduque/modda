@@ -1,5 +1,4 @@
 use std::borrow::Cow;
-use std::collections::HashMap;
 
 use serde::de::IntoDeserializer;
 use serde::{Deserialize, Serialize};
