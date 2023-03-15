@@ -52,7 +52,8 @@ fn run_weidu_auto(tp2: &str, module: &WeiduMod, components: &[Component], opts: 
         tp2.to_owned(),
         "--no-exit-pause".to_owned(),
         "--skip-at-view".to_owned(),
-        "--log".to_owned(),
+        "--log".to_owned(),    // Log output and details to X.
+        "--logapp".to_owned(), // Append to log file instead of overwriting it.
         format!("setup-{}.debug", module.name),
         "--use-lang".to_owned(),
         game_lang.to_owned(),
@@ -82,7 +83,8 @@ fn run_weidu_interactive(tp2: &str, module: &WeiduMod, opts: &Install,
         tp2.to_owned(),
         "--no-exit-pause".to_owned(),
         "--skip-at-view".to_owned(),
-        "--log".to_owned(),
+        "--log".to_owned(),    // Log output and details to X.
+        "--logapp".to_owned(), // Append to log file instead of overwriting it.
         format!("setup-{}.debug", module.name),
         "--use-lang".to_owned(),
         game_lang.to_owned(),
