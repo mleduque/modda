@@ -11,6 +11,7 @@ use crate::progname::PROGNAME;
 pub struct Config {
     pub archive_cache: Option<String>,
     pub extract_location: Option<String>,
+    pub weidu_path: Option<String>,
 }
 
 pub fn read_settings() -> Config {

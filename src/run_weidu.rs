@@ -1,6 +1,7 @@
 
 
 use std::io::{BufRead};
+use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
 use anyhow::{bail, Result};
@@ -14,11 +15,12 @@ use crate::language::{LanguageOption, LanguageSelection, select_language};
 use crate::components::{Component, Components};
 use crate::module::weidu_mod::WeiduMod;
 use crate::run_result::RunResult;
+use crate::settings::Config;
 
 
-pub fn run_weidu(tp2: &str, module: &WeiduMod, opts: &Install, global: &Global) -> Result<RunResult> {
+pub fn run_weidu(tp2: &str, module: &WeiduMod, opts: &Install, global: &Global, config: &Config) -> Result<RunResult> {
     use LanguageSelection::*;
-    let language_id = match select_language(tp2, module, &global.lang_preferences) {
+    let language_id = match select_language(tp2, module, &global.lang_preferences, config) {
         Ok(Selected(id)) => id,
         Ok(NoMatch(list)) if list.is_empty() => 0,
         Ok(NoPrefSet(available))
@@ -27,9 +29,9 @@ pub fn run_weidu(tp2: &str, module: &WeiduMod, opts: &Install, global: &Global) 
     };
     match &module.components {
         Components::None => Ok(RunResult::Dry("Explicitly requested no components to be installed".to_string())),
-        Components::Ask => run_weidu_interactive(tp2, module, opts, &global.game_language),
-        Components::List(comp) if comp.is_empty() => run_weidu_interactive(tp2, module, opts, &global.game_language),
-        Components::List(components) => run_weidu_auto(tp2, module, components, opts, &global.game_language, language_id)
+        Components::Ask => run_weidu_interactive(tp2, module, opts, &global.game_language, config),
+        Components::List(comp) if comp.is_empty() => run_weidu_interactive(tp2, module, opts, &global.game_language, config),
+        Components::List(components) => run_weidu_auto(tp2, module, components, opts, &global.game_language, language_id, config)
     }
 }
 
@@ -43,9 +45,9 @@ fn handle_no_language_selected(available: Vec<LanguageOption>, module: &WeiduMod
 }
 
 fn run_weidu_auto(tp2: &str, module: &WeiduMod, components: &[Component], opts: &Install,
-                    game_lang: &str, language_id: u32) -> Result<RunResult> {
+                    game_lang: &str, language_id: u32, config: &Config) -> Result<RunResult> {
 
-    let mut command = Command::new("weidu");
+    let mut command = Command::new(weidu_command(config, false)?);
     let mut args = vec![
         tp2.to_owned(),
         "--no-exit-pause".to_owned(),
@@ -74,8 +76,8 @@ fn run_weidu_auto(tp2: &str, module: &WeiduMod, components: &[Component], opts: 
 }
 
 fn run_weidu_interactive(tp2: &str, module: &WeiduMod, opts: &Install,
-                            game_lang: &str) -> Result<RunResult> {
-    let mut command = Command::new("weidu");
+                            game_lang: &str, config: &Config) -> Result<RunResult> {
+    let mut command = Command::new(weidu_command(config, false)?);
     let args = vec![
         tp2.to_owned(),
         "--no-exit-pause".to_owned(),
@@ -98,7 +100,7 @@ fn run_weidu_interactive(tp2: &str, module: &WeiduMod, opts: &Install,
 }
 
 
-pub fn format_run_result(result: &RunResult, module: &WeiduMod) -> Vec<u8> {
+pub fn format_run_result(result: &RunResult, module: &WeiduMod, config: &Config) -> Vec<u8> {
     return match result {
         RunResult::Real(result) => {
             let summary = format!("\n==\nmodule {} finished with status {:?}\n", module.name, result.status.code()).into_bytes();
@@ -125,8 +127,8 @@ pub struct WeiduComponent {
     pub group: Vec<String>,
 }
 
-pub fn run_weidu_list_components(tp2: &str, lang_id: u32) -> Result<Vec<WeiduComponent>> {
-    let mut command = Command::new("weidu");
+pub fn run_weidu_list_components(tp2: &str, lang_id: u32, config: &Config) -> Result<Vec<WeiduComponent>> {
+    let mut command = Command::new(weidu_command(config, false)?);
     let args = vec![
         "--list-components-json".to_owned(),
         tp2.to_owned(),
@@ -156,8 +158,8 @@ lazy_static! {
     static ref LANGUAGE_REGEX: Regex = Regex::new("^([0-9]*):(.*)$").unwrap();
 }
 
-pub fn list_available_languages(tp2: &str, module: &WeiduMod) -> Result<Vec<LanguageOption>> {
-    let mut command = Command::new("weidu");
+pub fn list_available_languages(tp2: &str, module: &WeiduMod, config: &Config) -> Result<Vec<LanguageOption>> {
+    let mut command = Command::new(weidu_command(config, false)?);
     let args = vec![
         "--no-exit-pause".to_owned(),
         "--list-languages".to_owned(),
@@ -196,4 +198,30 @@ pub fn list_available_languages(tp2: &str, module: &WeiduMod) -> Result<Vec<Lang
         }
     }).collect::<Vec<_>>();
     Ok(entries.into_iter().map(|(index, name)| LanguageOption { index, name }).collect())
+}
+
+pub fn check_weidu_exe(config: &Config) -> Result<()> {
+    let mut command = Command::new(weidu_command(config, false)?);
+    command.arg("--help");
+    command
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    match command.output() {
+        Err(error) => bail!("weidu executable doesn't appear to work\n  {:?}", error),
+        _ => Ok(())
+    }
+}
+
+fn weidu_command(config: &Config, check_exist: bool) -> Result<&str> {
+    use crate::progname::PROGNAME;
+
+    match &config.weidu_path {
+        Some(path) => {
+            if check_exist && !PathBuf::from(path).exists() {
+                bail!("file at '{}' doesn't exist. This is the weidu_path config in ${PROGNAME} settings file (${PROGNAME}.yaml)", path)
+            }
+            Ok(path)
+        }
+        None => Ok("weidu"),
+    }
 }

@@ -4,6 +4,7 @@ use anyhow::Result;
 
 use crate::module::weidu_mod::WeiduMod;
 use crate::run_weidu::list_available_languages;
+use crate::settings::Config;
 
 #[derive(Clone, Debug)]
 pub struct LanguageOption {
@@ -18,13 +19,13 @@ pub enum LanguageSelection {
     NoMatch(Vec<LanguageOption>),
 }
 
-pub fn select_language(tp2:&str, module: &WeiduMod, lang_preferences: &Option<Vec<String>>) -> Result<LanguageSelection> {
+pub fn select_language(tp2:&str, module: &WeiduMod, lang_preferences: &Option<Vec<String>>, config: &Config) -> Result<LanguageSelection> {
     use LanguageSelection::*;
 
     if let Some(idx) = module.language {
         Ok(Selected(idx))
     } else {
-        let available = match list_available_languages(tp2, module) {
+        let available = match list_available_languages(tp2, module, config) {
             Ok(result) => result,
             Err(error) =>  bail!(
                 "Couldn't get list of available language for module {} - {:?}",

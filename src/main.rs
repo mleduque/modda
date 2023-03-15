@@ -53,6 +53,7 @@ use file_installer::FileInstaller;
 use get_module::ModuleDownload;
 use log::{debug, info};
 use manifest::Manifest;
+use run_weidu::check_weidu_exe;
 use settings::{read_settings, Config};
 use sub::list_components::sub_list_components;
 use sub::search::search;
@@ -81,12 +82,13 @@ fn main() -> Result<()> {
         info!("chitin.key found");
     }
     let settings = read_settings();
+    check_weidu_exe(&settings)?;
     let opts: Opts = Opts::parse();
     let cache = Cache::ensure_from_config(&settings).unwrap();
     match opts {
         Opts::Install(ref install_opts) => install(install_opts, &settings, &current_dir, &cache),
         Opts::Search(ref search_opts) => search(search_opts),
-        Opts::ListComponents(ref params) => sub_list_components(params),
+        Opts::ListComponents(ref params) => sub_list_components(params, &settings),
         Opts::Invalidate(ref params) => sub::invalidate::invalidate(params, &cache),
         Opts::Extract(ref params) => sub::extract_manifest::extract_manifest(params, &current_dir),
     }
@@ -154,9 +156,9 @@ fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &Cach
         info!("module {} - {}", real_index, module.describe());
         debug!("{:?}", module);
         let finished = match module {
-            Module::Mod { weidu_mod } => process_weidu_mod(weidu_mod, &weidu_context, &manifest, real_index)?,
+            Module::Mod { weidu_mod } => process_weidu_mod(weidu_mod, &weidu_context, &manifest, real_index, settings)?,
             Module::File { file } => file_module_installer.file_module_install(file)?,
-            Module::Generated { gen } => process_generated_mod(gen, &weidu_context, &manifest, real_index )?,
+            Module::Generated { gen } => process_generated_mod(gen, &weidu_context, &manifest, real_index, settings)?,
         }
         ;
         if finished {

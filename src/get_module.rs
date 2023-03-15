@@ -155,7 +155,8 @@ mod test_retrieve_location {
         let opts = Install::default();
         let config = Config {
             archive_cache: Some("/cache_path".to_string()),
-            extract_location: Some("/tmp".to_string())
+            extract_location: Some("/tmp".to_string()),
+            weidu_path: None,
         };
 
         let expected_dest = PathBuf::from("/cache_path/github/username/repository");
@@ -207,7 +208,8 @@ mod test_retrieve_location {
         let opts = Install::default();
         let config = Config {
             archive_cache: Some("/cache_path".to_string()),
-            extract_location: Some("/tmp".to_string())
+            extract_location: Some("/tmp".to_string()),
+            weidu_path: None,
         };
 
         let expected_dest = PathBuf::from("/cache_path/http/example.com");

@@ -15,6 +15,7 @@ use crate::module::gen_mod::GeneratedMod;
 use crate::module::module_conf::ModuleContent;
 use crate::module::weidu_mod::WeiduMod;
 use crate::run_weidu::format_run_result;
+use crate::settings::Config;
 use crate::tp2::find_tp2;
 use crate::tp2_template::create_tp2;
 use crate::run_weidu::run_weidu;
@@ -22,7 +23,7 @@ use crate::weidu_context::WeiduContext;
 
 
 pub fn process_weidu_mod(weidu_mod: &WeiduMod, weidu_context: &WeiduContext, manifest: &Manifest,
-                            real_index: usize) -> Result<bool, anyhow::Error> {
+                            real_index: usize, config: &Config) -> Result<bool, anyhow::Error> {
 
     let mod_count = manifest.modules.len();
     let WeiduContext { current, opts, module_downloader, ..} = weidu_context;
@@ -45,8 +46,8 @@ pub fn process_weidu_mod(weidu_mod: &WeiduMod, weidu_context: &WeiduContext, man
     };
     configure_module(weidu_mod)?;
 
-    let single_result = run_weidu(&tp2_string, weidu_mod, &opts, &manifest.global)?;
-    let run_result = format_run_result(&single_result, weidu_mod);
+    let single_result = run_weidu(&tp2_string, weidu_mod, &opts, &manifest.global, config)?;
+    let run_result = format_run_result(&single_result, weidu_mod, config);
 
     weidu_context.log_bytes(&run_result)?;
     match single_result.status_code() {
@@ -93,7 +94,7 @@ pub fn process_weidu_mod(weidu_mod: &WeiduMod, weidu_context: &WeiduContext, man
 }
 
 pub fn process_generated_mod(gen_mod: &GeneratedMod, weidu_context: &WeiduContext,
-                                manifest: &Manifest, real_index: usize) -> Result<bool, anyhow::Error> {
+                                manifest: &Manifest, real_index: usize, config: &Config) -> Result<bool, anyhow::Error> {
     let WeiduContext { current, file_installer, ..} = weidu_context;
 
     if let Ok(found) = find_tp2(current, &gen_mod.gen_mod) {
@@ -114,7 +115,7 @@ pub fn process_generated_mod(gen_mod: &GeneratedMod, weidu_context: &WeiduContex
         bail!("Could not generate tp2 file for {}\n  {}", gen_mod.gen_mod, err);
     }
     let weidu_mod = gen_mod.as_weidu();
-    process_weidu_mod(&weidu_mod, weidu_context, manifest, real_index)
+    process_weidu_mod(&weidu_mod, weidu_context, manifest, real_index, config)
 }
 
 
