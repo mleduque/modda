@@ -1,3 +1,5 @@
+
+name: release-win
 on: workflow_dispatch
 
 jobs:

@@ -1,3 +1,5 @@
+
+name: release-mac
 on: workflow_dispatch
 
 jobs:
