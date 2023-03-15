@@ -9,7 +9,7 @@ Be able to generate (mostly) reproducible installations
 
 ## Operation
 
-You create a recipe that 
+You create a recipe that
  - decides which language(s) will be selected
  - lists all mods that should be installed, in order, and of the components for each mod
 
@@ -56,12 +56,12 @@ modules:
 
 The comments are optional of course, they are only for the reader.
 
+
 ## Limitations
 
-- Needs weidu accessible on the path
 - Only tested with weidu 247
 - At this point, was only tested on linux
-- Mods that use ACTION_READLN are not handled well (installation is interrupted until the user makes some choice, and reproductibility is not guaranteed)
+- Mods that use `ACTION_READLN` are not handled well (installation is interrupted until the user makes some choice, and reproducibility is not guaranteed)
 
 ## Errors and warnings
 
@@ -108,12 +108,23 @@ It currently contains one property: `archive_cache` which tells the program wher
 archive_cache: ~/path/to/my/cache
 ```
 
+## Weidu
+
+Installation uses
+ - either a weidu executable that can be discovered on the `PATH`
+ - or, if present, any executable set in the config file, as `weidu_path`
+
+## Logs
+
+Each mod produces a `setup-<mod identifier>.log` log file.
+Multiple run of the same mod (for different components at different places in the installation order) will append in the same file.
+
 ## Todo
 
 - Parallel HTTP fetching of mods using a pool
 - Resume aborted HTTP downloads?
 - Document YAML for archive fetching and unpacking (more)
-- Warn if the version of a mod changed ; this may impact reproductibility (component number changing, new components etc.)
+- Warn if the version of a mod changed ; this may impact reproducibility (component number changing, new components etc.)
 - Maybe use the `directories` projectdir cachevlue for default location of download cache?
 - Update or lock when using a "branch" location ?
 
