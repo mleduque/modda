@@ -102,7 +102,7 @@ fn run_weidu_interactive(tp2: &str, module: &WeiduMod, opts: &Install,
 }
 
 
-pub fn format_run_result(result: &RunResult, module: &WeiduMod, config: &Config) -> Vec<u8> {
+pub fn format_run_result(result: &RunResult, module: &WeiduMod) -> Vec<u8> {
     return match result {
         RunResult::Real(result) => {
             let summary = format!("\n==\nmodule {} finished with status {:?}\n", module.name, result.status.code()).into_bytes();

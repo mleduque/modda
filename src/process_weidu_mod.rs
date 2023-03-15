@@ -47,7 +47,7 @@ pub fn process_weidu_mod(weidu_mod: &WeiduMod, weidu_context: &WeiduContext, man
     configure_module(weidu_mod)?;
 
     let single_result = run_weidu(&tp2_string, weidu_mod, &opts, &manifest.global, config)?;
-    let run_result = format_run_result(&single_result, weidu_mod, config);
+    let run_result = format_run_result(&single_result, weidu_mod);
 
     weidu_context.log_bytes(&run_result)?;
     match single_result.status_code() {
