@@ -30,7 +30,7 @@ pub struct WeiduMod {
     /// List of components to be auto-installed.
     /// Can be `ask`, `none`, a list of components or absent/not set/null (which is the same as `ask`)
     ///   - `ask` (or empty) will use weidu in interactive mode (weidu itself asks how to install components)
-    ///   - `none` will just copy the mod filesin the game dir without installing anything
+    ///   - `none` will just copy the mod files in the game dir without installing anything
     ///   - a list of components will call weidu and provide the list of components on the command line
     #[serde(deserialize_with = "crate::components::component_deser")]
     pub components: Components,
@@ -40,6 +40,7 @@ pub struct WeiduMod {
     /// - If set to true, warning are ignored and the installation proceeds with the following mods
     /// - If set to false (or absent), weidu warnings will stop the installation.
     #[serde(default)]
+    #[serde(skip_serializing_if = "is_false")]
     pub ignore_warnings: bool,
     pub add_conf: Option<ModuleConf>,
     /// Where we can obtain the module.
@@ -60,3 +61,5 @@ pub struct WeiduMod {
     pub original_dl: Option<String>,
     pub installation: Option<InstallationComments>,
 }
+
+fn is_false(value: &bool) -> bool { !value }

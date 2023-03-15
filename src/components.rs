@@ -13,6 +13,16 @@ pub enum Components {
     None,
     List(Vec<Component>),
 }
+
+impl Components {
+    pub fn as_mut_list(&mut self) -> Option<&mut Vec<Component>> {
+        match self {
+            Components::List(list) => Some(list),
+            _ => None,
+        }
+    }
+}
+
 impl Default for Components {
     fn default() -> Self {
         Components::Ask
@@ -55,7 +65,10 @@ impl FromStr for Components {
 #[serde(untagged)]
 pub enum Component {
     Simple(u32),
-    Full { index: u32, ignore_warn: bool },
+    Full {
+        index: u32,
+        component_name: String,
+    },
 }
 impl Component {
     pub fn index(&self) -> u32 {

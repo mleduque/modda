@@ -33,13 +33,13 @@ mod settings;
 mod tp2;
 mod tp2_template;
 mod run_weidu;
+mod weidu_conf;
 mod weidu_context;
 
 use std::cell::RefCell;
 use std::env::set_current_dir;
-use std::io::{BufReader, BufWriter};
-use std::io::prelude::*;
-use std::path::{Path, PathBuf};
+use std::io::BufWriter;
+use std::path::PathBuf;
 
 use ansi_term::Colour::{Blue};
 use anyhow::{anyhow, bail, Result};
@@ -56,6 +56,7 @@ use manifest::Manifest;
 use settings::{read_settings, Config};
 use sub::list_components::sub_list_components;
 use sub::search::search;
+use weidu_conf::check_weidu_conf_lang;
 use weidu_context::WeiduContext;
 
 use crate::file_module_install::FileModuleInstaller;
@@ -87,6 +88,7 @@ fn main() -> Result<()> {
         Opts::Search(ref search_opts) => search(search_opts),
         Opts::ListComponents(ref params) => sub_list_components(params),
         Opts::Invalidate(ref params) => sub::invalidate::invalidate(params, &cache),
+        Opts::Extract(ref params) => sub::extract_manifest::extract_manifest(params, &current_dir),
     }
 }
 
@@ -110,7 +112,7 @@ fn ensure_chitin_key() -> Result<()> {
 fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &Cache) -> Result<()> {
 
     let manifest = Manifest::read_path(&opts.manifest_path)?;
-    check_weidu_conf_lang(&manifest.global.game_language)?;
+    check_weidu_conf_lang(game_dir, &manifest.global.game_language)?;
     let modules = &manifest.modules;
 
     let log = if let Some(output) = &opts.output {
@@ -171,34 +173,6 @@ fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &Cach
         }
         // Now check we actually installed all requested components
         check_install_complete(&module)?
-    }
-    Ok(())
-}
-
-fn check_weidu_conf_lang(lang: &str) -> Result<()> {
-    if !Path::new("weidu.conf").exists() {
-        return Ok(())
-    }
-    let file = match std::fs::File::open("weidu.conf") {
-        Err(error) => return Err(
-            anyhow!(format!("Could not open weidu.conf - {:?}", error)
-        )),
-        Ok(file) => file,
-    };
-    let regex = regex::Regex::new(r##"(?i)lang_dir(\s)+=(\s)+([a-z_]+)"##)?;
-    let reader = BufReader::new(file);
-    for line in reader.lines() {
-        let line = line?;
-        if let Some(caps) = regex.captures_iter(&line).next() {
-            if caps[3].to_lowercase() == lang.to_lowercase() {
-                return Ok(())
-            } else {
-                bail!(
-                    "lang_dir (in manifest) {} doesn't match value in weidu.conf {}",
-                    lang, &caps[3]
-                );
-            }
-        }
     }
     Ok(())
 }

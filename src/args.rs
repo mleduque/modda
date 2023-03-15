@@ -9,7 +9,8 @@ pub enum Opts {
     Install(Install),
     Search(Search),
     ListComponents(ListComponents),
-    Invalidate(Invalidate)
+    Invalidate(Invalidate),
+    Extract(Extract),
 }
 
 #[derive(Clap, Debug, Default)]
@@ -64,4 +65,17 @@ pub struct Invalidate {
 
     #[clap(long, short)]
     pub name: String,
+}
+
+#[derive(Clap, Debug)]
+pub struct Extract {
+
+    #[clap(long, short)]
+    pub output: String,
+
+    #[clap(long, short)]
+    pub export_language: Option<bool>,
+
+    #[clap(long, short)]
+    pub export_component_name: Option<bool>,
 }
