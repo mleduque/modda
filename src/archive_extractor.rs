@@ -44,7 +44,6 @@ impl <'a> Extractor<'a> {
             Some(ext) =>  match ext.to_str() {
                 None => bail!("Couldn't determine archive type for file {:?}", archive),
                 Some("zip") | Some("iemod") => self.extract_zip(archive, module_name, location),
-                Some("rar") => self.extract_rar(archive, module_name, location),
                 Some("tgz") => self.extract_tgz(archive, module_name, location),
                 Some("gz") => {
                     let stem = archive.file_stem();
@@ -99,33 +98,6 @@ impl <'a> Extractor<'a> {
         }
         debug!("files done moving to final destinatino");
 
-        Ok(())
-    }
-
-    fn extract_rar(&self, archive: &Path, module_name: &LwcString, location: &Location) -> Result<()> {
-        let string_path = match archive.as_os_str().to_str() {
-            None => bail!("invalid path for archive {:?}", archive),
-            Some(value) => value.to_owned(),
-        };
-        let rar_archive = unrar::archive::Archive::new(string_path);
-
-        let temp_dir_attempt = self.create_temp_dir();
-        let temp_dir = match temp_dir_attempt {
-            Ok(dir) => dir,
-            Err(error) => bail!("Extraction of rar mod {} failed\n -> {:?}", module_name, error),
-        };
-
-        let temp_dir_path = temp_dir.path();
-        let temp_dir_str = match temp_dir_path.as_os_str().to_str() {
-            None => bail!("invalid path for temp dir "),
-            Some(ref value) => value.to_string(),
-        };
-        if let Err(error) = rar_archive.extract_to(temp_dir_str) {
-            bail!("RAR extraction failed for {:?} - {:?}", archive, error);
-        }
-        if let Err(error) = self.move_from_temp_dir(temp_dir.as_ref(), module_name, location) {
-            bail!("Failed to copy file for archive {:?} from temp dir to game dir\n -> {:?}", archive, error);
-        }
         Ok(())
     }
 

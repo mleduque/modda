@@ -56,6 +56,58 @@ modules:
 
 The comments are optional of course, they are only for the reader.
 
+## Fetching mods
+
+- You can specify a `location` for fetching a mod.
+- If a module doesn't have a `location` field, it is expected to already be in the game directory.
+- If a mod `.tp2` file is found in the game directory, the `location` is ignored.
+
+### Example 1: HTTP fetch
+
+```yaml
+    - name: iwdcrossmodpack
+      components: ask
+      location:
+        http: http://america.iegmc.net/g3//lin-IWDCrossmodPack-v1.4.tar.gz
+```
+
+### Example 2: Github fetch
+
+To obtain a _release_
+```yaml
+  - name: iwdification
+    components:
+      - 30 # IWD Arcane Spell Pack: Release Candidate 2
+      - 40 # IWD Divine Spell Pack: Release Candidate 2
+    location:
+      github_user: Gibberlings3
+      repository: iwdification
+      release: v5
+      asset: lin-iwdification-v5.tar.gz
+```
+To obtain a tag
+```yaml
+  - name: iwdification
+    components:
+      - 30 # IWD Arcane Spell Pack: Release Candidate 2
+      - 40 # IWD Divine Spell Pack: Release Candidate 2
+    location:
+      github_user: Gibberlings3
+      repository: iwdification
+      tag: v5
+```
+### Example 3: Local (file-system) location
+
+```yaml
+  - name: willowisp
+    components: # 4 later
+      - 0 # Will NPC, shaman stronghold and new shaman kit for BG2EE
+      - 1 # Change shaman .tlk string to remove "Ineligible for any stronghold" line
+      - 2 # New items for shamans and undead NPCs
+      - 3 # Optional: Drider and Dark Treant Enemies
+    location:
+      path: /home/me/my_mods/static/Will of the Wisp v2.20.zip
+```
 
 ## Limitations
 
