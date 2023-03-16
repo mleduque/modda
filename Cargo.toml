@@ -2,6 +2,7 @@
 name = "modda"
 version = "1.2.0"
 authors = ["Mickaël <mleduque@gmail.com>"]
+description = "Weidu install automation"
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -10,7 +11,8 @@ edition = "2018"
 ansi_term = "0.12.1"
 anyhow = "1.0.69"
 bytes = "1.4.0"
-clap = { git = "https://github.com/clap-rs/clap/", rev="65b3892" }
+clap = "4.1.8"
+clap_derive = "4.1.8"
 directories = "4.0.1"
 chardetng = "0.1.17"
 chrono = "0.4.24"

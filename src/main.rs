@@ -41,12 +41,12 @@ use std::env::set_current_dir;
 use std::io::BufWriter;
 use std::path::PathBuf;
 
-use ansi_term::Colour::{Blue};
+use ansi_term::Colour::Blue;
 use anyhow::{anyhow, bail, Result};
-use args::{ Opts, Install };
+use args::{ Cli, Install, Commands };
 use cache::Cache;
 use canon_path::CanonPath;
-use clap::Clap;
+use clap::Parser;
 use download::Downloader;
 use env_logger::{Env, Target};
 use file_installer::FileInstaller;
@@ -73,6 +73,8 @@ fn main() -> Result<()> {
                             .target(Target::Stdout)
                             .init();
 
+    let cli = Cli::parse();
+
     let current_dir = std::env::current_dir()?;
     let current_dir = CanonPath::new(current_dir)?;
 
@@ -83,14 +85,13 @@ fn main() -> Result<()> {
     }
     let settings = read_settings();
     check_weidu_exe(&settings)?;
-    let opts: Opts = Opts::parse();
     let cache = Cache::ensure_from_config(&settings).unwrap();
-    match opts {
-        Opts::Install(ref install_opts) => install(install_opts, &settings, &current_dir, &cache),
-        Opts::Search(ref search_opts) => search(search_opts),
-        Opts::ListComponents(ref params) => sub_list_components(params, &settings),
-        Opts::Invalidate(ref params) => sub::invalidate::invalidate(params, &cache),
-        Opts::Extract(ref params) => sub::extract_manifest::extract_manifest(params, &current_dir),
+    match cli.command {
+        Commands::Install(ref install_opts) => install(install_opts, &settings, &current_dir, &cache),
+        Commands::Search(ref search_opts) => search(search_opts),
+        Commands::ListComponents(ref params) => sub_list_components(params, &settings),
+        Commands::Invalidate(ref params) => sub::invalidate::invalidate(params, &cache),
+        Commands::Reverse(ref params) => sub::extract_manifest::extract_manifest(params, &current_dir),
     }
 }
 

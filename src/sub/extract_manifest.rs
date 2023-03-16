@@ -4,7 +4,7 @@ use std::io::BufWriter;
 
 use anyhow::Result;
 
-use crate::args::Extract;
+use crate::args::Reverse;
 use crate::canon_path::CanonPath;
 use crate::components::{Component, Components};
 use crate::global::Global;
@@ -16,7 +16,7 @@ use crate::module::weidu_mod::WeiduMod;
 use crate::weidu_conf::read_weidu_conf_lang_dir;
 
 
-pub fn extract_manifest(args: &Extract, game_dir: &CanonPath) -> Result<()> {
+pub fn extract_manifest(args: &Reverse, game_dir: &CanonPath) -> Result<()> {
     let lang_dir = match read_weidu_conf_lang_dir(game_dir)? {
         None => "en_en".to_string(),
         Some(lang) => lang.clone(),
@@ -54,7 +54,7 @@ pub fn extract_manifest(args: &Extract, game_dir: &CanonPath) -> Result<()> {
     Ok(serde_yaml::to_writer(buf_writer, &manifest)?)
 }
 
-fn weidu_mod_from_log_row(row: &LogRow, args: &Extract) -> WeiduMod {
+fn weidu_mod_from_log_row(row: &LogRow, args: &Reverse) -> WeiduMod {
     let components = match args.export_component_name {
         Some(false) => Components::List(vec![ Component::Simple(row.component_index)]),
         _ => Components::List(vec![
