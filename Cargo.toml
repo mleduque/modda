@@ -1,6 +1,6 @@
 [package]
 name = "modda"
-version = "1.2.0-pre"
+version = "1.2.0-pre2"
 authors = ["Mickaël <mleduque@gmail.com>"]
 edition = "2018"
 
