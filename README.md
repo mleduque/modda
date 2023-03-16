@@ -171,20 +171,10 @@ Installation uses
 Each mod produces a `setup-<mod identifier>.log` log file.
 Multiple run of the same mod (for different components at different places in the installation order) will append in the same file.
 
-## Todo
+## RAR
 
-- Parallel HTTP fetching of mods using a pool
-- Resume aborted HTTP downloads?
-- Document YAML for archive fetching and unpacking (more)
-- Warn if the version of a mod changed ; this may impact reproducibility (component number changing, new components etc.)
-- Maybe use the `directories` projectdir cachevlue for default location of download cache?
-- Update or lock when using a "branch" location ?
-
-## Not sure
-
-RAR archive support has code but doesn't work
- - RAR archive in Rust is sparse, few crates, mostly unmaintained
+RAR archive are not supported right now
+ - RAR archive support in Rust is sparse, few crates, mostly unmaintained
  - Few actual RAR archives for mods
- - Could use external RAR tools but fragile
+ - Could use external RAR tools maybe?
 
-The cost does seem to high for the reward.
