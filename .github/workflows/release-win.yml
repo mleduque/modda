@@ -1,6 +1,8 @@
 
 name: release-win
-on: workflow_dispatch
+on:
+  release:
+    types: [published]
 
 jobs:
   release:

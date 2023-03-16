@@ -1,6 +1,7 @@
 
 name: release-all
-on: workflow_dispatch
+  release:
+    types: [created]
 
 jobs:
   release:
