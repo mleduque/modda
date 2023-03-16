@@ -1,5 +1,6 @@
 
 name: release-all
+on:
   release:
     types: [created]
 
