@@ -150,7 +150,7 @@ This uses a configuration file with one single config property (at the moment).
 The file is name `modda.yml` and will be taken from the current directory (first) then from the "OS conventional location for application configuration.
 
 - on linux, it should be `~/.config/modda/modda.yml`
-- on windows, probably around `%USERPROFILE%\AppData\Roaming\modda\modda.yml` (untested)
+- on windows, shoudld be around `C:\Users\<username>\AppData\Roaming\modda\config/modda.yml`
 - on macos, something like `$HOME/Library/Application Support/modda/modda.yml`
 
 It currently contains one property: `archive_cache` which tells the program where to store and search for downloaded modf archives.
