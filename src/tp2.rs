@@ -41,7 +41,7 @@ pub fn find_tp2(from_base: &PathBuf, module_name: &LwcString) -> Result<PathBuf>
             if let Some(idx) = lwc_paths.find_str(&last) {
                 return Ok(paths[idx].to_owned())
             }
-            bail!("No tp2 file for mo {}", module_name);
+            bail!("No tp2 file for mod {}", module_name);
         }
     }
 }
