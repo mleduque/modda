@@ -25,22 +25,28 @@ pub fn find_tp2(from_base: &PathBuf, module_name: &LwcString) -> Result<PathBuf>
             let lwc_paths = paths.iter().filter_map(|path| {
                 path.as_os_str().to_str().map(|os_str| lwc!(os_str))
             }).collect::<Vec<_>>();
+            debug!("find_tp2, candidates={:?}", lwc_paths);
             let first = format!("{}/{}.tp2", module_name, module_name);
+            debug!("find_tp2, checking first, {first}");
             if let Some(idx) = lwc_paths.find_str(&first) {
                 return Ok(paths[idx].to_owned())
             }
             let second = format!("{}/setup-{}.tp2", module_name, module_name);
+            debug!("find_tp2, checking ssecond, {second}");
             if let Some(idx) = lwc_paths.find_str(&second) {
                 return Ok(paths[idx].to_owned())
             }
             let third = format!("{}.tp2", module_name);
+            debug!("find_tp2, checking third, {third}");
             if let Some(idx) = lwc_paths.find_str(&third) {
                 return Ok(paths[idx].to_owned())
             }
             let last = format!("setup-{}.tp2", module_name);
+            debug!("find_tp2, checking last, {last}");
             if let Some(idx) = lwc_paths.find_str(&last) {
                 return Ok(paths[idx].to_owned())
             }
+            debug!("find_tp2, none of the candidates matched.");
             bail!("No tp2 file for mod {}", module_name);
         }
     }
@@ -67,10 +73,11 @@ fn find_glob_casefold(from_base: &PathBuf, module_name: &LwcString, depth: usize
         .filter_map(Result::ok);
     let mut result = vec![];
     for item in walker {
-        debug!("check_glob_casefold got {:?}", item);
+        debug!("find_glob_casefold got {:?}", item);
         result.push(item.path().strip_prefix(from_base).unwrap().to_owned())
     }
 
+    debug!("find_glob_casefold result=${:?}", result);
     Ok(result)
 }
 
