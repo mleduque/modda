@@ -20,8 +20,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    # checkout
     - uses: actions/checkout@v3
+    # set up rust cache
+    - uses: Swatinem/rust-cache@v2        
+    # build
     - name: Build
       run: cargo build --verbose
+    # tests
     - name: Run tests
       run: cargo test --verbose
