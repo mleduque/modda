@@ -22,31 +22,29 @@ pub fn find_tp2(from_base: &PathBuf, module_name: &LwcString) -> Result<PathBuf>
     match find_glob_casefold(from_base, module_name, 2) {
         Err(error) => bail!("Failed to search tp2 file for module {}\n -> {:?}", module_name, error),
         Ok(paths) => {
-            let lwc_paths = paths.iter().filter_map(|path| {
-                path.as_os_str().to_str().map(|os_str| lwc!(os_str))
-            }).collect::<Vec<_>>();
-            debug!("find_tp2, candidates={:?}", lwc_paths);
-            let first = format!("{}/{}.tp2", module_name, module_name);
-            debug!("find_tp2, checking first, {first}");
-            if let Some(idx) = lwc_paths.find_str(&first) {
-                return Ok(paths[idx].to_owned())
+            if !paths.is_empty() {
+
+                let short_tp2 = Some(lwc!(&format!("{module_name}.tp2")));
+                let long_tp2 = Some(lwc!(&format!("setup-{module_name}.tp2")));
+                let mod_dir = Some(module_name.clone());
+
+                for path in paths {
+                    let components = path.components().map(|component|
+                        component.as_os_str().to_str().map(|os_str| lwc!(os_str))
+                    ).collect::<Vec<_>>();
+                    match &components[..] {
+                        &[ref single] => if single == &short_tp2 || single == &long_tp2 { return Ok(path.clone()) },
+                        &[ref first, ref second] =>
+                                        if first == &mod_dir && (second == &short_tp2 || second == &long_tp2) {
+                                            return Ok(path.clone())
+                                        }
+                        _ => {}
+                    }
+                }
+                debug!("find_tp2, none of the candidates matched.");
+            } else {
+                debug!("find_tp2, no candidates found.");
             }
-            let second = format!("{}/setup-{}.tp2", module_name, module_name);
-            debug!("find_tp2, checking ssecond, {second}");
-            if let Some(idx) = lwc_paths.find_str(&second) {
-                return Ok(paths[idx].to_owned())
-            }
-            let third = format!("{}.tp2", module_name);
-            debug!("find_tp2, checking third, {third}");
-            if let Some(idx) = lwc_paths.find_str(&third) {
-                return Ok(paths[idx].to_owned())
-            }
-            let last = format!("setup-{}.tp2", module_name);
-            debug!("find_tp2, checking last, {last}");
-            if let Some(idx) = lwc_paths.find_str(&last) {
-                return Ok(paths[idx].to_owned())
-            }
-            debug!("find_tp2, none of the candidates matched.");
             bail!("No tp2 file for mod {}", module_name);
         }
     }
@@ -62,13 +60,18 @@ pub fn find_tp2_str(from_base: &PathBuf, module_name: &LwcString) -> Result<Stri
 
 fn find_glob_casefold(from_base: &PathBuf, module_name: &LwcString, depth: usize) -> Result<Vec<PathBuf>> {
     debug!("search tp2 for module {} from {:?} depth={}", module_name, from_base, depth);
-    let pattern =format!("**/*{module}.tp2",module = module_name);
-    let walker = match GlobWalkerBuilder::new(from_base, &pattern)
+    let patterns = vec![
+        format!("{module_name}.tp2"),
+        format!("setup-{module_name}.tp2"),
+        format!("{module_name}/{module_name}.tp2"),
+        format!("{module_name}/setup-{module_name}.tp2"),
+    ];
+    let walker = match GlobWalkerBuilder::from_patterns(from_base, &patterns)
         .case_insensitive(true)
         .max_depth(depth)
         .build() {
             Ok(glob) => glob,
-            Err(error) => bail!("Failed to build glob {}\n-> {:?}", pattern, error),
+            Err(error) => bail!("Failed to build glob {:?}\n-> {:?}", patterns, error),
         }.into_iter()
         .filter_map(Result::ok);
     let mut result = vec![];
@@ -77,7 +80,7 @@ fn find_glob_casefold(from_base: &PathBuf, module_name: &LwcString, depth: usize
         result.push(item.path().strip_prefix(from_base).unwrap().to_owned())
     }
 
-    debug!("find_glob_casefold result=${:?}", result);
+    debug!("find_glob_casefold result={:?}", result);
     Ok(result)
 }
 
