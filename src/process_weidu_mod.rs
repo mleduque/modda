@@ -32,8 +32,23 @@ pub fn process_weidu_mod(weidu_mod: &WeiduMod, weidu_context: &WeiduContext, man
         Ok(tp2) => tp2,
         Err(_) => {
             // if tp2 not found, mod must be fetched from location (if any)
-            module_downloader.get_module(&weidu_mod)?;
-            find_tp2(current, &weidu_mod.name)?
+            if let Err(error) = module_downloader.get_module(&weidu_mod) {
+                let message = format!("module {name} (index={idx}/{len}) download/installation failed, stopping.",
+                                                name = weidu_mod.name, idx = real_index + 1, len = mod_count);
+                weidu_context.log(&message)?;
+                info!("{}", Red.bold().paint(message));
+                return Err(error)
+            }
+            match find_tp2(current, &weidu_mod.name) {
+                Ok(tp2) => tp2,
+                Err(error) => {
+                    let message = format!("module {name} (index={idx}/{len}) mod installed but no tp2 found, stopping.",
+                                                    name = weidu_mod.name, idx = real_index + 1, len = mod_count);
+                    weidu_context.log(&message)?;
+                    info!("{}", Red.bold().paint(message));
+                    return Err(error)
+                }
+            }
         }
     };
     let tp2_string = match tp2.into_os_string().into_string() {
