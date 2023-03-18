@@ -114,6 +114,7 @@ fn replace_module(game_dir: &CanonPath, module_name: &LwcString, replace: &Optio
 mod test_retrieve_location {
 
 
+    use std::collections::HashMap;
     use std::{path::PathBuf};
 
     use crate::global::Global;
@@ -157,6 +158,7 @@ mod test_retrieve_location {
             archive_cache: Some("/cache_path".to_string()),
             extract_location: Some("/tmp".to_string()),
             weidu_path: None,
+            extractors: HashMap::new(),
         };
 
         let expected_dest = PathBuf::from("/cache_path/github/username/repository");
@@ -210,6 +212,7 @@ mod test_retrieve_location {
             archive_cache: Some("/cache_path".to_string()),
             extract_location: Some("/tmp".to_string()),
             weidu_path: None,
+            extractors: HashMap::new(),
         };
 
         let expected_dest = PathBuf::from("/cache_path/http/example.com");

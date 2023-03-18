@@ -83,7 +83,7 @@ fn main() -> Result<()> {
     } else {
         info!("chitin.key found");
     }
-    let settings = read_settings();
+    let settings = read_settings()?;
     check_weidu_exe(&settings)?;
     let cache = Cache::ensure_from_config(&settings).unwrap();
     match cli.command {

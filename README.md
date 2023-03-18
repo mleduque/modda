@@ -173,8 +173,6 @@ Multiple run of the same mod (for different components at different places in th
 
 ## RAR
 
-RAR archive are not supported right now
- - RAR archive support in Rust is sparse, few crates, mostly unmaintained
- - Few actual RAR archives for mods
- - Could use external RAR tools maybe?
-
+RAR is only supported with an external CLI/console executable.
+ -on Linux, `unrar-free` must be available on path or in the same directory (unrar-free from https://gitlab.com/bgermann/unrar-free _not_ https://www.rarlab.com/)
+ - on windows, `7z.exe` must be available (from https://www.7-zip.org/download.html)
