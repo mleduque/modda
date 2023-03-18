@@ -164,6 +164,7 @@ archive_cache: ~/path/to/my/cache
 
 Installation uses
  - either a weidu executable that can be discovered on the `PATH`
+ - Or one weidu executable in the same location modda is run from (game directory)
  - or, if present, any executable set in the config file, as `weidu_path`
 
 ## Logs
@@ -171,8 +172,31 @@ Installation uses
 Each mod produces a `setup-<mod identifier>.log` log file.
 Multiple run of the same mod (for different components at different places in the installation order) will append in the same file.
 
-## RAR
+The log level can be increased
+
+```
+# unix-like
+RUST_LOG=debug modda install -m ...
+
+# windows
+set RUST_LOG=debug
+modda install -m ...
+```
+
+Other things are possible, like different log levels by crate, https://docs.rs/env_logger/latest/env_logger/ for the whole doc.
+
+## RAR (or rare archive formats)
 
 RAR is only supported with an external CLI/console executable.
- -on Linux, `unrar-free` must be available on path or in the same directory (unrar-free from https://gitlab.com/bgermann/unrar-free _not_ https://www.rarlab.com/)
- - on windows, `7z.exe` must be available (from https://www.7-zip.org/download.html)
+
+The actual extractor used can be configured in modda.yml
+
+For me (linux) it will be
+
+```yaml
+extractors:
+    rar:
+        command: unrar-nonfree 
+        args: [ "x", "${input}", "${target}" ] # ${input} is replace by the actual archive name, ${target} is the destination directory
+```
+Obviously "rar" can be replaced by some other extension (7z, bz2, xz) but those are rare as weidu mods (?).
