@@ -132,9 +132,29 @@ fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &Cach
     };
 
     let modules = match (opts.from_index, opts.to_index) {
-        (Some(from_index), Some(to_index)) => &modules[(from_index - 1)..(to_index - 1)],
-        (Some(from_index), None) => &modules[(from_index - 1)..],
-        (None, Some(to_index)) => &modules[..(to_index - 1)],
+        (Some(from_index), Some(to_index)) => {
+            if from_index > modules.len() || from_index > to_index {
+                return Ok(());
+            } else if to_index > modules.len() {
+                &modules[(from_index - 1)..]
+            } else {
+                &modules[(from_index - 1)..(to_index - 1)]
+            }
+        }
+        (Some(from_index), None) => {
+            if from_index > modules.len() {
+                return Ok(());
+            } else {
+                &modules[(from_index - 1)..]
+            }
+        }
+        (None, Some(to_index)) => {
+            if to_index > modules.len() {
+                &modules
+            } else {
+                &modules[..(to_index - 1)]
+            }
+        }
         (None, None) => &modules,
     };
 
