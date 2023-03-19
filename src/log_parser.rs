@@ -26,7 +26,7 @@ pub struct LogRow {
 }
 
 lazy_static! {
-    static ref TP2_REGEX: Regex = RegexBuilder::new(r##"^~(?:.*/)?(?:setup-)?(.*)\.tp2~\s+#([0-9]+)\s+#([0-9]+)\s+//\s+(.*)$"##)
+    static ref TP2_REGEX: Regex = RegexBuilder::new(r##"^~(?:.*[/\\])?(?:setup-)?(.*)\.tp2~\s+#([0-9]+)\s+#([0-9]+)\s+//\s+(.*)$"##)
                                         .case_insensitive(true).build().unwrap();
 }
 
@@ -85,22 +85,22 @@ pub fn parse_weidu_log(mod_filter: Option<&LwcString>) -> Result<Vec<LogRow>> {
 
 pub fn check_install_complete(module: &Module) -> Result<()> {
     match module {
-        Module::Mod { weidu_mod } => check_install_weidu_mod(weidu_mod, module.get_name()),
+        Module::Mod { weidu_mod } => check_install_weidu_mod(weidu_mod),
         Module::File { .. } => Ok(()),
-        Module::Generated { gen } => check_install_weidu_mod(&gen.as_weidu(), module.get_name()),
+        Module::Generated { gen } => check_install_weidu_mod(&gen.as_weidu()),
     }
 }
 
-fn check_install_weidu_mod(weidu_mod: &WeiduMod, mod_name: &LwcString) -> Result<()> {
+fn check_install_weidu_mod(weidu_mod: &WeiduMod) -> Result<()> {
     match check_installed_components(weidu_mod) {
         Err(err) => return Err(err),
         Ok(missing) => if !missing.is_empty() {
-            bail!("All requested components for mod {} could not be installed.\nMissing: {:?}", mod_name, missing);
+            bail!("All requested components for mod {} could not be installed.\nMissing: {:?}", weidu_mod.name , missing);
         } else { Ok(()) }
     }
 }
 
-pub fn check_installed_components(module: &WeiduMod) -> Result<Vec<u32>> {
+fn check_installed_components(module: &WeiduMod) -> Result<Vec<u32>> {
     match &module.components {
         Components::None => Ok(vec![]),
         Components::Ask => Ok(vec![]),
