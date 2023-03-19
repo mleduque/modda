@@ -40,18 +40,18 @@ fn patch_module_with_content(game_dir: &CanonPath, module_name: &LwcString, patc
     };
     for patch in diff {
         let old_path = game_dir.join(&*patch.old.path);
-        let old = match old_path.canonicalize() {
+        let old = match old_path {
             Ok(path) => path,
-            Err(error) => bail!("Failed to canonicalize old file path {:?} while patching mod {}\n -> {:?}",
-                                        old_path, module_name, error),
+            Err(ref error) => bail!("Failed to canonicalize old file path {:?} while patching mod {}\n -> {:?}",
+                                            old_path, module_name, error),
         };
         check_path(game_dir, &old)?;
 
         let new_path = game_dir.join(&*patch.new.path);
-        let new = match new_path.canonicalize() {
+        let new = match new_path {
             Ok(path) => path,
-            Err(error) => bail!("Failed to canonicalize new file path {:?} while patching mod {}\n -> {:?}",
-                                        new_path, module_name, error),
+            Err(ref error) => bail!("Failed to canonicalize new file path {:?} while patching mod {}\n -> {:?}",
+                                            new_path, module_name, error),
         };
         check_path(game_dir, &new)?;
         if let Err(error) = patch_files(&old, &new, &patch, encoding) {
@@ -61,14 +61,14 @@ fn patch_module_with_content(game_dir: &CanonPath, module_name: &LwcString, patc
     Ok(())
 }
 
-fn check_path(base: &CanonPath, path: &Path) -> Result<()> {
+fn check_path(base: &CanonPath, path: &CanonPath) -> Result<()> {
     if !path.starts_with(base.path()) {
-        bail!("Attempt to patch file not in game directory");
+        bail!("Attempt to patch file not in game directory\n  {:?} not in {:?}", path, base);
     }
     Ok(())
 }
 
-fn decode_file(path:&Path, encoding: PatchEncoding) -> Result<String> {
+fn decode_file(path:&CanonPath, encoding: PatchEncoding) -> Result<String> {
     let bytes = match std::fs::read(&path) {
         Ok(content) => content,
         Err(error) => bail!("Failed to read patch file {:?}\n -> {:?}", path, error),
@@ -82,7 +82,7 @@ fn decode_file(path:&Path, encoding: PatchEncoding) -> Result<String> {
     Ok(decoded.0.into_owned())
 }
 
-fn patch_files(old: &Path, new: &Path, diff: &Patch, encoding: PatchEncoding) -> Result<()> {
+fn patch_files(old: &CanonPath, new: &CanonPath, diff: &Patch, encoding: PatchEncoding) -> Result<()> {
     let old_content = match decode_file(old, encoding) {
         Ok(lines) => lines,
         Err(error) => bail!("Error decoding file {:?}\n -> {:?}", old, error),
@@ -178,9 +178,9 @@ fn read_patch_relative(relative: &str, game_dir: &CanonPath, opts: &Install, enc
 
 fn read_patch_from(relative: &Path, base: &CanonPath, encoding: PatchEncoding) -> Result<String> {
     let complete = base.join(relative);
-    if let Ok(path) = CanonPath::new(&complete) {
+    if let Ok(path) = complete {
         if path.starts_with(base) {
-            decode_file(&path.path(), encoding)
+            decode_file(&path, encoding)
         } else {
             bail!("Relative patch not in expected location")
         }
@@ -387,17 +387,17 @@ mod apply_patch_tests {
     fn simple_patch_on_files() {
         let (_tempdir, game_dir) = setup_test_game_dir();
         let origin = Path::new(env!("CARGO_MANIFEST_DIR")).join("resources/test/patch/modulename.tp2");
-        std::fs::copy(&origin, &game_dir.join("modulename.tp2")).unwrap();
+        std::fs::copy(&origin, &game_dir.join_path("modulename.tp2")).unwrap();
 
         super::patch_module_with_content(&game_dir, &lwc!("modulename"), SIMPLEST_PATCH,
                                     crate::patch_source::PatchEncoding::UTF8).unwrap();
 
         // file modulename.tp2.old must exist and contain OLD content
-        let dot_old_file = game_dir.join("modulename.tp2.old");
+        let dot_old_file = game_dir.join_path("modulename.tp2.old");
         let dot_old_content = read_all(&dot_old_file).unwrap().join("\n");
         let expected = read_all(&origin).unwrap().join("\n");
         assert_eq!(dot_old_content, expected);
-        let new_file = game_dir.join("modulename.tp2");
+        let new_file = game_dir.join_path("modulename.tp2");
 
         // file modulename.tp2 must exist and contain NEW content
         let new_content = read_all(&new_file).unwrap().join("\n");

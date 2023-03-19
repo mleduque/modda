@@ -33,7 +33,7 @@ impl <'a> FileInstaller<'a> {
         self.copy_from_origins(&origins, target, allow_overwrite)
     }
     pub fn resolve_from_game_dir(&self, rel_path: &str) -> PathBuf {
-        self.game_dir.join(rel_path)
+        self.game_dir.join_path(rel_path)
     }
 
     fn get_file_globs(&self, origins: &[&FileModuleOrigin]) -> Result<Vec<CopyGlob>> {

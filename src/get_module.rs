@@ -103,7 +103,7 @@ impl <'a> ModuleDownload<'a> {
 fn replace_module(game_dir: &CanonPath, module_name: &LwcString, replace: &Option<Vec<ReplaceSpec>>) -> Result<()> {
     if let Some(specs) = replace {
         for spec in specs {
-            let mod_path = game_dir.join(module_name.as_ref());
+            let mod_path = game_dir.join_path(module_name.as_ref());
             spec.exec(&mod_path)?;
         }
     }

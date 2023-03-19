@@ -14,7 +14,7 @@ pub fn check_weidu_conf_lang(game_dir: &CanonPath, lang: &str) -> Result<()> {
     if !Path::new("weidu.conf").exists() {
         return Ok(())
     }
-    let file = match std::fs::File::open(game_dir.join("weidu.conf")) {
+    let file = match std::fs::File::open(game_dir.join_path("weidu.conf")) {
         Err(error) => return Err(
             anyhow!(format!("Could not open weidu.conf - {:?}", error)
         )),
@@ -41,7 +41,7 @@ pub fn read_weidu_conf_lang_dir(game_dir: &CanonPath) -> Result<Option<String>> 
     if !Path::new("weidu.conf").exists() {
         return Ok(None)
     }
-    let file = match std::fs::File::open(game_dir.join("weidu.conf")) {
+    let file = match std::fs::File::open(game_dir.join_path("weidu.conf")) {
         Err(error) => return Err(
             anyhow!(format!("Could not open weidu.conf - {:?}", error)
         )),

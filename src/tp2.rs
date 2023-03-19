@@ -6,7 +6,7 @@ use anyhow::{anyhow, bail, Result};
 use globwalk::{GlobWalkerBuilder};
 use log::debug;
 
-use crate::lowercase::{ContainsStr, LwcString, lwc};
+use crate::lowercase::{LwcString, lwc};
 
 /**
  * Given a module name, finds a matching path to a .tp2 file
