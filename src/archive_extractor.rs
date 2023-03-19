@@ -229,9 +229,19 @@ impl <'a> Extractor<'a> {
         let mut command = Command::new(&extractor_command.command);
         let args = extractor_command.args.iter().map(|arg| {
             match arg.as_str() {
-                "${input}" => archive.as_os_str().to_str().ok_or(anyhow!("Error extracting archive path")),
-                "${target}"=> tmp_dir.as_ref().as_os_str().to_str().ok_or(anyhow!("Error extracting target path")),
-                other => Ok(other),
+                s if s.contains("${input}") => {
+                    match archive.as_os_str().to_str().ok_or(anyhow!("Error extracting archive path")) {
+                        Err(error) => Err(error),
+                        Ok(input) => Ok(s.replace("${input}", input)),
+                    }
+                }
+                s if s.contains("${target}") => {
+                    match tmp_dir.as_ref().as_os_str().to_str().ok_or(anyhow!("Error extracting target path")) {
+                        Err(error) => Err(error),
+                        Ok(target) => Ok(s.replace("${target}", target)),
+                    }
+                }
+                other => Ok(other.to_string()),
             }
         }).collect::<Vec<_>>();
         let (successes, failures): (Vec<_>, Vec<_>) = args.into_iter().partition(|entry| entry.is_ok());

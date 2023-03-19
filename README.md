@@ -146,14 +146,20 @@ If the components with warning has no order dependency or reverse-dependency wit
 
 ## Configuration
 
-This uses a configuration file with one single config property (at the moment).
+This uses a configuration file with one single configuration property (at the moment).
 The file is name `modda.yml` and will be taken from the current directory (first) then from the "OS conventional location for application configuration.
 
 - on linux, it should be `~/.config/modda/modda.yml`
-- on windows, shoudld be around `C:\Users\<username>\AppData\Roaming\modda\config/modda.yml`
+- on windows, should be around `C:\Users\<username>\AppData\Roaming\modda\config/modda.yml`
 - on macos, something like `$HOME/Library/Application Support/modda/modda.yml`
 
-It currently contains one property: `archive_cache` which tells the program where to store and search for downloaded modf archives.
+Properties:
+- `archive_cache` which tells the program where to store and search for downloaded mod archives.
+- `extract_location` the temporary place where archive are extracted before being copied to the game directory (using a place on the same file system as the game directory can provide some performance advantage)
+- `weidu_path` where weidu executable can be found
+- `extractors` tells howto extract some archive format with an external program
+
+All properties are optional.
 
 ```yaml
 # can be an absolute path, or can use ~ exapansion on UNIX-like OSes
@@ -166,6 +172,8 @@ Installation uses
  - either a weidu executable that can be discovered on the `PATH`
  - Or one weidu executable in the same location modda is run from (game directory)
  - or, if present, any executable set in the config file, as `weidu_path`
+
+Modda will not use the various setup-XXX.exe that clutter the game directory (and are just `weidu.exe` duplicates with different versions).
 
 ## Logs
 
@@ -199,4 +207,14 @@ extractors:
         command: unrar-nonfree 
         args: [ "x", "${input}", "${target}" ] # ${input} is replace by the actual archive name, ${target} is the destination directory
 ```
-Obviously "rar" can be replaced by some other extension (7z, bz2, xz) but those are rare as weidu mods (?).
+
+Tested on windows with
+
+```yaml
+extractors:
+  rar:
+    command: 'C:\Program Files\7-Zip\7z.exe'
+    args: [ "x", "${input}", "-o${target}" ]
+```
+
+Obviously "rar" can be replaced by some other extension (7z, bz2, xz) but those are rare as weidu mods (I think?).
