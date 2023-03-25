@@ -3,9 +3,11 @@
 Automates the installation of a bunch of mods above an Infinity Engine based game.
 (though so far, it was only tested with BG1 & BG2).
 
+It depends on weidu to be accessible somewhere on the computer.
+
 ## Initial goal
 
-Be able to generate (mostly) reproducible installations
+Be able to generate (mostly) reproducible installations.
 
 ## Operation
 
@@ -70,8 +72,17 @@ The comments are optional of course, they are only for the reader.
       location:
         http: http://america.iegmc.net/g3//lin-IWDCrossmodPack-v1.4.tar.gz
 ```
+It's possible to give a name to the resulting archive.
+
+```yaml
+    location:
+      http: http://www.shsforums.net/files/download/710-xulaye/
+      rename: Xulaye_v2.0.zip
+```
 
 ### Example 2: Github fetch
+
+You can specify a `release`/`asset` pair, a `tag`, a `commit` hash or (not really recommended) a `branch`.
 
 To obtain a _release_
 ```yaml
@@ -96,6 +107,7 @@ To obtain a tag
       repository: iwdification
       tag: v5
 ```
+
 ### Example 3: Local (file-system) location
 
 ```yaml
@@ -111,9 +123,105 @@ To obtain a tag
 
 ## Limitations
 
-- Only tested with weidu 247
-- At this point, was only tested on linux
-- Mods that use `ACTION_READLN` are not handled well (installation is interrupted until the user makes some choice, and reproducibility is not guaranteed)
+- At this point, was only tested on linux and (a little less) windows.
+- Mods that use `ACTION_READLN` are not handled well (installation is interrupted until the user makes some choice, and reproducibility is not guaranteed).To work around this, I usually `patch` those commands out.
+
+## Modifying mode
+
+There are some ways to changea mod after it's been copied in the game directory (unarchive+copy) and before executing installation (weidu phase).
+
+WARNING: If you use these capabilities, please don't bother the mod authors/maintainers with questions (except maybe the `add_conf` method). Check with an unmodified mod first.
+
+### Patching`
+
+Apply a patch in "unified diff" format to the mod.
+
+It assumes the patched files are text files UTF-8 encoded but can be forced to use (some) other encodings.
+
+``` yaml
+- name: my_mod
+    location:
+        http: https://whatever.org/path/my_mod.zip
+        patch:
+            relative: patches/my_mod-remove-action_readln.diff
+- name: other_mod_in_win1252
+    location:
+        http: https://whatever.org/path/my_mod.zip
+        patch:
+            relative: patches/my_mod-remove-action_readln.diff
+            encoding: WIN1252 # UTF8 / WIN1252 / WIN1251
+```
+
+With my_mod-remove-action_readln.diff
+
+```diff
+--- my_mod/lib/my_lib.tpa
++++ my_mod/lib/my_lib.tpa
+@@ -70,13 +70,7 @@
+ <some patch context line>
+ <yet more patch context>
+ 
+-PRINT ~Choose a portrait:~
+-
+-PRINT ~Please choose one of the following:
+-[1] Default
+-[2] Alt portrait~
+-
+-OUTER_SPRINT ~portrait~ ~placeholder_value~
++OUTER_SPRINT ~portrait~ 1
+-OUTER_WHILE (!(IS_AN_INT ~portrait~) OR (~portrait~ > 0x2) OR (~portrait~ < 0x1)) BEGIN
+-  ACTION_READLN ~portrait~
+-END
+```
+
+"Relative" patches are searched
+- in the same directory as the YAML manifest file if `global.local_patches` is not defined
+- in `${manifest_directory}/${local_patches}` if `local_patches` is defined
+
+### Regex replace
+
+instead of the `patch` property of `location`, this uses a ` replace` property which is _a list_  of "replace operations"
+
+```yaml
+    location:
+      http: https://somewhere.under/the-rainbow.zip
+      replace:
+        # this timer is far too long!
+        - file_globs: ["the-rainbow/dialogue/who_s_this.d"]
+          replace: 'RealSetGlobalTimer("MyLongTimer","GLOBAL",7200)'
+          with: 'RealSetGlobalTimer("MyLongTimer","GLOBAL",3600)'
+        - file_globs: ["the-rainbow/scripts/script.baf", "the-rainbow/scripts/script2.baf"]
+          replace: "something else"
+          with: "something better"
+```
+
+- `file_globs` is a list of "globs" (the best description I could find is the one in the 
+- [gitignore documentaition](https://git-scm.com/docs/gitignore#_pattern_format))
+- `replace` is a regexp in the [Rust regex crate format](https://docs.rs/regex/latest/regex/#syntax) (**Not the Weidu regex format**), which tells _what_ will be replaced
+- `with` is a replacement string which tell _with what_ it will be replaced (maybe including capture groups).
+
+## Adding a single file
+Use the mod `add_conf` property to add a single file in the mod directory.
+
+```yaml
+- name: EET
+  components: [0]
+  location:
+    http: ...
+  add_conf:
+    file_name: bgee_dir.txt
+    content: /path/>to/>my_bg1ee/installation
+- name: cdtweaks
+  components: ask
+  location:
+    http: ...
+  add_conf:
+    file_name: cdtweaks.txt
+    content: |
+      OUTER_SET always_install_unique_icons = 1
+      OUTER_SET romance_use_config_values = 1
+      OUTER_SET romance_speed_factor = 67
+```
 
 ## Errors and warnings
 

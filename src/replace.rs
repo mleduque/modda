@@ -51,7 +51,7 @@ impl ReplaceSpec {
         }
 
         let content = match String::from_utf8(buf) {
-            Err(err)  => bail!("apply_replace: content of {:?} doesnot appear to be UTF8 - {}", file, err),
+            Err(err)  => bail!("apply_replace: content of {:?} does not appear to be UTF8 - {}", file, err),
             Ok(what) => what,
         };
         Ok(regex.replace_all(&content, &self.with).to_string())
