@@ -97,10 +97,10 @@ pub struct Reverse {
     pub output: String,
 
     /// If set, the `language` field in mod definitions will be generated (default: `false`).
-    #[arg(long, short)]
+    #[arg(long, short = 'l')]
     pub export_language: Option<bool>,
 
     /// If set, the component names will be generated (default: `true`).
-    #[arg(long, short)]
+    #[arg(long, short = 'c')]
     pub export_component_name: Option<bool>,
 }
