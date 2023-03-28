@@ -58,6 +58,48 @@ modules:
 
 The comments are optional of course, they are only for the reader.
 
+## Generating from weidu.log
+
+It's possible to generate a skeleton YAML file from an existing `weidu.log` file.
+
+From the gamedirectory (where weidu.log is located):
+
+```
+modda reverse --output my-install.yaml
+```
+with a weidu.log that looks like that
+```
+// Log of Currently Installed WeiDU Mods
+// The top of the file is the 'oldest' mod
+// ~TP2_File~ #language_number #component_number // [Subcomponent Name -> ] Component Name [ : Version]
+~FAITHS_AND_POWERS/FAITHS_AND_POWERS.TP2~ #0 #25 // Choosee a Sphere System -> nuFnP: a new sphere system (fewer spheres, more balanced, closer to PnP): 0.85sd19
+~FAITHS_AND_POWERS/FAITHS_AND_POWERS.TP2~ #0 #31 // Install Cleric kits: 0.85sd19
+~FAITHS_AND_POWERS/FAITHS_AND_POWERS.TP2~ #0 #33 // Install Druid kits: 0.85sd19
+```
+
+will generate
+```yaml
+version: '1'
+global:
+  lang_dir: fr_fr
+  lang_preferences:
+  - '#rx#^fran[cç]ais'
+  - french
+modules:
+- name: faiths_and_powers
+  components:
+  - index: 25
+    component_name: 'Choosee a Sphere System -> nuFnP: a new sphere system (fewer spheres, more balanced, closer to PnP): 0.85sd19'
+  - index: 31
+    component_name: 'Install Cleric kits: 0.85sd19'
+  - index: 33
+    component_name: 'Install Druid kits: 0.85sd19'
+```
+
+The `component_name` properties are actually just like comments (they would be ignored in an `install` operation).
+
+The `lang_dir` property is taken from `weidu.conf` and `lang_preferences` is just guessed (for a limited set of languages, `en`, `fr` and `es` ATM).
+
 ## Fetching mods
 
 - You can specify a `location` for fetching a mod.
