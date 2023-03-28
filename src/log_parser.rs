@@ -70,7 +70,7 @@ pub fn parse_weidu_log(mod_filter: Option<&LwcString>) -> Result<Vec<LogRow>> {
                     Err(_) => return Some(Err(anyhow!("invalid component index `{:?}` in weidu.log line\n>\t{}", lang_capture, line))),
                     Ok(value) => value,
                 };
-                let component_name = cap.get(3).unwrap().as_str().to_owned();
+                let component_name = cap.get(4).unwrap().as_str().to_owned();
                 Some(Ok(LogRow {
                     module,
                     lang_index,
