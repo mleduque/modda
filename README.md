@@ -368,3 +368,6 @@ extractors:
 ```
 
 Obviously "rar" can be replaced by some other extension (7z, bz2, xz) but those are rare as weidu mods (I think?).
+
+## Building
+TODO Describe installing rustup, installing the compiler components and running cargo build
