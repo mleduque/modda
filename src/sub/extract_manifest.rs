@@ -46,7 +46,7 @@ pub fn extract_manifest(args: &Reverse, game_dir: &CanonPath) -> Result<()> {
 
 pub fn generate_manifest(game_dir: &CanonPath, modules: Vec<Module>) -> Result<Manifest> {
     let lang_dir = match read_weidu_conf_lang_dir(game_dir)? {
-        None => "en_en".to_string(),
+        None => "en_US".to_string(),
         Some(lang) => lang.clone(),
     };
     Ok(Manifest {
