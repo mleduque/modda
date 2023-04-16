@@ -74,9 +74,9 @@ fn weidu_mod_from_log_row(row: &LogRow, args: &Reverse) -> WeiduMod {
 
 fn default_lang_pref(lang_dir: &str) -> Option<Vec<String>> {
     match lang_dir {
-        "fr_fr" => Some(vec!["#rx#^fran[cç]ais".to_string(), "french".to_string()]),
-        "en_en" => Some(vec!["english".to_string(), "american english".to_string()]),
-        "es_es" => Some(vec!["#rx#^espa[ñn]ol".to_string(), "spanish".to_string()]),
+        "fr_FR" => Some(vec!["#rx#^fran[cç]ais".to_string(), "french".to_string()]),
+        "en_US" => Some(vec!["english".to_string(), "american english".to_string()]),
+        "es_ES" => Some(vec!["#rx#^espa[ñn]ol".to_string(), "spanish".to_string()]),
         // some more...
         _ => None,
     }
