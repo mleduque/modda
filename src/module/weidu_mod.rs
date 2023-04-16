@@ -12,7 +12,7 @@ use super::module_conf::ModuleConf;
 
 /** Definition of a mod. */
 #[skip_serializing_none]
-#[derive(Deserialize, Serialize, Debug, PartialEq, Default)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Default, Clone)]
 pub struct WeiduMod {
     /**
      * Unique identifier of a mod.

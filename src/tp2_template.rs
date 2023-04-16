@@ -5,8 +5,8 @@ use handlebars::Handlebars;
 use serde_json::json;
 
 use std::io::Write;
-use std::path::PathBuf;
 
+use crate::canon_path::CanonPath;
 use crate::module::gen_mod::GeneratedMod;
 
 const TP2_TEMPLATE: &str ="
@@ -43,12 +43,12 @@ pub fn generate_tp2(gen: &GeneratedMod) -> Result<String> {
     Ok(result)
 }
 
-pub fn create_tp2(gen: &GeneratedMod, target: &PathBuf) -> Result<()> {
+pub fn create_tp2(gen: &GeneratedMod, target: &CanonPath) -> Result<()> {
     let content = match generate_tp2(gen) {
         Err(err) => bail!("Could not generate tp2 file from template\n  {}", err),
         Ok(content) => content,
     };
-    let tp2_path = target.join(format!("{}.tp2", gen.gen_mod));
+    let tp2_path = target.join(format!("{}.tp2", gen.gen_mod))?;
     let file = std::fs::OpenOptions::new()
                                             .write(true)
                                             .create_new(true)

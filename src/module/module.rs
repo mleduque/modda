@@ -12,7 +12,7 @@ use super::gen_mod::GeneratedMod;
 use super::weidu_mod::WeiduMod;
 
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Module {
     Mod { weidu_mod: WeiduMod },
     File { file: FileModule },

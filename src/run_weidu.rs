@@ -13,6 +13,7 @@ use crate::args::Install;
 use crate::global::Global;
 use crate::language::{LanguageOption, LanguageSelection, select_language};
 use crate::components::{Component, Components};
+use crate::lowercase::LwcString;
 use crate::module::weidu_mod::WeiduMod;
 use crate::run_result::RunResult;
 use crate::settings::Config;
@@ -160,7 +161,7 @@ lazy_static! {
     static ref LANGUAGE_REGEX: Regex = Regex::new("^([0-9]*):(.*)$").unwrap();
 }
 
-pub fn list_available_languages(tp2: &str, module: &WeiduMod, config: &Config) -> Result<Vec<LanguageOption>> {
+pub fn list_available_languages(tp2: &str, mod_name: &LwcString, config: &Config) -> Result<Vec<LanguageOption>> {
     let mut command = Command::new(weidu_command(config, false)?);
     let args = vec![
         "--no-exit-pause".to_owned(),
@@ -180,7 +181,7 @@ pub fn list_available_languages(tp2: &str, module: &WeiduMod, config: &Config) -
     for line in lines {
         match line {
             Err(err) => bail!("Couldn't obtain language list for module '{}' [error reading output] _ {:?}",
-                            module.name, err),
+                            mod_name, err),
             Ok(line) => {
                 lines_ok.push(line);
             }

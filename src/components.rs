@@ -6,7 +6,7 @@ use std::marker::PhantomData;
 use serde::{Deserialize, Deserializer, Serialize};
 use serde::de::{self, Visitor, SeqAccess};
 
-#[derive(Deserialize, Serialize, Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum Components {
     Ask,
@@ -61,7 +61,7 @@ impl FromStr for Components {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum Component {
     Simple(u32),

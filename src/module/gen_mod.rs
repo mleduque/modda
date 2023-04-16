@@ -11,7 +11,7 @@ use super::weidu_mod::WeiduMod;
 
 /// Generates a skeleton weidu mod that just copies a bunch of files into `games/override`
 #[skip_serializing_none]
-#[derive(Deserialize, Serialize, Debug, PartialEq, Default)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Default, Clone)]
 pub struct GeneratedMod {
     pub gen_mod: LwcString,
     pub description: Option<String>,
@@ -42,7 +42,7 @@ impl GeneratedMod {
     }
 }
 #[skip_serializing_none]
-#[derive(Deserialize, Serialize, Debug, PartialEq, Default)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Default, Clone)]
 pub struct GenModComponent {
     #[serde(default)]
     pub index: u32,

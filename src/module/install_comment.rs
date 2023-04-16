@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
 #[skip_serializing_none]
-#[derive(Deserialize, Serialize, Debug, PartialEq, Default)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Default, Clone)]
 pub struct InstallationComments {
     pub general: Option<String>,
     pub before: Option<String>,

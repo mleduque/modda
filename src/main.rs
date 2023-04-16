@@ -86,12 +86,14 @@ fn main() -> Result<()> {
     let settings = read_settings()?;
     check_weidu_exe(&settings)?;
     let cache = Cache::ensure_from_config(&settings).unwrap();
+
     match cli.command {
         Commands::Install(ref install_opts) => install(install_opts, &settings, &current_dir, &cache),
         Commands::Search(ref search_opts) => search(search_opts),
-        Commands::ListComponents(ref params) => sub_list_components(params, &settings),
+        Commands::ListComponents(ref params) => sub_list_components(params, &current_dir, &settings),
         Commands::Invalidate(ref params) => sub::invalidate::invalidate(params, &cache),
         Commands::Reverse(ref params) => sub::extract_manifest::extract_manifest(params, &current_dir),
+        Commands::AppendMod(ref params) => sub::append_mod::append_mod(params, &current_dir, &settings),
     }
 }
 
@@ -158,17 +160,13 @@ fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &Cach
         (None, None) => &modules,
     };
 
-    let current = match std::env::current_dir() {
-        Ok(cwd) => cwd,
-        Err(error) => bail!("Failed to obtain current directory\n -> {:?}", error),
-    };
     let downloader = Downloader::new();
     let module_downloader = ModuleDownload::new(&settings, &manifest.global, &opts,
                                                                         &downloader, &game_dir, cache);
     let file_installer = FileInstaller::new(&manifest.global, &opts, &game_dir);
     let file_module_installer = FileModuleInstaller::new(&file_installer);
 
-    let weidu_context = WeiduContext { current: &current, settings: &settings, opts: &opts,
+    let weidu_context = WeiduContext { current: game_dir, settings: &settings, opts: &opts,
                                                     module_downloader: &module_downloader, file_installer: &file_installer,
                                                     log: RefCell::from(log) };
 

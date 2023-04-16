@@ -6,6 +6,7 @@ use anyhow::{anyhow, bail, Result};
 use globwalk::{GlobWalkerBuilder};
 use log::debug;
 
+use crate::canon_path::CanonPath;
 use crate::lowercase::{LwcString, lwc};
 
 /**
@@ -18,7 +19,7 @@ use crate::lowercase::{LwcString, lwc};
  * with case-insensitive search.
  * Search is done in this order and ignores other matches when one is found.
  */
-pub fn find_tp2(from_base: &PathBuf, module_name: &LwcString) -> Result<PathBuf> {
+pub fn find_tp2(from_base: &CanonPath, module_name: &LwcString) -> Result<PathBuf> {
     match find_glob_casefold(from_base, module_name, 2) {
         Err(error) => bail!("Failed to search tp2 file for module {}\n -> {:?}", module_name, error),
         Ok(paths) => {
@@ -50,7 +51,7 @@ pub fn find_tp2(from_base: &PathBuf, module_name: &LwcString) -> Result<PathBuf>
     }
 }
 
-pub fn find_tp2_str(from_base: &PathBuf, module_name: &LwcString) -> Result<String> {
+pub fn find_tp2_str(from_base: &CanonPath, module_name: &LwcString) -> Result<String> {
     let tp2_path = find_tp2(from_base, module_name)?;
     match tp2_path.to_str() {
         Some(name) => Ok(name.to_owned()),
@@ -58,7 +59,7 @@ pub fn find_tp2_str(from_base: &PathBuf, module_name: &LwcString) -> Result<Stri
     }
 }
 
-fn find_glob_casefold(from_base: &PathBuf, module_name: &LwcString, depth: usize) -> Result<Vec<PathBuf>> {
+fn find_glob_casefold(from_base: &CanonPath, module_name: &LwcString, depth: usize) -> Result<Vec<PathBuf>> {
     debug!("search tp2 for module {} from {:?} depth={}", module_name, from_base, depth);
     let patterns = vec![
         format!("{module_name}.tp2"),
@@ -88,7 +89,7 @@ fn find_glob_casefold(from_base: &PathBuf, module_name: &LwcString, depth: usize
 fn find_simplest_tp2_location() {
     use std::str::FromStr;
     let test_base = format!("{}/{}", env!("CARGO_MANIFEST_DIR"), "resources/test/tp2");
-    let base = PathBuf::from_str(&test_base).unwrap();
+    let base = CanonPath::new(PathBuf::from_str(&test_base).unwrap()).unwrap();
     let found = find_tp2(&base, &lwc!("simple")).unwrap();
     assert_eq!(
         found,
@@ -100,7 +101,7 @@ fn find_simplest_tp2_location() {
 fn find_tp2_location_with_case_mismatch() {
     use std::str::FromStr;
     let test_base = format!("{}/{}", env!("CARGO_MANIFEST_DIR"), "resources/test/tp2");
-    let base = PathBuf::from_str(&test_base).unwrap();
+    let base = CanonPath::new(PathBuf::from_str(&test_base).unwrap()).unwrap();
     let found = find_tp2(&base, &lwc!("simplewithcase")).unwrap();
     assert_eq!(
         found,
@@ -112,7 +113,7 @@ fn find_tp2_location_with_case_mismatch() {
 fn find_tp2_location_with_setup_prefix() {
     use std::str::FromStr;
     let test_base = format!("{}/{}", env!("CARGO_MANIFEST_DIR"), "resources/test/tp2");
-    let base = PathBuf::from_str(&test_base).unwrap();
+    let base = CanonPath::new(PathBuf::from_str(&test_base).unwrap()).unwrap();
     let found = find_tp2(&base, &lwc!("anotherModule")).unwrap();
     assert_eq!(
         found,
@@ -124,7 +125,7 @@ fn find_tp2_location_with_setup_prefix() {
 fn find_tp2_in_mod_subdir_simple() {
     use std::str::FromStr;
     let test_base = format!("{}/{}", env!("CARGO_MANIFEST_DIR"), "resources/test/tp2");
-    let base = PathBuf::from_str(&test_base).unwrap();
+    let base = CanonPath::new(PathBuf::from_str(&test_base).unwrap()).unwrap();
     let found = find_tp2(&base, &lwc!("SomeModule")).unwrap();
     assert_eq!(
         found,
@@ -136,7 +137,7 @@ fn find_tp2_in_mod_subdir_simple() {
 fn find_tp2_in_mod_subdir_and_setup_prefix() {
     use std::str::FromStr;
     let test_base = format!("{}/{}", env!("CARGO_MANIFEST_DIR"), "resources/test/tp2");
-    let base = PathBuf::from_str(&test_base).unwrap();
+    let base = CanonPath::new(PathBuf::from_str(&test_base).unwrap()).unwrap();
     let found = find_tp2(&base, &lwc!("someothermodule")).unwrap();
     assert_eq!(
         found,

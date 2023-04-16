@@ -2,14 +2,14 @@
 use serde::{Deserialize, Serialize};
 
 
-#[derive(Deserialize, Serialize, Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
 pub struct ModuleConf {
     pub file_name:String,
     #[serde(flatten)]
     pub content: ModuleContent,
 }
 
-#[derive(Deserialize, Serialize, Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum ModuleContent {
     /// The actual content of the file is provided

@@ -1,4 +1,5 @@
 
+use std::fs::File;
 use std::io::{BufReader, Seek, SeekFrom};
 use serde::{Deserialize, Serialize};
 
@@ -14,7 +15,7 @@ pub struct VersionDetect {
     pub version: String,
 }
 
-#[derive(Deserialize, Serialize, Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
 pub struct Manifest {
     /// Manifest format version
     pub version: String,
@@ -28,10 +29,14 @@ pub struct Manifest {
 
 impl Manifest {
     pub fn read_path(path: &str) -> Result<Self> {
-        let mut file = match std::fs::File::open(path) {
+        let file = match std::fs::File::open(path) {
             Err(error) => bail!("Could not open manifest file {} - {:?}", path, error),
             Ok(file) => file,
         };
+        Self::read_file(file)
+    }
+
+    pub fn read_file(mut file: File) -> Result<Self> {
         {
             let reader = BufReader::new(&file);
             let version: VersionDetect = serde_yaml::from_reader(reader)?;
@@ -40,12 +45,12 @@ impl Manifest {
             }
         }
         let _ = file.seek(SeekFrom::Start(0))?;
-        let reader = BufReader::new(&file);
+        let reader = BufReader::new(file);
         let deserializer = Deserializer::from_reader(reader);
         let result: Result<Manifest, _> = serde_path_to_error::deserialize(deserializer);
         let manifest: Manifest = match result {
             Ok(manifest) => manifest,
-            Err(error) => bail!("Failed to parse manifest at {}\n -> {}\npath:{}", path, error, error.path()),
+            Err(error) => bail!("Failed to parse manifest\n -> {}\npath:{}", error, error.path()),
         };
         Ok(manifest)
     }

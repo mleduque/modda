@@ -1,6 +1,7 @@
 
 use clap_derive::{Parser, Subcommand, Args};
 
+use crate::lowercase::LwcString;
 use crate::progname::PROGNAME;
 
 
@@ -26,6 +27,9 @@ pub enum Commands {
     Invalidate(Invalidate),
     /// generate a skeleton manifest YAML file from a `weidu.log` file.
     Reverse(Reverse),
+    /// Append all components of a mod to a manifest. This can result in an uninstallable mod (incompatible components, GROUPs etc.)
+    /// so it should probably manually edited.
+    AppendMod(AppendMod),
 }
 
 #[derive(Args, Debug, Default)]
@@ -71,7 +75,7 @@ pub struct Search {
 #[derive(Args, Debug)]
 pub struct ListComponents {
     /// Name of the module we want to find.
-    pub module_name: String,
+    pub module_name: LwcString,
 
     /// Language we want the component names to appear in.
     #[arg(long, short)]
@@ -99,6 +103,25 @@ pub struct Reverse {
     /// If set, the `language` field in mod definitions will be generated (default: `false`).
     #[arg(long, short = 'l')]
     pub export_language: Option<bool>,
+
+    /// If set, the component names will be generated (default: `true`).
+    #[arg(long, short = 'c')]
+    pub export_component_name: Option<bool>,
+}
+
+#[derive(Args, Debug)]
+pub struct AppendMod {
+    /// Name of the file that will be appended to.
+    /// The file is created if it doesn't exist.
+    #[arg(long, short)]
+    pub output: String,
+
+    #[arg(long, short)]
+    pub r#mod: LwcString,
+
+    /// If set, the component names will be generated (default: `true`).
+    #[arg(long, short = 'l')]
+    pub language: Option<String>,
 
     /// If set, the component names will be generated (default: `true`).
     #[arg(long, short = 'c')]

@@ -4,7 +4,7 @@ use serde_with::skip_serializing_none;
 
 
 #[skip_serializing_none]
-#[derive(Deserialize, Serialize, Debug, PartialEq, Default)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Default, Clone)]
 pub struct Global {
     /// The "language code" configured in the game e.g. en_US, es_ES, fr_FR
     #[serde(rename = "lang_dir")]

@@ -3,18 +3,18 @@ use std::fs::File;
 use std::io::BufWriter;
 
 use std::io::Write;
-use std::path::PathBuf;
 
 use anyhow::Result;
 
 use crate::args::Install;
+use crate::canon_path::CanonPath;
 use crate::file_installer::FileInstaller;
 use crate::get_module::ModuleDownload;
 use crate::settings::Config;
 
 
 pub struct WeiduContext<'a> {
-    pub current: &'a PathBuf,
+    pub current: &'a CanonPath,
     pub settings: &'a Config,
     pub opts: &'a Install,
     pub module_downloader: &'a ModuleDownload<'a>,

@@ -9,7 +9,7 @@ use super::file_module_origin::FileModuleOrigin;
 
 
 #[skip_serializing_none]
-#[derive(Deserialize, Serialize, Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
 pub struct FileModule {
     pub file_mod: LwcString,
     pub description: Option<String>,

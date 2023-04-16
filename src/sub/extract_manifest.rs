@@ -17,10 +17,6 @@ use crate::weidu_conf::read_weidu_conf_lang_dir;
 
 
 pub fn extract_manifest(args: &Reverse, game_dir: &CanonPath) -> Result<()> {
-    let lang_dir = match read_weidu_conf_lang_dir(game_dir)? {
-        None => "en_en".to_string(),
-        Some(lang) => lang.clone(),
-    };
     let log_rows = parse_weidu_log(None)?;
     let init: Vec<WeiduMod> = vec![];
     let mod_fragments = log_rows.iter().fold(init, |mut accumulator, row| {
@@ -40,18 +36,28 @@ pub fn extract_manifest(args: &Reverse, game_dir: &CanonPath) -> Result<()> {
         }
         accumulator
     });
-    let manifest = Manifest {
+    let mods = mod_fragments.into_iter().map(|item| Module::Mod { weidu_mod: item }).collect();
+    let manifest = generate_manifest(game_dir, mods)?;
+
+    let output_file = OpenOptions::new().create_new(true).write(true).open(&args.output)?;
+    let buf_writer = BufWriter::new(&output_file);
+    Ok(serde_yaml::to_writer(buf_writer, &manifest)?)
+}
+
+pub fn generate_manifest(game_dir: &CanonPath, modules: Vec<Module>) -> Result<Manifest> {
+    let lang_dir = match read_weidu_conf_lang_dir(game_dir)? {
+        None => "en_en".to_string(),
+        Some(lang) => lang.clone(),
+    };
+    Ok(Manifest {
         version: "1".to_string(),
         global: Global {
             game_language: lang_dir.clone(),
             lang_preferences: default_lang_pref(&lang_dir),
             ..Default::default()
         },
-        modules: mod_fragments.into_iter().map(|item| Module::Mod { weidu_mod: item }).collect(),
-    };
-    let output_file = OpenOptions::new().create_new(true).write(true).open(&args.output)?;
-    let buf_writer = BufWriter::new(&output_file);
-    Ok(serde_yaml::to_writer(buf_writer, &manifest)?)
+        modules,
+    })
 }
 
 fn weidu_mod_from_log_row(row: &LogRow, args: &Reverse) -> WeiduMod {
