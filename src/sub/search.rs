@@ -11,7 +11,7 @@ pub fn search(opts: &Search) -> Result<()> {
     for (idx, module) in manifest.modules.iter().enumerate() {
         if module.get_name() == &opts.name.to_lowercase() {
             found = true;
-            println!("idx: '{} - {}\n\t{:?}", idx, module.describe(), module);
+            println!("idx: '{} - {}\n\t{:?}", idx + 1, module.describe(), module);
         }
     }
 
