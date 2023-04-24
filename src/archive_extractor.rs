@@ -127,7 +127,7 @@ impl <'a> Extractor<'a> {
         let temp_dir_attempt = self.create_temp_dir();
         let temp_dir = match temp_dir_attempt {
             Ok(dir) => dir,
-            Err(error) => bail!("Extraction of tgz mod {} failed\n -> {:?}", module_name, error),
+            Err(error) => bail!("Extraction of '{}' mod {} failed\n -> {:?}", extension, module_name, error),
         };
 
         if let Err(error) = self.external_extractor_tool(archive, extension, &temp_dir) {
