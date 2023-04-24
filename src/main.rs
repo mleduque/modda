@@ -193,7 +193,9 @@ fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &Cach
             }
         }
         // Now check we actually installed all requested components
-        check_install_complete(&module)?
+        if !opts.dry_run {
+            check_install_complete(&module)?
+        }
     }
     info!("Installation done with no error");
     Ok(())
