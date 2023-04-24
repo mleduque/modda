@@ -23,6 +23,8 @@ pub enum LayoutContent {
     SingleDirPlusTp2 { tp2: Option<String> },
     #[serde(rename = "multi_dir")]
     MultipleDirs { dirs: Vec<String> },
+    #[serde(rename = "tp2")]
+    Tp2 { tp2: Option<String> },
     // other layouts to be added as needed
     // All ?
     // Explicit ?
@@ -68,6 +70,8 @@ impl Layout {
                 &format!("setup-{}.tp2", module_name)
                 ], strip_level),
             MultipleDirs { dirs } => GlobDesc::with(&dirs, strip_level),
+            Tp2 { tp2: Some(tp2) } => GlobDesc::from(&[&tp2], strip_level),
+            Tp2 { tp2: None } => GlobDesc::from(&[&format!("setup-{}.tp2", module_name)], strip_level),
         }
     }
 
