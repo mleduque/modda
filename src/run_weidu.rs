@@ -147,7 +147,7 @@ pub fn run_weidu_list_components(tp2: &str, lang_id: u32, config: &Config) -> Re
         let result: Vec<WeiduComponent> = serde_json::from_str(&line)?;
         return Ok(result);
     }
-    bail!("weidu json output not parseable")
+    bail!("weidu json output not parsable")
 }
 
 
