@@ -139,14 +139,8 @@ pub fn run_weidu_list_components(tp2: &str, lang_id: u32, config: &Config) -> Re
     ];
     command.args(&args);
     let output = command.output()?;
-    for (idx, line) in output.stdout.lines().enumerate() {
-        let line = match line {
-            Err(error) => {
-                error!("error reading line {} of weidu stdout - {:?}", idx, error);
-                continue;
-            }
-            Ok(line) => line,
-        };
+    let output = String::from_utf8_lossy(&output.stdout);
+    for line in output.lines() {
         if !line.starts_with(r##"[{""##) {
             continue;
         }
