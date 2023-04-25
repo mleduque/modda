@@ -215,16 +215,17 @@ pub fn check_weidu_exe(config: &Config) -> Result<()> {
     }
 }
 
-fn weidu_command(config: &Config, check_exist: bool) -> Result<&str> {
+fn weidu_command(config: &Config, check_exist: bool) -> Result<String> {
     use crate::progname::PROGNAME;
 
     match &config.weidu_path {
         Some(path) => {
-            if check_exist && !PathBuf::from(path).exists() {
+            let expanded = shellexpand::tilde(path).to_string();
+            if check_exist && !PathBuf::from(&expanded).exists() {
                 bail!("file at '{}' doesn't exist. This is the weidu_path config in ${PROGNAME} settings file (${PROGNAME}.yaml)", path)
             }
-            Ok(path)
+            Ok(expanded)
         }
-        None => Ok("weidu"),
+        None => Ok("weidu".to_string()),
     }
 }
