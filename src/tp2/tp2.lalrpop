@@ -1,0 +1,18 @@
+
+grammar;
+
+pub Tp2File: Tp2File = {
+    BACKUP WeiduString
+    AUTHOR WeiduString
+    Tp2Flag
+    Language
+    Component
+};
+
+
+// doesn't support the five tildas case
+WeiduString: String = {
+    "\"" <s: r#"(?-u)[^"]*""#> "\"" => s,
+    "~" <s: r"(?-u)[^~]"> "~" =>  s,
+    "%" <s: r"(?-u)[^%]"> "%" => s,
+};

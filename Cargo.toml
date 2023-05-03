@@ -25,6 +25,7 @@ globwalk = "0.8.1"
 handlebars = "4.3.6"
 indoc ="2.0.1"
 itertools = "0.10.5"
+lalrpop-util = "0.19.12"
 lazy_static = "1.4.0"
 log = "0.4.17"
 patch = "0.7.0"
@@ -47,3 +48,6 @@ zip = "0.6.4"
 
 [dev-dependencies]
 faux = "0.1.9"
+
+[build-dependencies]
+lalrpop= "0.19.12"
