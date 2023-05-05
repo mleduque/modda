@@ -3,7 +3,7 @@
 use std::cell::RefCell;
 use std::io::BufWriter;
 
-use ansi_term::Colour::Blue;
+use ansi_term::Colour::{Blue, Green};
 use anyhow::{Result, anyhow, bail};
 use log::{debug, info};
 
@@ -42,31 +42,11 @@ pub fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &
         None
     };
 
-    let from_index = match opts.from_index {
-        Some(from_index) => if from_index > modules.len() {
-            return Ok(());
-        } else {
-            from_index - 1
-        }
-        None => 0,
-    };
-    let modules = match (opts.to_index, opts.just_one, opts.count) {
-        (Some(to_index), false, None) => if from_index > to_index {
-            return Ok(());
-        } else if to_index > modules.len() {
-            &modules[(from_index)..]
-        } else {
-            &modules[(from_index)..(to_index - 1)]
-        }
-        (None, true, None) => &modules[(from_index)..(from_index + 1)],
-        (None, false, Some(count)) => if from_index + count > modules.len() {
-            &modules[(from_index)..]
-        } else {
-            &modules[(from_index)..(from_index + count)]
-        }
-        (None, false, None) => &modules,
-        _ => bail!("incompatible arguments given"),
-    };
+    let modules = get_modules_range(&modules, opts)?;
+    if modules.is_empty() {
+        info!("{}", Green.paint("Nothing to install with given range"));
+        return Ok(())
+    }
 
     let downloader = Downloader::new();
     let module_downloader = ModuleDownload::new(&settings, &manifest.global, &opts,
@@ -107,4 +87,33 @@ pub fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &
     }
     info!("Installation done with no error");
     Ok(())
+}
+
+fn  get_modules_range<'a>(modules: &'a[Module], opts: &Install) -> Result<&'a [Module]> {
+    let from_index = match opts.from_index {
+        Some(from_index) => if from_index > modules.len() {
+            return Ok(&modules[0..0]);
+        } else {
+            from_index - 1
+        }
+        None => 0,
+    };
+    let result = match (opts.to_index, opts.just_one, opts.count) {
+        (Some(to_index), false, None) => if from_index > to_index {
+            return Ok(&modules[0..0]);
+        } else if to_index > modules.len() {
+            &modules[(from_index)..]
+        } else {
+            &modules[(from_index)..(to_index - 1)]
+        }
+        (None, true, None) => &modules[(from_index)..(from_index + 1)],
+        (None, false, Some(count)) => if from_index + count > modules.len() {
+            &modules[(from_index)..]
+        } else {
+            &modules[(from_index)..(from_index + count)]
+        }
+        (None, false, None) => &modules,
+        _ => bail!("incompatible arguments given"),
+    };
+    Ok(result)
 }

@@ -40,12 +40,13 @@ use std::env::set_current_dir;
 use std::path::PathBuf;
 
 use anyhow::{bail, Result};
-use args::{ Cli, Commands };
-use cache::Cache;
-use canon_path::CanonPath;
 use clap::Parser;
 use env_logger::{Env, Target};
 use log::{info, debug};
+
+use args::{ Cli, Commands };
+use cache::Cache;
+use canon_path::CanonPath;
 use run_weidu::check_weidu_exe;
 use settings::read_settings;
 use sub::install::install;
