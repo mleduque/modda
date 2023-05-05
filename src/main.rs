@@ -36,35 +36,21 @@ mod run_weidu;
 mod weidu_conf;
 mod weidu_context;
 
-use std::cell::RefCell;
 use std::env::set_current_dir;
-use std::io::BufWriter;
 use std::path::PathBuf;
 
-use ansi_term::Colour::Blue;
-use anyhow::{anyhow, bail, Result};
-use args::{ Cli, Install, Commands };
+use anyhow::{bail, Result};
+use args::{ Cli, Commands };
 use cache::Cache;
 use canon_path::CanonPath;
 use clap::Parser;
-use download::Downloader;
 use env_logger::{Env, Target};
-use file_installer::FileInstaller;
-use get_module::ModuleDownload;
-use log::{debug, info};
-use manifest::Manifest;
+use log::{info, debug};
 use run_weidu::check_weidu_exe;
-use settings::{read_settings, Config};
+use settings::read_settings;
+use sub::install::install;
 use sub::list_components::sub_list_components;
 use sub::search::search;
-use weidu_conf::check_weidu_conf_lang;
-use weidu_context::WeiduContext;
-
-use crate::file_module_install::FileModuleInstaller;
-use crate::module::module::Module;
-use crate::post_install::PostInstallOutcome;
-use crate::log_parser::check_install_complete;
-use crate::process_weidu_mod::{process_generated_mod, process_weidu_mod};
 
 
 
@@ -81,7 +67,7 @@ fn main() -> Result<()> {
     if ensure_chitin_key().is_err() {
         bail!("Must be run from the game directory (where chitin.key is)");
     } else {
-        info!("chitin.key found");
+        debug!("chitin.key found");
     }
     let settings = read_settings()?;
     check_weidu_exe(&settings)?;
@@ -111,91 +97,5 @@ fn ensure_chitin_key() -> Result<()> {
     } else {
         info!("./chitin.key found");
     }
-    Ok(())
-}
-
-fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &Cache) -> Result<()> {
-
-    let manifest = Manifest::read_path(&opts.manifest_path)?;
-    check_weidu_conf_lang(game_dir, &manifest.global.game_language)?;
-    let modules = &manifest.modules;
-
-    let log = if let Some(output) = &opts.output {
-        let file = match std::fs::OpenOptions::new().create(true).write(true).truncate(true).open(output) {
-            Err(error) => return Err(
-                anyhow!(format!("Could not create log file {} - {:?}", output, error)
-            )),
-            Ok(file) => file,
-        };
-        let buffered = BufWriter::new(file);
-        Some(buffered)
-    } else {
-        None
-    };
-
-    let from_index = match opts.from_index {
-        Some(from_index) => if from_index > modules.len() {
-            return Ok(());
-        } else {
-            from_index - 1
-        }
-        None => 0,
-    };
-    let modules = match (opts.to_index, opts.just_one, opts.count) {
-        (Some(to_index), false, None) => if from_index > to_index {
-            return Ok(());
-        } else if to_index > modules.len() {
-            &modules[(from_index)..]
-        } else {
-            &modules[(from_index)..(to_index - 1)]
-        }
-        (None, true, None) => &modules[(from_index)..(from_index + 1)],
-        (None, false, Some(count)) => if from_index + count > modules.len() {
-            &modules[(from_index)..]
-        } else {
-            &modules[(from_index)..(from_index + count)]
-        }
-        (None, false, None) => &modules,
-        _ => bail!("incompatible arguments given"),
-    };
-
-    let downloader = Downloader::new();
-    let module_downloader = ModuleDownload::new(&settings, &manifest.global, &opts,
-                                                                        &downloader, &game_dir, cache);
-    let file_installer = FileInstaller::new(&manifest.global, &opts, &game_dir);
-    let file_module_installer = FileModuleInstaller::new(&file_installer);
-
-    let weidu_context = WeiduContext { current: game_dir, settings: &settings, opts: &opts,
-                                                    module_downloader: &module_downloader, file_installer: &file_installer,
-                                                    log: RefCell::from(log) };
-
-    for (index, module) in modules.iter().enumerate() {
-        let real_index = index + opts.from_index.unwrap_or(0);
-        info!("module {} - {}", real_index, module.describe());
-        debug!("{:?}", module);
-        let finished = match module {
-            Module::Mod { weidu_mod } => process_weidu_mod(weidu_mod, &weidu_context, &manifest, real_index, settings)?,
-            Module::File { file } => file_module_installer.file_module_install(file)?,
-            Module::Generated { gen } => process_generated_mod(gen, &weidu_context, &manifest, real_index, settings)?,
-        }
-        ;
-        if finished {
-            bail!("Program interrupted on error on non-whitelisted warning");
-        } else {
-            match module.exec_post_install(&module.get_name()) {
-                PostInstallOutcome::Stop => {
-                    info!("{}",  Blue.bold().paint(format!("Interruption requested for module {} - {}",
-                                                            real_index + 1, module.describe())));
-                    return Ok(());
-                }
-                PostInstallOutcome::Continue => {}
-            }
-        }
-        // Now check we actually installed all requested components
-        if !opts.dry_run {
-            check_install_complete(&module)?
-        }
-    }
-    info!("Installation done with no error");
     Ok(())
 }
