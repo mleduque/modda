@@ -133,31 +133,30 @@ fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &Cach
         None
     };
 
-    let modules = match (opts.from_index, opts.to_index) {
-        (Some(from_index), Some(to_index)) => {
-            if from_index > modules.len() || from_index > to_index {
-                return Ok(());
-            } else if to_index > modules.len() {
-                &modules[(from_index - 1)..]
-            } else {
-                &modules[(from_index - 1)..(to_index - 1)]
-            }
+    let from_index = match opts.from_index {
+        Some(from_index) => if from_index > modules.len() {
+            return Ok(());
+        } else {
+            from_index - 1
         }
-        (Some(from_index), None) => {
-            if from_index > modules.len() {
-                return Ok(());
-            } else {
-                &modules[(from_index - 1)..]
-            }
+        None => 0,
+    };
+    let modules = match (opts.to_index, opts.just_one, opts.count) {
+        (Some(to_index), false, None) => if from_index > to_index {
+            return Ok(());
+        } else if to_index > modules.len() {
+            &modules[(from_index)..]
+        } else {
+            &modules[(from_index)..(to_index - 1)]
         }
-        (None, Some(to_index)) => {
-            if to_index > modules.len() {
-                &modules
-            } else {
-                &modules[..(to_index - 1)]
-            }
+        (None, true, None) => &modules[(from_index)..(from_index + 1)],
+        (None, false, Some(count)) => if from_index + count > modules.len() {
+            &modules[(from_index)..]
+        } else {
+            &modules[(from_index)..(from_index + count)]
         }
-        (None, None) => &modules,
+        (None, false, None) => &modules,
+        _ => bail!("incompatible arguments given"),
     };
 
     let downloader = Downloader::new();

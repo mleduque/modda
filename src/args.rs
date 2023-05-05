@@ -48,8 +48,16 @@ pub struct Install {
     pub from_index: Option<usize>,
 
     /// Index in the module list where we stop (excluded, counting from one).
-    #[arg(long, short = 't')]
+    #[arg(long, short = 't', group="limit")]
     pub to_index: Option<usize>,
+
+    /// Tells to only install one mod fragment.
+    #[arg(long, short = 'j', group="limit")]
+    pub just_one: bool,
+
+    /// Tells to only install `count` mod fragments.
+    #[arg(long, short = 'c', group="limit")]
+    pub count: Option<usize>,
 
     /// name of a file where the output will be written.
     #[arg(long, short = 'o')]
