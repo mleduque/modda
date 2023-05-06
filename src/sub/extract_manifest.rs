@@ -15,15 +15,14 @@ use crate::module::module::Module;
 use crate::module::weidu_mod::WeiduMod;
 use crate::weidu_conf::read_weidu_conf_lang_dir;
 
-
-pub fn extract_manifest(args: &Reverse, game_dir: &CanonPath) -> Result<()> {
+pub fn extract_modules(export_component_name: Option<bool>, export_language: Option<bool>) -> Result<Vec<Module>> {
     let log_rows = parse_weidu_log(None)?;
     let init: Vec<WeiduMod> = vec![];
     let mod_fragments = log_rows.iter().fold(init, |mut accumulator, row| {
         let current_mod = row.module.to_lowercase();
         let last_mod = accumulator.last().map(|module| module.name.clone());
         match last_mod {
-            None => accumulator.push(weidu_mod_from_log_row(row, args)),
+            None => accumulator.push(weidu_mod_from_log_row(row, export_component_name, export_language)),
             Some(mod_name) if mod_name == current_mod => {
                 let last_index = accumulator.len() - 1;
                 let last = accumulator.get_mut(last_index).unwrap();
@@ -32,11 +31,16 @@ pub fn extract_manifest(args: &Reverse, game_dir: &CanonPath) -> Result<()> {
                     component_name: row.component_name.to_string(),
                 });
             }
-            _ => accumulator.push(weidu_mod_from_log_row(row, args)),
+            _ => accumulator.push(weidu_mod_from_log_row(row, export_component_name, export_language)),
         }
         accumulator
     });
     let mods = mod_fragments.into_iter().map(|item| Module::Mod { weidu_mod: item }).collect();
+    Ok(mods)
+}
+
+pub fn extract_manifest(args: &Reverse, game_dir: &CanonPath) -> Result<()> {
+    let mods = extract_modules(args.export_component_name, args.export_language)?;
     let manifest = generate_manifest(game_dir, mods)?;
 
     let output_file = OpenOptions::new().create_new(true).write(true).open(&args.output)?;
@@ -60,8 +64,8 @@ pub fn generate_manifest(game_dir: &CanonPath, modules: Vec<Module>) -> Result<M
     })
 }
 
-fn weidu_mod_from_log_row(row: &LogRow, args: &Reverse) -> WeiduMod {
-    let components = match args.export_component_name {
+fn weidu_mod_from_log_row(row: &LogRow, export_component_name: Option<bool>, export_language: Option<bool>) -> WeiduMod {
+    let components = match export_component_name {
         Some(false) => Components::List(vec![ Component::Simple(row.component_index)]),
         _ => Components::List(vec![
             Component::Full {
@@ -72,7 +76,7 @@ fn weidu_mod_from_log_row(row: &LogRow, args: &Reverse) -> WeiduMod {
     };
     WeiduMod {
         name: lwc!(&row.module),
-        language: if let Some(true) = args.export_language { Some(row.lang_index) } else { None },
+        language: if let Some(true) = export_language { Some(row.lang_index) } else { None },
         components,
         ..Default::default()
     }
