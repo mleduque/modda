@@ -86,7 +86,6 @@ pub fn parse_weidu_log(mod_filter: Option<&LwcString>) -> Result<Vec<LogRow>> {
 pub fn check_install_complete(module: &Module) -> Result<()> {
     match module {
         Module::Mod { weidu_mod } => check_install_weidu_mod(weidu_mod),
-        Module::File { .. } => Ok(()),
         Module::Generated { gen } => check_install_weidu_mod(&gen.as_weidu()),
     }
 }

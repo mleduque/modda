@@ -132,16 +132,6 @@ mod test_deserialize {
                             ..Default::default()
                         },
                     },
-                    Module::File {
-                        file: FileModule {
-                            file_mod: lwc!("bbb"),
-                            from: FileModuleOrigin::Local { local:"files/my-file.itm".to_string(), glob: None },
-                            to: "override".to_string(),
-                            description: None,
-                            post_install: None,
-                            allow_overwrite: false,
-                        },
-                    },
                     Module::Generated {
                         gen:  GeneratedMod {
                             gen_mod: lwc!("ccc"),
@@ -196,16 +186,6 @@ mod test_deserialize {
                         }),
                         ignore_warnings: true,
                         ..Default::default()
-                    },
-                },
-                Module::File {
-                    file: FileModule {
-                        file_mod: lwc!("bbb"),
-                        from: FileModuleOrigin::Local { local:"files/my-file.itm".to_string(), glob: None },
-                        to: "override".to_string(),
-                        description: None,
-                        post_install: None,
-                        allow_overwrite: true,
                     },
                 },
                 Module::Generated {

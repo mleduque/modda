@@ -364,52 +364,6 @@ mod test_deserialize {
     }
 
     #[test]
-    fn deserialize_modules_with_weidu_mod_and_file_mod() {
-        let yaml = r#"
-            - name: DlcMerger
-              components: ask
-            - file_mod: configure_whatever
-              from:
-                local: path/file.idk
-              to: override/
-        "#;
-        let modules: Vec<Module> = serde_yaml::from_str(yaml).unwrap();
-        assert_eq!(
-            modules,
-            vec![
-                Module::Mod { weidu_mod: WeiduMod {
-                    name: lwc!("DlcMerger"),
-                    components: Components::Ask,
-                    ..Default::default()
-                }},
-                Module::File { file: FileModule {
-                    file_mod: lwc!("configure_whatever"),
-                    description: None,
-                    from: FileModuleOrigin::Local { local: "path/file.idk".to_string(), glob: None },
-                    to: "override/".to_string(),
-                    post_install: None,
-                    allow_overwrite: false,
-                }},
-            ],
-        );
-    }
-
-    #[test]
-    fn deserialize_mixed_module() {
-        let yaml = r#"
-            name: DlcMerger
-            components: ask
-            file_mod: some_name
-            from:
-              local: path/file.idk
-            to: override
-        "#;
-        let error: Result<Module, serde_yaml::Error> = serde_yaml::from_str(yaml);
-        let err = error.unwrap_err();
-        println!("deserialize_mixed_module error is {:?}", err)
-    }
-
-    #[test]
     fn deserialize_gen_mod() {
         let yaml = r#"
         gen_mod: some_name

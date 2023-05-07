@@ -64,7 +64,6 @@ pub fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &
         debug!("{:?}", module);
         let finished = match module {
             Module::Mod { weidu_mod } => process_weidu_mod(weidu_mod, &weidu_context, &manifest, real_index, settings)?,
-            Module::File { file } => file_module_installer.file_module_install(file)?,
             Module::Generated { gen } => process_generated_mod(gen, &weidu_context, &manifest, real_index, settings)?,
         }
         ;
