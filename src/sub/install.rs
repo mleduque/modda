@@ -13,7 +13,6 @@ use crate::canon_path::CanonPath;
 use crate::download::Downloader;
 use crate::file_installer::FileInstaller;
 use crate::get_module::ModuleDownload;
-use crate::file_module_install::FileModuleInstaller;
 use crate::module::module::Module;
 use crate::post_install::PostInstallOutcome;
 use crate::log_parser::check_install_complete;
@@ -52,7 +51,6 @@ pub fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &
     let module_downloader = ModuleDownload::new(&settings, &manifest.global, &opts,
                                                                         &downloader, &game_dir, cache);
     let file_installer = FileInstaller::new(&manifest.global, &opts, &game_dir);
-    let file_module_installer = FileModuleInstaller::new(&file_installer);
 
     let weidu_context = WeiduContext { current: game_dir, settings: &settings, opts: &opts,
                                                     module_downloader: &module_downloader, file_installer: &file_installer,
