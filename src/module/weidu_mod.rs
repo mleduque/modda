@@ -1,8 +1,9 @@
 
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
-use crate::components::Components;
+use crate::components::{Components, Component, FullComponent};
 use crate::location::Location;
 use crate::lowercase::LwcString;
 use crate::post_install::PostInstall;
@@ -63,3 +64,28 @@ pub struct WeiduMod {
 }
 
 fn is_false(value: &bool) -> bool { !value }
+
+pub struct BareMod {
+    pub name: LwcString,
+    pub components: Vec<FullComponent>,
+    pub language: u32,
+}
+
+impl BareMod {
+    pub fn to_weidu_mod(&self, export_component_name: Option<bool>, export_language: Option<bool>) -> WeiduMod {
+        let components = match export_component_name {
+            Some(false) => self.components.iter().map(|comp| Component::Simple(comp.index)).collect(),
+            _ => self.components.iter().map(|comp| Component::Full(comp.clone())).collect(),
+        };
+        WeiduMod {
+            name: self.name.to_owned(),
+            components: Components::List(components),
+            language: if let Some(true) = export_language { Some(self.language) } else { None },
+            ..Default::default()
+        }
+    }
+
+    pub fn short(&self) -> String {
+        format!("{}: {}", self.name,self.components.iter().map(|comp| comp.index).join(", "))
+    }
+}

@@ -8,7 +8,7 @@ use log::debug;
 
 use crate::args::AppendMod;
 use crate::canon_path::CanonPath;
-use crate::components::{Components, Component};
+use crate::components::{Components, Component, FullComponent};
 use crate::language::{select_language_pref, LanguageSelection};
 use crate::list_components::list_components;
 use crate::lowercase::LwcString;
@@ -82,7 +82,7 @@ fn generate_mod(mod_name: &LwcString, components: Vec<WeiduComponent>, generate_
                 components.iter()
                     .map(|comp| {
                         match generate_comment {
-                            true => Component::Full { index: comp.index, component_name: comp.name.to_owned() },
+                            true => Component::Full(FullComponent { index: comp.index, component_name: comp.name.to_owned() }),
                             false => Component::Simple(comp.index),
                         }
                     })

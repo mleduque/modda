@@ -30,6 +30,8 @@ pub enum Commands {
     /// Append all components of a mod to a manifest. This can result in an uninstallable mod (incompatible components, GROUPs etc.)
     /// so it should probably manually edited.
     AppendMod(AppendMod),
+    /// Tries to uninstall modules that are after a given index in the manifest.
+    Reset(Reset),
 }
 
 #[derive(Args, Debug, Default)]
@@ -134,4 +136,18 @@ pub struct AppendMod {
     /// If set, the component names will be generated (default: `true`).
     #[arg(long, short = 'c')]
     pub export_component_name: Option<bool>,
+}
+
+
+#[derive(Args, Debug)]
+pub struct Reset {
+
+    /// Path of the YAML manifest file.
+    #[arg(long, short)]
+    pub manifest_path: String,
+
+    /// Index to reset to.
+    /// zero means before the first module.
+    #[arg(long, short)]
+    pub to_index: usize,
 }

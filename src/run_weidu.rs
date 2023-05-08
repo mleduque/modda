@@ -1,12 +1,10 @@
 
-
-use std::io::{BufRead};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
 use anyhow::{bail, Result};
+use chrono::Utc;
 use lazy_static::lazy_static;
-use log::error;
 use regex::Regex;
 
 use crate::args::Install;
@@ -14,12 +12,12 @@ use crate::global::Global;
 use crate::language::{LanguageOption, LanguageSelection, select_language};
 use crate::components::{Component, Components};
 use crate::lowercase::LwcString;
-use crate::module::weidu_mod::WeiduMod;
+use crate::module::weidu_mod::{WeiduMod, BareMod};
 use crate::run_result::RunResult;
 use crate::settings::Config;
 
 
-pub fn run_weidu(tp2: &str, module: &WeiduMod, opts: &Install, global: &Global, config: &Config) -> Result<RunResult> {
+pub fn run_weidu_install(tp2: &str, module: &WeiduMod, opts: &Install, global: &Global, config: &Config) -> Result<RunResult> {
     use LanguageSelection::*;
     let language_id = match select_language(tp2, module, &global.lang_preferences, config) {
         Ok(Selected(id)) => id,
@@ -30,9 +28,9 @@ pub fn run_weidu(tp2: &str, module: &WeiduMod, opts: &Install, global: &Global, 
     };
     match &module.components {
         Components::None => Ok(RunResult::Dry("Explicitly requested no components to be installed".to_string())),
-        Components::Ask => run_weidu_interactive(tp2, module, opts, &global.game_language, config),
-        Components::List(comp) if comp.is_empty() => run_weidu_interactive(tp2, module, opts, &global.game_language, config),
-        Components::List(components) => run_weidu_auto(tp2, module, components, opts, &global.game_language, language_id, config)
+        Components::Ask => run_weidu_install_interactive(tp2, module, opts, &global.game_language, config),
+        Components::List(comp) if comp.is_empty() => run_weidu_install_interactive(tp2, module, opts, &global.game_language, config),
+        Components::List(components) => run_weidu_install_auto(tp2, module, components, opts, &global.game_language, language_id, config)
     }
 }
 
@@ -45,7 +43,7 @@ fn handle_no_language_selected(available: Vec<LanguageOption>, module: &WeiduMod
         module.name, &global.lang_preferences, available);
 }
 
-fn run_weidu_auto(tp2: &str, module: &WeiduMod, components: &[Component], opts: &Install,
+fn run_weidu_install_auto(tp2: &str, module: &WeiduMod, components: &[Component], opts: &Install,
                     game_lang: &str, language_id: u32, config: &Config) -> Result<RunResult> {
 
     let mut command = Command::new(weidu_command(config, false)?);
@@ -77,7 +75,7 @@ fn run_weidu_auto(tp2: &str, module: &WeiduMod, components: &[Component], opts: 
     }
 }
 
-fn run_weidu_interactive(tp2: &str, module: &WeiduMod, opts: &Install,
+fn run_weidu_install_interactive(tp2: &str, module: &WeiduMod, opts: &Install,
                             game_lang: &str, config: &Config) -> Result<RunResult> {
     let mut command = Command::new(weidu_command(config, false)?);
     let args = vec![
@@ -103,7 +101,7 @@ fn run_weidu_interactive(tp2: &str, module: &WeiduMod, opts: &Install,
 }
 
 
-pub fn format_run_result(result: &RunResult, module: &WeiduMod) -> Vec<u8> {
+pub fn format_install_result(result: &RunResult, module: &WeiduMod) -> Vec<u8> {
     return match result {
         RunResult::Real(result) => {
             let summary = format!("\n==\nmodule {} finished with status {:?}\n", module.name, result.status.code()).into_bytes();
@@ -222,4 +220,27 @@ fn weidu_command(config: &Config, check_exist: bool) -> Result<String> {
         }
         None => Ok("weidu".to_string()),
     }
+}
+
+pub fn run_weidu_uninstall(tp2: &str, module: &BareMod, config: &Config) -> Result<()> {
+    let now = Utc::now().naive_local().format("%Y-%m-%d_%H:%M:%S");
+
+    let mut command = Command::new(weidu_command(config, false)?);
+    let mut args = vec![
+        tp2.to_owned(),
+        "--no-exit-pause".to_owned(),
+        "--skip-at-view".to_owned(),
+        "--log".to_owned(),    // Log output and details to X.
+        format!("setup-{}-uninstall-{}.debug", module.name, now),
+    ];
+    // component list
+    args.push("--force-uninstall-list".to_owned());
+    args.extend(module.components.iter().map(|id| id.index.to_string()));
+
+    command.args(&args)
+        .stdin(Stdio::inherit())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit());
+    command.output()?;
+    Ok(())
 }

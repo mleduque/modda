@@ -81,6 +81,7 @@ fn main() -> Result<()> {
         Commands::Invalidate(ref params) => sub::invalidate::invalidate(params, &cache),
         Commands::Reverse(ref params) => sub::extract_manifest::extract_manifest(params, &current_dir),
         Commands::AppendMod(ref params) => sub::append_mod::append_mod(params, &current_dir, &settings),
+        Commands::Reset(ref reset_args) => sub::reset::reset(reset_args, &current_dir, &settings),
     }
 }
 

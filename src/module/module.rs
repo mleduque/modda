@@ -4,6 +4,7 @@ use serde::de::IntoDeserializer;
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
 
+use crate::components::{Components, Component};
 use crate::lowercase::LwcString;
 use crate::post_install::{PostInstallExec, PostInstallOutcome};
 
@@ -29,6 +30,13 @@ impl Module {
         match self {
             Module::Mod { weidu_mod } => &weidu_mod.description,
             Module::Generated { gen } => &gen.description,
+        }
+    }
+
+    pub fn get_components(&self) -> Components {
+        match self {
+            Module::Mod { weidu_mod } => weidu_mod.components.clone(),
+            Module::Generated { gen } => Components::List(vec![Component::Simple(gen.component.index)]),
         }
     }
 

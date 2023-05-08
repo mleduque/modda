@@ -14,11 +14,11 @@ use crate::manifest::Manifest;
 use crate::module::gen_mod::GeneratedMod;
 use crate::module::module_conf::ModuleContent;
 use crate::module::weidu_mod::WeiduMod;
-use crate::run_weidu::format_run_result;
+use crate::run_weidu::format_install_result;
 use crate::settings::Config;
 use crate::tp2::find_tp2;
 use crate::tp2_template::create_tp2;
-use crate::run_weidu::run_weidu;
+use crate::run_weidu::run_weidu_install;
 use crate::weidu_context::WeiduContext;
 
 
@@ -61,8 +61,8 @@ pub fn process_weidu_mod(weidu_mod: &WeiduMod, weidu_context: &WeiduContext, man
     };
     configure_module(weidu_mod)?;
 
-    let single_result = run_weidu(&tp2_string, weidu_mod, &opts, &manifest.global, config)?;
-    let run_result = format_run_result(&single_result, weidu_mod);
+    let single_result = run_weidu_install(&tp2_string, weidu_mod, &opts, &manifest.global, config)?;
+    let run_result = format_install_result(&single_result, weidu_mod);
 
     weidu_context.log_bytes(&run_result)?;
     match single_result.status_code() {

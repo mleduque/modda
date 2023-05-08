@@ -65,18 +65,22 @@ impl FromStr for Components {
 #[serde(untagged)]
 pub enum Component {
     Simple(u32),
-    Full {
-        index: u32,
-        component_name: String,
-    },
+    Full(FullComponent),
 }
+
 impl Component {
     pub fn index(&self) -> u32 {
         match &self {
             Component::Simple(index) => *index,
-            Component::Full { index, ..} => *index,
+            Component::Full(full_component) => full_component.index,
         }
     }
+}
+
+#[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
+pub struct FullComponent {
+    pub index: u32,
+    pub component_name: String,
 }
 
 pub fn component_deser<'de, D>(deserializer: D) -> Result<Components, D::Error>
