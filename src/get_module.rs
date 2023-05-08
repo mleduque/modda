@@ -1,6 +1,7 @@
 use std::path::{PathBuf};
 
 use anyhow::{bail, Result};
+use chrono::Local;
 use path_clean::PathClean;
 
 use crate::apply_patch::patch_module;
@@ -10,6 +11,7 @@ use crate::cache::Cache;
 use crate::canon_path::CanonPath;
 use crate::download::Downloader;
 use crate::global::Global;
+use crate::timeline::SetupTimeline;
 use crate::location::Location;
 use crate::lowercase::LwcString;
 use crate::module::weidu_mod::WeiduMod;
@@ -42,21 +44,26 @@ impl <'a> ModuleDownload<'a> {
     // at some point, I'd like to have a pool of downloads with installations done
     // concurrently as soon as modules are there
     #[tokio::main]
-    pub async fn get_module(&self, module: &WeiduMod) -> Result<()> {
+    pub async fn get_module(&self, module: &WeiduMod) -> Result<SetupTimeline> {
         match &module.location {
             None => bail!("No location provided to retrieve missing module {}", module.name),
             Some(location) => {
+                let start = Local::now();
                 let archive = match self.retrieve_location(&location, &module).await {
                     Ok(archive) => archive,
                     Err(error) => bail!("retrieve archive failed for module {}\n-> {:?}", module.name, error),
                 };
+                let downloaded = Some(Local::now());
 
                 let dest = std::env::current_dir()?;
                 let dest = CanonPath::new(dest)?;
                 self.extractor.extract_files(&archive, &module.name, location)?;
+                let copied = Some(Local::now());
                 patch_module(&dest, &module.name, &location.patch, &self.opts).await?;
+                let patched = Some(Local::now());
                 replace_module(&dest, &module.name, &location.replace)?;
-                Ok(())
+                let replaced = Some(Local::now());
+                Ok(SetupTimeline { start, downloaded, copied, patched, replaced, configured: None })
             }
         }
     }

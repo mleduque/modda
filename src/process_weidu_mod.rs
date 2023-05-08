@@ -8,8 +8,11 @@ use ansi_term::{Colour, Colour::{Green, Red, Yellow}};
 use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::bail;
+use chrono::Local;
 use log::info;
 
+use crate::timeline::InstallTimeline;
+use crate::timeline::SetupTimeline;
 use crate::manifest::Manifest;
 use crate::module::gen_mod::GeneratedMod;
 use crate::module::module_conf::ModuleContent;
@@ -21,24 +24,42 @@ use crate::tp2_template::create_tp2;
 use crate::run_weidu::run_weidu_install;
 use crate::weidu_context::WeiduContext;
 
+pub struct ProcessResult {
+    pub stop: bool,
+    pub timeline: InstallTimeline,
+}
 
 pub fn process_weidu_mod(weidu_mod: &WeiduMod, weidu_context: &WeiduContext, manifest: &Manifest,
-                            real_index: usize, config: &Config) -> Result<bool, anyhow::Error> {
+                            real_index: usize, config: &Config) -> Result<ProcessResult, anyhow::Error> {
 
     let mod_count = manifest.modules.len();
     let WeiduContext { current, opts, module_downloader, ..} = weidu_context;
+
+    let mut install_timeline = InstallTimeline::new(weidu_mod.name.clone(), Local::now());
 
     let tp2 = match find_tp2(current, &weidu_mod.name) {
         Ok(tp2) => tp2,
         Err(_) => {
             // if tp2 not found, mod must be fetched from location (if any)
-            if let Err(error) = module_downloader.get_module(&weidu_mod) {
-                let message = format!("module {name} (index={idx}/{len}) download/installation failed, stopping.",
-                                                name = weidu_mod.name, idx = real_index + 1, len = mod_count);
-                weidu_context.log(&message)?;
-                info!("{}", Red.bold().paint(message));
-                return Err(error)
-            }
+            let setup_log = match module_downloader.get_module(&weidu_mod) {
+                Err(error) => {
+                    let message = format!("module {name} (index={idx}/{len}) download/installation failed, stopping.",
+                                                    name = weidu_mod.name, idx = real_index + 1, len = mod_count);
+                    weidu_context.log(&message)?;
+                    info!("{}", Red.bold().paint(message));
+                    return Err(error)
+                }
+                Ok(setup_log) => {
+                    configure_module(weidu_mod)?;
+                    SetupTimeline {
+                        configured: Some(Local::now()),
+                        ..setup_log
+                    }
+                }
+            };
+
+            install_timeline.complete(setup_log);
+
             match find_tp2(current, &weidu_mod.name) {
                 Ok(tp2) => tp2,
                 Err(error) => {
@@ -59,19 +80,21 @@ pub fn process_weidu_mod(weidu_mod: &WeiduMod, weidu_context: &WeiduContext, man
             return Err(anyhow!(format!("{}", msg)));
         }
     };
-    configure_module(weidu_mod)?;
 
+    install_timeline.start_install = Some(Local::now());
     let single_result = run_weidu_install(&tp2_string, weidu_mod, &opts, &manifest.global, config)?;
+    install_timeline.installed = Some(Local::now());
+
     let run_result = format_install_result(&single_result, weidu_mod);
 
     weidu_context.log_bytes(&run_result)?;
-    match single_result.status_code() {
+    let must_stop = match single_result.status_code() {
         Some(0) => {
             let message = format!("module {name} (index={index}/{len}) finished with success.",
                             name = weidu_mod.name, index = real_index + 1, len = mod_count);
             weidu_context.log(&message)?;
             info!("{}", Green.bold().paint(message));
-            Ok(false)
+            false
         }
         Some(3) => {
             let mut finished = false;
@@ -83,33 +106,34 @@ pub fn process_weidu_mod(weidu_mod: &WeiduMod, weidu_context: &WeiduContext, man
             };
             weidu_context.log(&message)?;
             info!("{}", color.bold().paint(message));
-            Ok(finished)
+            finished
         }
         Some(value) => {
             let message = format!("module {name} (index={idx}/{len}) finished with error (status={status}), stopping.",
                                     name = weidu_mod.name, idx = real_index + 1, len = mod_count, status = value);
             weidu_context.log(&message)?;
             info!("{}", Red.bold().paint(message));
-            Ok(true)
+            true
         }
         None => if !single_result.success() {
             let message = format!("module {name} (index={idx}/{len}) finished with success.",
                                     name = weidu_mod.name, idx = real_index + 1, len = mod_count);
             weidu_context.log(&message)?;
             info!("{}", Green.bold().paint(message));
-            Ok(false)
+            false
         } else {
             let message = format!("module {name} (index={idx}/{len}) finished with error, stopping.",
                                 name = weidu_mod.name, idx = real_index + 1, len = mod_count);
             weidu_context.log(&message)?;
             info!("{}", Red.bold().paint(message));
-            Ok(true)
+            true
         }
-    }
+    };
+    Ok(ProcessResult { stop: must_stop, timeline: install_timeline })
 }
 
 pub fn process_generated_mod(gen_mod: &GeneratedMod, weidu_context: &WeiduContext,
-                                manifest: &Manifest, real_index: usize, config: &Config) -> Result<bool, anyhow::Error> {
+                                manifest: &Manifest, real_index: usize, config: &Config) -> Result<ProcessResult, anyhow::Error> {
     let WeiduContext { current, file_installer, ..} = weidu_context;
 
     if let Ok(found) = find_tp2(current, &gen_mod.gen_mod) {

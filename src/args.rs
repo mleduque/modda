@@ -68,6 +68,10 @@ pub struct Install {
     /// If set to true, the mods will be downloaded and copied in the game directory, but not actually installed.
     #[arg(long)]
     pub dry_run: bool,
+
+    /// If set, prints duration information.
+    #[arg(long)]
+    pub timeline: bool,
 }
 
 #[derive(Args, Debug)]

@@ -4,6 +4,7 @@
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::BufReader;
+use std::path::PathBuf;
 
 use anyhow::{anyhow, bail, Result};
 use lazy_static::lazy_static;
@@ -31,6 +32,9 @@ lazy_static! {
 }
 
 pub fn parse_weidu_log(mod_filter: Option<&LwcString>) -> Result<Vec<LogRow>> {
+    if !PathBuf::from("weidu.log").exists() {
+        return Ok(vec![]);
+    }
     let weidu_log = match std::fs::File::open("weidu.log") { // TODO: handle case variations
         Err(error) => return Err(
             anyhow!(format!("Could not open weidu.log - {:?}", error)

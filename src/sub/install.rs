@@ -5,8 +5,9 @@ use std::io::BufWriter;
 
 use ansi_term::Colour::{Blue, Green, Red};
 use anyhow::{Result, anyhow, bail};
+use chrono::{Local};
 use itertools::Itertools;
-use log::{debug, info, error};
+use log::{debug, info, error, warn};
 
 use crate::args::Install;
 use crate::cache::Cache;
@@ -15,12 +16,14 @@ use crate::components::Components;
 use crate::download::Downloader;
 use crate::file_installer::FileInstaller;
 use crate::get_module::ModuleDownload;
+use crate::lowercase::lwc;
 use crate::module::module::Module;
 use crate::post_install::PostInstallOutcome;
 use crate::log_parser::check_install_complete;
 use crate::manifest::Manifest;
-use crate::process_weidu_mod::{process_generated_mod, process_weidu_mod};
+use crate::process_weidu_mod::{process_generated_mod, process_weidu_mod, ProcessResult};
 use crate::settings::Config;
+use crate::timeline::InstallTimeline;
 use crate::unique_component::UniqueComponent;
 use crate::weidu_conf::check_weidu_conf_lang;
 use crate::weidu_context::WeiduContext;
@@ -61,6 +64,7 @@ pub fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &
                                                     module_downloader: &module_downloader, file_installer: &file_installer,
                                                     log: RefCell::from(log) };
 
+    let mut timelines = vec![];
     for (index, module) in modules.iter().enumerate() {
         let real_index = index + opts.from_index.unwrap_or(0);
         info!("module {} - {}", real_index, module.describe());
@@ -78,12 +82,18 @@ pub fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &
             }
         }
 
-        let finished = match module {
+        let process_result = match module {
             Module::Mod { weidu_mod } => process_weidu_mod(weidu_mod, &weidu_context, &manifest, real_index, settings)?,
             Module::Generated { gen } => process_generated_mod(gen, &weidu_context, &manifest, real_index, settings)?,
-        }
-        ;
+        };
+
+        let ProcessResult { stop: finished, timeline } = process_result;
+        timelines.push(timeline);
+
         if finished {
+            warn!("interrupted");
+            timelines.push(InstallTimeline::new(lwc!("aborted"), Local::now()));
+            handle_timeline(opts.timeline, &timelines);
             bail!("Program interrupted on error on non-whitelisted warning");
         } else {
             match module.exec_post_install(&module.get_name()) {
@@ -101,6 +111,8 @@ pub fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &
         }
     }
     info!("Installation done with no error");
+    timelines.push(InstallTimeline::new(lwc!("finished"), Local::now()));
+    handle_timeline(opts.timeline, &timelines);
     Ok(())
 }
 
@@ -182,6 +194,14 @@ fn check_safely_installable(module: &Module) -> Result<SafetyResult> {
 // should show the actual reset command, with the correct index, TBD
 fn show_reset_help() {
     info!("You may use the `reset` subcommand")
+}
+
+fn handle_timeline(flag: bool, timelines: &[InstallTimeline]) {
+    if flag {
+        info!("timelines:\n  - {}", timelines.iter().map(|it| it.short()).join("\n  - "));
+    } else{
+        debug!("timelines:\n  - {}", timelines.iter().map(|it| it.short()).join("\n  - "));
+    }
 }
 
 pub enum SafetyResult {
