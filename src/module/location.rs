@@ -216,7 +216,7 @@ impl Source {
 
 #[cfg(test)]
 mod test_deserialize {
-    use crate::location::{Github, Source, GithubDescriptor};
+    use super::{Github, Source, GithubDescriptor};
     use crate::replace::ReplaceSpec;
 
     use super::Location;

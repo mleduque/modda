@@ -11,7 +11,7 @@ use anyhow::{bail, Result, anyhow};
 use tempfile::TempDir;
 
 use crate::canon_path::CanonPath;
-use crate::location::Location;
+use crate::module::location::Location;
 use crate::lowercase::{LwcString, lwc};
 use crate::module::pre_copy_command::PrecopyCommand;
 use crate::settings::{Config, ExtractorCommand};

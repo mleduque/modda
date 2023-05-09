@@ -9,7 +9,7 @@ use regex::Regex;
 
 use crate::args::Install;
 use crate::global::Global;
-use crate::language::{LanguageOption, LanguageSelection, select_language};
+use crate::module::language::{LanguageOption, LanguageSelection, select_language};
 use crate::components::{Component, Components};
 use crate::lowercase::LwcString;
 use crate::module::weidu_mod::{WeiduMod, BareMod};

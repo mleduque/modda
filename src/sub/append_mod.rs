@@ -9,7 +9,7 @@ use log::debug;
 use crate::args::AppendMod;
 use crate::canon_path::CanonPath;
 use crate::components::{Components, Component, FullComponent};
-use crate::language::{select_language_pref, LanguageSelection};
+use crate::module::language::{select_language_pref, LanguageSelection};
 use crate::list_components::list_components;
 use crate::lowercase::LwcString;
 use crate::module::manifest::Manifest;

@@ -4,11 +4,11 @@ use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
 use crate::components::{Components, Component, FullComponent};
-use crate::location::Location;
 use crate::lowercase::LwcString;
 use crate::post_install::PostInstall;
 
 use super::install_comment::InstallationComments;
+use super::location::Location;
 use super::module_conf::ModuleConf;
 
 /** Definition of a mod. */

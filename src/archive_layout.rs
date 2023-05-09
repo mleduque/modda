@@ -2,8 +2,8 @@
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
-use crate::location::Source;
 use crate::lowercase::{LwcString};
+use crate::module::location::Source;
 
 
 #[skip_serializing_none]

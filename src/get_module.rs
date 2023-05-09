@@ -12,7 +12,7 @@ use crate::canon_path::CanonPath;
 use crate::download::Downloader;
 use crate::global::Global;
 use crate::timeline::SetupTimeline;
-use crate::location::Location;
+use crate::module::location::Location;
 use crate::lowercase::LwcString;
 use crate::module::weidu_mod::WeiduMod;
 use crate::replace::ReplaceSpec;
@@ -69,7 +69,7 @@ impl <'a> ModuleDownload<'a> {
     }
 
     pub async fn retrieve_location(&self, loc: &Location, module: &WeiduMod) -> Result<PathBuf> {
-        use crate::location::Source::*;
+        use crate::module::location::Source::*;
 
         let dest = self.cache.join(loc.source.save_subdir()?);
         let save_name = loc.source.save_name(&module.name)?;
@@ -125,10 +125,10 @@ mod test_retrieve_location {
     use std::{path::PathBuf};
 
     use crate::global::Global;
-    use crate::location::{Location, Github};
     use crate::download::{Downloader};
     use crate::args::{Install};
     use crate::get_module::ModuleDownload;
+    use crate::module::location::{Location, Source, Github};
     use crate::module::weidu_mod::WeiduMod;
     use crate:: settings::Config;
     use crate::canon_path::CanonPath;
@@ -142,10 +142,10 @@ mod test_retrieve_location {
      */
     #[tokio::test]
     async fn retrieve_github_location() {
-        use crate::location::GithubDescriptor::Release;
+        use crate::module::location::GithubDescriptor::Release;
 
         let location = Location {
-            source: crate::location::Source::Github(Github {
+            source: Source::Github(Github {
                 github_user: "username".to_string(),
                 repository: "repository".to_string(),
                 descriptor: Release {
@@ -200,7 +200,7 @@ mod test_retrieve_location {
     * */
     #[tokio::test]
     async fn retrieve_http_location() {
-        use crate::location::Source::Http;
+        use crate::module::location::Source::Http;
 
         let location = Location {
             source: Http {
@@ -254,7 +254,7 @@ mod test_retrieve_location {
      */
     #[tokio::test]
     async fn retrieve_absolute_location() {
-        use crate::location::Source::Absolute;
+        use crate::module::location::Source::Absolute;
         let location = Location {
             source: Absolute { path: "/some/path/file.zip".to_string() },
             ..Location::default()
@@ -294,7 +294,7 @@ mod test_retrieve_location {
      */
     #[tokio::test]
     async fn retrieve_local_location() {
-        use crate::location::Source::Local;
+        use crate::module::location::Source::Local;
         let location = Location {
             source: Local { local: "some/path/file.zip".to_string() },
             ..Location::default()
