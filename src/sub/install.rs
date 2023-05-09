@@ -1,7 +1,9 @@
 
 
 use std::cell::RefCell;
+use std::fs::OpenOptions;
 use std::io::BufWriter;
+use std::path::PathBuf;
 
 use ansi_term::Colour::{Blue, Green, Red};
 use anyhow::{Result, anyhow, bail};
@@ -12,14 +14,15 @@ use log::{debug, info, error, warn};
 use crate::args::Install;
 use crate::cache::Cache;
 use crate::canon_path::CanonPath;
-use crate::components::Components;
+use crate::components::{Components, Component, FullComponent};
 use crate::download::Downloader;
 use crate::file_installer::FileInstaller;
 use crate::get_module::ModuleDownload;
 use crate::lowercase::lwc;
 use crate::module::module::Module;
+use crate::module::weidu_mod::WeiduMod;
 use crate::post_install::PostInstallOutcome;
-use crate::log_parser::check_install_complete;
+use crate::log_parser::{check_install_complete, parse_weidu_log};
 use crate::module::manifest::Manifest;
 use crate::process_weidu_mod::{process_generated_mod, process_weidu_mod, ProcessResult};
 use crate::settings::Config;
@@ -83,7 +86,13 @@ pub fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &
         }
 
         let process_result = match module {
-            Module::Mod { weidu_mod } => process_weidu_mod(weidu_mod, &weidu_context, &manifest, real_index, settings)?,
+            Module::Mod { weidu_mod } => {
+                let result = process_weidu_mod(weidu_mod, &weidu_context, &manifest, real_index, settings)?;
+                if let (true, Some(output_path)) = (module.get_components().is_ask(), &opts.record ){
+                    record_selection(index, weidu_mod, &output_path)?;
+                }
+                result
+            }
             Module::Generated { gen } => process_generated_mod(gen, &weidu_context, &manifest, real_index, settings)?,
         };
 
@@ -208,4 +217,67 @@ pub enum SafetyResult {
     Conflicts(Vec<UniqueComponent>),
     Safe,
     Abort,
+}
+
+fn record_selection(index: usize, module: &WeiduMod, output_file: &str) ->Result<()> {
+    let log_rows = parse_weidu_log(None)?;
+    let mut record_manifest = Manifest::read_path(output_file)?;
+
+    let previous_mod = record_manifest.modules[..index].iter().rev().find(|item| match item.get_components() {
+        Components::List(_) => true,
+        Components::Ask => true,
+        Components::None => false,
+    });
+
+    let selection = match previous_mod {
+        None => log_rows.iter().filter(|row| module.name == row.module).collect::<Vec<_>>(),
+        Some(previous) => {
+            let previous_components = previous.get_components();
+            let previous_components = match previous_components {
+                Components::List(ref list) => list,
+                Components::Ask => bail!("components for previous mod fragment were not recorded"),
+                Components::None => bail!("search incorrectly returned a 'none' component list"),
+            };
+            let previous_name = previous.get_name();
+            let previous_match = log_rows.iter().enumerate().rev().find(|(_, row)| {
+                previous_name == &row.component_name && previous_components.iter().any(|comp| comp.index() == row.component_index)
+            });
+            let last_index = match previous_match {
+                None => bail!("Couldn't find components for the previous mod"),
+                Some((index, _)) => index,
+            };
+            log_rows[(last_index + 1)..].iter().filter(|row| module.name == row.module).collect::<Vec<_>>()
+        }
+    };
+    let selection = selection.iter().map(|row|
+        Component::Full(FullComponent { index: row.component_index, component_name: row.component_name.to_owned() })
+    ).collect_vec();
+
+    // update manifest with new component selection
+    let components = if selection.is_empty() {
+        Components::None
+    } else{
+        Components::List(selection)
+    };
+    record_manifest.modules[index] = Module::Mod { weidu_mod: WeiduMod {
+        components,
+        ..module.to_owned()
+    } };
+
+    // write updated manifest to new file
+    let temp_path = PathBuf::from(format!("{}.new", output_file));
+    let dest = match OpenOptions::new().create(true).truncate(true).write(true).open(&temp_path) {
+        Err(err) => bail!("Could not create temp output file\n  {}", err),
+        Ok(file) => file,
+    };
+    let buf_writer = BufWriter::new(&dest);
+    serde_yaml::to_writer(buf_writer, &record_manifest)?;
+
+    // rename temp file to output file
+    if let Err(error) = std::fs::rename(&temp_path, output_file) {
+        bail!("Failed to rename temp output file {:?} to {:?}\n -> {:?}", temp_path, output_file, error);
+    } else {
+        debug!("renamed temp output file to {:?}", output_file);
+    }
+    Ok(())
 }

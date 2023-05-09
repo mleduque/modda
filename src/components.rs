@@ -20,6 +20,15 @@ impl Default for Components {
     }
 }
 
+impl Components {
+    pub fn is_ask(&self) -> bool {
+        match self {
+            Components::Ask => true,
+            _ => false,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct ParseComponentError(String);
 
