@@ -18,7 +18,6 @@ mod test_deserialize {
     use crate::module::file_mod::FileModule;
     use crate::module::file_module_origin::FileModuleOrigin;
     use crate::module::gen_mod::{GeneratedMod, GenModComponent};
-    use crate::module::module::Module;
     use crate::module::module_conf::{ModuleConf, ModuleContent};
     use crate::module::weidu_mod::WeiduMod;
     use crate::post_install::PostInstall;

@@ -14,15 +14,6 @@ pub enum Components {
     List(Vec<Component>),
 }
 
-impl Components {
-    pub fn as_mut_list(&mut self) -> Option<&mut Vec<Component>> {
-        match self {
-            Components::List(list) => Some(list),
-            _ => None,
-        }
-    }
-}
-
 impl Default for Components {
     fn default() -> Self {
         Components::Ask

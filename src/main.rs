@@ -9,7 +9,6 @@ mod canon_path;
 mod components;
 mod download;
 mod file_installer;
-mod file_module_install;
 mod get_module;
 mod global;
 mod language;

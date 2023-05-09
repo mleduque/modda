@@ -62,7 +62,6 @@ mod test_deserialize {
     use crate::components::{Component, Components};
     use crate::location::Location;
     use crate::lowercase::lwc;
-    use crate::module::file_mod::FileModule;
     use crate::module::file_module_origin::FileModuleOrigin;
     use crate::module::gen_mod::{GeneratedMod, GenModComponent};
     use crate::module::module::Module;
