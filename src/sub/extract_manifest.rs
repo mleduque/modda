@@ -1,22 +1,23 @@
 
+use std::collections::HashSet;
 use std::fs::OpenOptions;
 use std::io::BufWriter;
 
-use anyhow::Result;
-use chrono::format;
+use anyhow::{Result, bail};
 
 use crate::args::Reverse;
 use crate::canon_path::CanonPath;
-use crate::components::{Component, Components, FullComponent};
+use crate::components::FullComponent;
 use crate::global::Global;
 use crate::log_parser::{parse_weidu_log, LogRow};
 use crate::lowercase::lwc;
 use crate::manifest::Manifest;
 use crate::module::module::Module;
-use crate::module::weidu_mod::{WeiduMod, BareMod};
+use crate::module::weidu_mod::BareMod;
+use crate::unique_component::UniqueComponent;
 use crate::weidu_conf::read_weidu_conf_lang_dir;
 
-pub fn extract_bare_mods(export_component_name: Option<bool>, export_language: Option<bool>) -> Result<Vec<BareMod>> {
+pub fn extract_bare_mods() -> Result<Vec<BareMod>> {
     let log_rows = parse_weidu_log(None)?;
     let init: Vec<BareMod> = vec![];
     let mod_fragments = log_rows.iter().fold(init, |mut accumulator, row| {
@@ -44,7 +45,7 @@ fn format_modules(bare_mods: Vec<BareMod>, export_component_name: Option<bool>, 
 }
 
 pub fn extract_manifest(args: &Reverse, game_dir: &CanonPath) -> Result<()> {
-    let mods = extract_bare_mods(args.export_component_name, args.export_language)?;
+    let mods = extract_bare_mods()?;
     let mods = format_modules(mods, args.export_component_name, args.export_language);
     let manifest = generate_manifest(game_dir, mods)?;
 
@@ -91,4 +92,16 @@ fn bare_mod_from_log_row(row: &LogRow) -> BareMod {
         language: row.lang_index,
         components,
     }
+}
+
+pub fn extract_unique_components() -> Result<HashSet<UniqueComponent>> {
+    let log_rows = parse_weidu_log(None)?;
+    log_rows.iter().try_fold(HashSet::new(), |mut set, row| {
+        let unique_component = UniqueComponent { mod_key: lwc!(&row.module), index: row.component_index };
+        if set.insert(unique_component.clone()) {
+            Ok(set)
+        } else {
+            bail!("Component appears multiple times in weidu.log: {:?}", unique_component);
+        }
+    })
 }

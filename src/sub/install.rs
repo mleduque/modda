@@ -3,13 +3,15 @@
 use std::cell::RefCell;
 use std::io::BufWriter;
 
-use ansi_term::Colour::{Blue, Green};
+use ansi_term::Colour::{Blue, Green, Red};
 use anyhow::{Result, anyhow, bail};
-use log::{debug, info};
+use itertools::Itertools;
+use log::{debug, info, error};
 
 use crate::args::Install;
 use crate::cache::Cache;
 use crate::canon_path::CanonPath;
+use crate::components::Components;
 use crate::download::Downloader;
 use crate::file_installer::FileInstaller;
 use crate::get_module::ModuleDownload;
@@ -18,9 +20,12 @@ use crate::post_install::PostInstallOutcome;
 use crate::log_parser::check_install_complete;
 use crate::manifest::Manifest;
 use crate::process_weidu_mod::{process_generated_mod, process_weidu_mod};
-use crate::settings::{Config};
+use crate::settings::Config;
+use crate::unique_component::UniqueComponent;
 use crate::weidu_conf::check_weidu_conf_lang;
 use crate::weidu_context::WeiduContext;
+
+use super::extract_manifest::extract_unique_components;
 
 pub fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &Cache) -> Result<()> {
 
@@ -60,6 +65,19 @@ pub fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &
         let real_index = index + opts.from_index.unwrap_or(0);
         info!("module {} - {}", real_index, module.describe());
         debug!("{:?}", module);
+
+        match check_safely_installable(module)? {
+            SafetyResult::Abort => bail!("Aborted"),
+            SafetyResult::Safe => {}
+            SafetyResult::Conflicts(matches) if matches.is_empty() => {}
+            SafetyResult::Conflicts(matches) => {
+                let list = format!("\n  - {}", matches.iter().map(|item| item.short_desc()).join("\n  - "));
+                error!("{}", Red.bold().paint(format!("Module fragment\n  {:?}\ncontains components that were already installed:{}", module, list)));
+                show_reset_help();
+                bail!("Aborting - proceeding with `install` is unsafe (could uninstall then install modules repeatedly)");
+            }
+        }
+
         let finished = match module {
             Module::Mod { weidu_mod } => process_weidu_mod(weidu_mod, &weidu_context, &manifest, real_index, settings)?,
             Module::Generated { gen } => process_generated_mod(gen, &weidu_context, &manifest, real_index, settings)?,
@@ -113,4 +131,61 @@ fn  get_modules_range<'a>(modules: &'a[Module], opts: &Install) -> Result<&'a [M
         _ => bail!("incompatible arguments given"),
     };
     Ok(result)
+}
+
+fn check_safely_installable(module: &Module) -> Result<SafetyResult> {
+    let installed = extract_unique_components()?;
+    match module.get_components() {
+        Components::None => Ok(SafetyResult::Safe),
+        Components::Ask => {
+            let existing = installed.iter().filter(|comp| comp.mod_key == module.get_name()).collect_vec();
+            if existing.is_empty() {
+                let prompt = format!(r#"
+                    For the next module fragment ({}), weidu will ask which components must be installed.
+                    Be aware that selecting a component that was already installed will uninstall all
+                    components that were installed in the meantime, reinstall this component and all the
+                    following ones which can take a long time (and, possibly, break things) and is better avoided.
+
+                    The following components for the same mod were installed:
+                    {}
+
+                    Continue?
+                "#, module.get_name(), existing.iter().map(|comp| comp.index.to_string()).join(", "));
+                if dialoguer::Confirm::new().with_prompt(prompt).interact()? {
+                    Ok(SafetyResult::Safe)
+                } else{
+                    Ok(SafetyResult::Abort)
+                }
+            } else {
+                Ok(SafetyResult::Safe)
+            }
+        }
+        Components::List(list) => {
+            let matches = list.iter().fold(vec![], |mut matches, current| {
+                let current = UniqueComponent { mod_key: module.get_name().to_owned(), index: current.index() };
+                if installed.contains(&current) {
+                    matches.push(current);
+                    matches
+                } else {
+                    matches
+                }
+            });
+            if matches.is_empty() {
+                Ok(SafetyResult::Conflicts(matches))
+            } else {
+                Ok(SafetyResult::Safe)
+            }
+        }
+    }
+}
+
+// should show the actual reset command, with the correct index, TBD
+fn show_reset_help() {
+    info!("You may use the `reset` subcommand")
+}
+
+pub enum SafetyResult {
+    Conflicts(Vec<UniqueComponent>),
+    Safe,
+    Abort,
 }

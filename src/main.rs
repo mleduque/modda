@@ -29,10 +29,11 @@ mod progname;
 mod replace;
 mod sub;
 mod run_result;
+mod run_weidu;
 mod settings;
 mod tp2;
 mod tp2_template;
-mod run_weidu;
+mod unique_component;
 mod weidu_conf;
 mod weidu_context;
 

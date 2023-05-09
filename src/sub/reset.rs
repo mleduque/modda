@@ -1,3 +1,4 @@
+
 use anyhow::{Result, bail};
 use itertools::Itertools;
 use log::info;
@@ -14,7 +15,7 @@ use crate::tp2::find_tp2_str;
 
 
 pub fn reset(args: &Reset, game_dir: &CanonPath, config: &Config) -> Result<()> {
-    let installed = extract_bare_mods(Option::Some(false), Option::Some(false))?;
+    let installed = extract_bare_mods()?;
     let manifest = Manifest::read_path(&args.manifest_path)?;
 
     // ensure the index actually exists in the manifest
