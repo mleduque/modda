@@ -6,7 +6,7 @@ use log::info;
 use crate::args::Reset;
 use crate::canon_path::CanonPath;
 use crate::components::Components;
-use crate::manifest::Manifest;
+use crate::module::manifest::Manifest;
 use crate::module::module::Module;
 use crate::run_weidu::run_weidu_uninstall;
 use crate::settings::Config;

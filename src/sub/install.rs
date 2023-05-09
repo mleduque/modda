@@ -20,7 +20,7 @@ use crate::lowercase::lwc;
 use crate::module::module::Module;
 use crate::post_install::PostInstallOutcome;
 use crate::log_parser::check_install_complete;
-use crate::manifest::Manifest;
+use crate::module::manifest::Manifest;
 use crate::process_weidu_mod::{process_generated_mod, process_weidu_mod, ProcessResult};
 use crate::settings::Config;
 use crate::timeline::InstallTimeline;

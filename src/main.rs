@@ -16,7 +16,6 @@ mod list_components;
 mod location;
 mod log_parser;
 mod lowercase;
-mod manifest;
 mod module;
 #[macro_use]
 mod named_unit_variant;

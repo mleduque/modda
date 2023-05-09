@@ -2,7 +2,8 @@
 
 use anyhow::{Result};
 
-use crate::{args::Search, manifest::Manifest};
+use crate::args::Search;
+use crate::module::manifest::Manifest;
 
 
 pub fn search(opts: &Search) -> Result<()> {

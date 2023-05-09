@@ -3,7 +3,7 @@ use crate::args::Invalidate;
 use crate::cache::Cache;
 use crate::location::{Location, Source};
 use crate::lowercase::lwc;
-use crate::manifest::Manifest;
+use crate::module::manifest::Manifest;
 use crate::module::module::Module;
 use crate::module::weidu_mod::WeiduMod;
 

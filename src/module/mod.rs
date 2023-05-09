@@ -3,6 +3,7 @@ pub mod file_mod;
 pub mod file_module_origin;
 pub mod gen_mod;
 pub mod install_comment;
+pub mod manifest;
 pub mod module;
 pub mod module_conf;
 pub mod pre_copy_command;
