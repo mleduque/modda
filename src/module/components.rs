@@ -6,7 +6,7 @@ use std::marker::PhantomData;
 use serde::{Deserialize, Deserializer, Serialize};
 use serde::de::{self, Visitor, SeqAccess};
 
-#[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
+#[derive(Deserialize, Debug, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum Components {
     Ask,
@@ -25,6 +25,17 @@ impl Components {
         match self {
             Components::Ask => true,
             _ => false,
+        }
+    }
+}
+
+impl Serialize for Components {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where S: serde::Serializer {
+        match self {
+            Components::Ask => serializer.serialize_str("ask"),
+            Components::None => serializer.serialize_str("none"),
+            Components::List(list) => serializer.collect_seq(list.iter()),
         }
     }
 }

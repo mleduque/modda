@@ -19,6 +19,7 @@ use crate::module::weidu_mod::WeiduMod;
 
 // doesn't support --quick-log generated logs ATM
 // just need to actually look at then and set field as optional and update regexes
+#[derive(Debug)]
 pub struct LogRow {
     pub module: String,
     pub lang_index: u32,

@@ -38,12 +38,6 @@ impl PartialEq<&str> for LwcString {
     }
 }
 
-impl PartialEq<&LwcString> for LwcString {
-    fn eq(&self, other: &&LwcString) -> bool {
-        self == other
-    }
-}
-
 impl From<&str> for LwcString {
     fn from(base: &str) -> Self { LwcString(base.to_lowercase()) }
 }

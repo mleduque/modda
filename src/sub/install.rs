@@ -89,7 +89,7 @@ pub fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &
             Module::Mod { weidu_mod } => {
                 let result = process_weidu_mod(weidu_mod, &weidu_context, &manifest, real_index, settings)?;
                 if let (true, Some(output_path)) = (module.get_components().is_ask(), &opts.record ){
-                    record_selection(index, weidu_mod, &output_path)?;
+                    record_selection(index, weidu_mod, &output_path, &manifest)?;
                 }
                 result
             }
@@ -159,7 +159,7 @@ fn check_safely_installable(module: &Module) -> Result<SafetyResult> {
     match module.get_components() {
         Components::None => Ok(SafetyResult::Safe),
         Components::Ask => {
-            let existing = installed.iter().filter(|comp| comp.mod_key == module.get_name()).collect_vec();
+            let existing = installed.iter().filter(|comp| comp.mod_key == *module.get_name()).collect_vec();
             if !existing.is_empty() {
                 let prompt = format!(r#"
                     For the next module fragment ({}), weidu will ask which components must be installed.
@@ -219,15 +219,21 @@ pub enum SafetyResult {
     Abort,
 }
 
-fn record_selection(index: usize, module: &WeiduMod, output_file: &str) ->Result<()> {
+fn record_selection(index: usize, module: &WeiduMod, output_file: &str, original_manifest: &Manifest) ->Result<()> {
     let log_rows = parse_weidu_log(None)?;
-    let mut record_manifest = Manifest::read_path(output_file)?;
+    let output_path = PathBuf::from(output_file);
+    let mut record_manifest = if output_path.exists() {
+        Manifest::read_path(output_file)?
+    } else {
+        original_manifest.clone()
+    };
 
     let previous_mod = record_manifest.modules[..index].iter().rev().find(|item| match item.get_components() {
         Components::List(_) => true,
         Components::Ask => true,
         Components::None => false,
     });
+    debug!("record_selection- previous_mod={:?}", previous_mod);
 
     let selection = match previous_mod {
         None => log_rows.iter().filter(|row| module.name == row.module).collect::<Vec<_>>(),
@@ -239,8 +245,11 @@ fn record_selection(index: usize, module: &WeiduMod, output_file: &str) ->Result
                 Components::None => bail!("search incorrectly returned a 'none' component list"),
             };
             let previous_name = previous.get_name();
+            debug!("record_selection- previous_components={:?}, previous_name={}", previous_components, previous_name);
             let previous_match = log_rows.iter().enumerate().rev().find(|(_, row)| {
-                previous_name == &row.component_name && previous_components.iter().any(|comp| comp.index() == row.component_index)
+                let result = previous_name == &row.module && previous_components.iter().any(|comp| comp.index() == row.component_index);
+                debug!("{:?} ? {}", row, result);
+                result
             });
             let last_index = match previous_match {
                 None => bail!("Couldn't find components for the previous mod"),
@@ -259,6 +268,7 @@ fn record_selection(index: usize, module: &WeiduMod, output_file: &str) ->Result
     } else{
         Components::List(selection)
     };
+    debug!("replace {:?} at position {}", components, index);
     record_manifest.modules[index] = Module::Mod { weidu_mod: WeiduMod {
         components,
         ..module.to_owned()
