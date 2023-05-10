@@ -73,7 +73,7 @@ pub struct Install {
     #[arg(long)]
     pub timeline: bool,
 
-    /// If set, prints duration information.
+    /// If set, records the weidu component selection for mod fragments with `components:ask`.
     #[arg(long, short)]
     pub record: Option<String>,
 }
