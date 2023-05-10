@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
-use crate::components::{Component, Components};
+use crate::module::components::{Component, Components};
 use crate::lowercase::LwcString;
 use crate::post_install::PostInstall;
 

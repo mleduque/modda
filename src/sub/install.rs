@@ -14,7 +14,7 @@ use log::{debug, info, error, warn};
 use crate::args::Install;
 use crate::cache::Cache;
 use crate::canon_path::CanonPath;
-use crate::components::{Components, Component, FullComponent};
+use crate::module::components::{Components, Component, FullComponent};
 use crate::download::Downloader;
 use crate::file_installer::FileInstaller;
 use crate::get_module::ModuleDownload;

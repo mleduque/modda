@@ -59,7 +59,7 @@ impl Manifest {
 #[cfg(test)]
 mod test_deserialize {
 
-    use crate::components::{Component, Components};
+    use crate::module::components::{Component, Components};
     use crate::lowercase::lwc;
     use crate::module::file_module_origin::FileModuleOrigin;
     use crate::module::gen_mod::{GeneratedMod, GenModComponent};

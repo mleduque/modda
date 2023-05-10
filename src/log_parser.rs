@@ -12,7 +12,7 @@ use log::{warn, info};
 use regex::{Regex, RegexBuilder};
 
 use crate::bufread_raw::BufReadRaw;
-use crate::components::Components;
+use crate::module::components::Components;
 use crate::lowercase::LwcString;
 use crate::module::module::Module;
 use crate::module::weidu_mod::WeiduMod;

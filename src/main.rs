@@ -6,7 +6,6 @@ mod args;
 mod bufread_raw;
 mod cache;
 mod canon_path;
-mod components;
 mod download;
 mod file_installer;
 mod get_module;

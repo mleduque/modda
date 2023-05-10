@@ -1,4 +1,5 @@
 
+pub mod components;
 pub mod file_mod;
 pub mod file_module_origin;
 pub mod gen_mod;
@@ -17,7 +18,7 @@ mod test_deserialize {
     use serde_yaml::Deserializer;
 
     use crate::lowercase::lwc;
-    use crate::components::{Components, Component};
+    use crate::module::components::{Components, Component};
     use crate::module::file_mod::FileModule;
     use crate::module::file_module_origin::FileModuleOrigin;
     use crate::module::gen_mod::{GeneratedMod, GenModComponent};

@@ -3,7 +3,7 @@ use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
-use crate::components::{Components, Component, FullComponent};
+use crate::module::components::{Components, Component, FullComponent};
 use crate::lowercase::LwcString;
 use crate::post_install::PostInstall;
 
@@ -33,7 +33,7 @@ pub struct WeiduMod {
     ///   - `ask` (or empty) will use weidu in interactive mode (weidu itself asks how to install components)
     ///   - `none` will just copy the mod files in the game dir without installing anything
     ///   - a list of components will call weidu and provide the list of components on the command line
-    #[serde(deserialize_with = "crate::components::component_deser")]
+    #[serde(deserialize_with = "crate::module::components::component_deser")]
     pub components: Components,
     /// Whether warnings returned by weidu (exit code) will interrupt the whole installation.
     ///
