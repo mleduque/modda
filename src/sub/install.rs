@@ -148,9 +148,10 @@ fn  get_modules_range<'a>(modules: &'a[Module], opts: &Install) -> Result<&'a [M
         } else {
             &modules[(from_index)..(from_index + count)]
         }
-        (None, false, None) => &modules,
+        (None, false, None) => &modules[(from_index)..],
         _ => bail!("incompatible arguments given"),
     };
+    debug!("range: {:?}", result);
     Ok(result)
 }
 
