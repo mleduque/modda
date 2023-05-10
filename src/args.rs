@@ -76,6 +76,10 @@ pub struct Install {
     /// If set, records the weidu component selection for mod fragments with `components:ask`.
     #[arg(long, short)]
     pub record: Option<String>,
+
+    /// If set along with `--record`, will not ask for confirmation before recording.
+    #[arg(long, requires = "record")]
+    pub record_no_confirm: bool,
 }
 
 #[derive(Args, Debug)]

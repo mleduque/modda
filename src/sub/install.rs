@@ -18,11 +18,11 @@ use crate::module::components::{Components, Component, FullComponent};
 use crate::download::Downloader;
 use crate::file_installer::FileInstaller;
 use crate::get_module::ModuleDownload;
-use crate::lowercase::lwc;
+use crate::lowercase::{lwc, LwcString};
 use crate::module::module::Module;
 use crate::module::weidu_mod::WeiduMod;
 use crate::post_install::PostInstallOutcome;
-use crate::log_parser::{check_install_complete, parse_weidu_log};
+use crate::log_parser::{check_install_complete, parse_weidu_log, LogRow};
 use crate::module::manifest::Manifest;
 use crate::process_weidu_mod::{process_generated_mod, process_weidu_mod, ProcessResult};
 use crate::settings::Config;
@@ -89,7 +89,7 @@ pub fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &
             Module::Mod { weidu_mod } => {
                 let result = process_weidu_mod(weidu_mod, &weidu_context, &manifest, real_index, settings)?;
                 if let (true, Some(output_path)) = (module.get_components().is_ask(), &opts.record ){
-                    record_selection(index, weidu_mod, &output_path, &manifest)?;
+                    record_selection(index, weidu_mod, &output_path, &manifest, opts.record_no_confirm)?;
                 }
                 result
             }
@@ -219,7 +219,7 @@ pub enum SafetyResult {
     Abort,
 }
 
-fn record_selection(index: usize, module: &WeiduMod, output_file: &str, original_manifest: &Manifest) ->Result<()> {
+fn record_selection(index: usize, module: &WeiduMod, output_file: &str, original_manifest: &Manifest, no_confirm_flag: bool) -> Result<()> {
     let log_rows = parse_weidu_log(None)?;
     let output_path = PathBuf::from(output_file);
     let mut record_manifest = if output_path.exists() {
@@ -235,7 +235,7 @@ fn record_selection(index: usize, module: &WeiduMod, output_file: &str, original
     });
     debug!("record_selection- previous_mod={:?}", previous_mod);
 
-    let selection = match previous_mod {
+    let selection_rows = match previous_mod {
         None => log_rows.iter().filter(|row| module.name == row.module).collect::<Vec<_>>(),
         Some(previous) => {
             let previous_components = previous.get_components();
@@ -258,36 +258,53 @@ fn record_selection(index: usize, module: &WeiduMod, output_file: &str, original
             log_rows[(last_index + 1)..].iter().filter(|row| module.name == row.module).collect::<Vec<_>>()
         }
     };
-    let selection = selection.iter().map(|row|
+    let selection = selection_rows.iter().map(|row|
         Component::Full(FullComponent { index: row.component_index, component_name: row.component_name.to_owned() })
     ).collect_vec();
 
-    // update manifest with new component selection
-    let components = if selection.is_empty() {
-        Components::None
-    } else{
-        Components::List(selection)
-    };
-    debug!("replace {:?} at position {}", components, index);
-    record_manifest.modules[index] = Module::Mod { weidu_mod: WeiduMod {
-        components,
-        ..module.to_owned()
-    } };
+    if confirm_record(no_confirm_flag, &selection_rows, &module.name)? {
+        // update manifest with new component selection
+        let components = if selection.is_empty() {
+            Components::None
+        } else{
+            Components::List(selection)
+        };
+        debug!("replace {:?} at position {}", components, index);
+        record_manifest.modules[index] = Module::Mod { weidu_mod: WeiduMod {
+            components,
+            ..module.to_owned()
+        } };
 
-    // write updated manifest to new file
-    let temp_path = PathBuf::from(format!("{}.new", output_file));
-    let dest = match OpenOptions::new().create(true).truncate(true).write(true).open(&temp_path) {
-        Err(err) => bail!("Could not create temp output file\n  {}", err),
-        Ok(file) => file,
-    };
-    let buf_writer = BufWriter::new(&dest);
-    serde_yaml::to_writer(buf_writer, &record_manifest)?;
+        // write updated manifest to new file
+        let temp_path = PathBuf::from(format!("{}.new", output_file));
+        let dest = match OpenOptions::new().create(true).truncate(true).write(true).open(&temp_path) {
+            Err(err) => bail!("Could not create temp output file\n  {}", err),
+            Ok(file) => file,
+        };
+        let buf_writer = BufWriter::new(&dest);
+        serde_yaml::to_writer(buf_writer, &record_manifest)?;
 
-    // rename temp file to output file
-    if let Err(error) = std::fs::rename(&temp_path, output_file) {
-        bail!("Failed to rename temp output file {:?} to {:?}\n -> {:?}", temp_path, output_file, error);
-    } else {
-        debug!("renamed temp output file to {:?}", output_file);
+        // rename temp file to output file
+        if let Err(error) = std::fs::rename(&temp_path, output_file) {
+            bail!("Failed to rename temp output file {:?} to {:?}\n -> {:?}", temp_path, output_file, error);
+        } else {
+            debug!("renamed temp output file to {:?}", output_file);
+        }
     }
+
     Ok(())
+}
+
+fn confirm_record(no_confirm_flag: bool, selection: &[&LogRow], module_name: &LwcString) -> Result<bool> {
+    if no_confirm_flag {
+        Ok(true)
+    } else {
+        let prompt = format!("Record component selection for mod {}?\n  selection:\n- {}\n",
+                                    module_name, selection.iter().map(|row| format!("{} - {}", row.component_index, row.component_name)).join("\n- "));
+        if dialoguer::Confirm::new().with_prompt(prompt).interact()? {
+            Ok(true)
+        } else{
+            Ok(false)
+        }
+    }
 }
