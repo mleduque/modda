@@ -160,7 +160,7 @@ fn check_safely_installable(module: &Module) -> Result<SafetyResult> {
         Components::None => Ok(SafetyResult::Safe),
         Components::Ask => {
             let existing = installed.iter().filter(|comp| comp.mod_key == module.get_name()).collect_vec();
-            if existing.is_empty() {
+            if !existing.is_empty() {
                 let prompt = format!(r#"
                     For the next module fragment ({}), weidu will ask which components must be installed.
                     Be aware that selecting a component that was already installed will uninstall all
