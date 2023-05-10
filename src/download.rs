@@ -1,10 +1,12 @@
 
+use std::cmp::min;
 use std::fs::File;
 use std::io::Write;
 use std::path::{PathBuf};
 
 use anyhow::{bail, Result};
 use futures_util::stream::StreamExt;
+use indicatif::{ProgressBar, ProgressStyle, ProgressState};
 use log::{debug, info};
 
 
@@ -46,15 +48,51 @@ impl Downloader {
         info!("download {} to {:?}", url, dest_dir);
         std::fs::create_dir_all(dest_dir)?;
 
+        let client = reqwest::Client::new();
+
         let mut partial_file = match File::create(&partial_name) {
             Err(error) => bail!("failed to create file {:?}\n -> {:?}", partial_name, error),
             Ok(file) => file,
         };
 
-        let response = match reqwest::get(url).await {
+        let response = match client.get(url).send().await {
             Ok(response) => response,
             Err(error) => bail!("HTTP download failed\n -> {:?}", error),
         };
+        let total_size = response.content_length();
+
+
+        // Indicatif setup
+        let pb = match total_size {
+            Some(total_size) => {
+                let pb = ProgressBar::new(total_size);
+                pb.set_style(ProgressStyle::default_bar()
+                    .template("{msg}\n{spinner:.green} [{elapsed_precise}] {percent:>3}% of {total_bytes} {smoothed_eta:>10}")?
+                    .progress_chars("#>-")
+                    // https://github.com/console-rs/indicatif/issues/394
+                    .with_key("smoothed_eta",
+                        |s: &ProgressState, w: &mut dyn std::fmt::Write| match (s.pos(), s.len()) {
+                            (pos, Some(len)) if pos != 0 =>
+                                write!(w, "{:#}",
+                                    indicatif::HumanDuration(std::time::Duration::from_millis(
+                                        (s.elapsed().as_millis() * (len as u128 - pos as u128) / (pos as u128)) as u64
+                                    ))
+                                ).unwrap(),
+                            _ => write!(w, "-").unwrap(),
+                        },
+                    )
+                );
+                pb
+            }
+            None => {
+                let pb = ProgressBar::new_spinner();
+                pb.set_style(ProgressStyle::default_bar()
+                    .template("{msg}\n{spinner:.green} [{elapsed_precise}]  {bytes}/(unknown size)")?
+                );
+                pb
+            }
+        };
+        pb.set_message(format!("Downloading {}", url));
 
         let response = match response.error_for_status() {
             Err(ref error) => bail!("Could not download mod archive at {}\n -> {}", url, error),
@@ -62,6 +100,7 @@ impl Downloader {
         };
 
         let mut stream = response.bytes_stream();
+        let mut downloaded: u64 = 0;
 
         while let Some(item) = stream.next().await {
             let chunk = match item {
@@ -71,7 +110,17 @@ impl Downloader {
             if let Err(error) = partial_file.write(&chunk) {
                 bail!("Error while writing to file\n ->{:?}", error);
             }
+            if let Some(total_size) = total_size {
+                let new = min(downloaded + (chunk.len() as u64), total_size);
+                downloaded = new;
+                pb.set_position(new);
+            } else {
+                let new = downloaded + (chunk.len() as u64);
+                downloaded = new;
+                pb.set_position(new);
+            }
         }
+        pb.finish_with_message(format!("Download from {} finished", url));
         Ok(())
     }
 
