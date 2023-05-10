@@ -7,11 +7,11 @@ use anyhow::{Result, bail};
 
 use crate::args::Reverse;
 use crate::canon_path::CanonPath;
-use crate::components::FullComponent;
+use crate::module::components::FullComponent;
 use crate::global::Global;
 use crate::log_parser::{parse_weidu_log, LogRow};
 use crate::lowercase::lwc;
-use crate::manifest::Manifest;
+use crate::module::manifest::Manifest;
 use crate::module::module::Module;
 use crate::module::weidu_mod::BareMod;
 use crate::unique_component::UniqueComponent;

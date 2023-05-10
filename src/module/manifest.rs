@@ -59,12 +59,11 @@ impl Manifest {
 #[cfg(test)]
 mod test_deserialize {
 
-    use crate::components::{Component, Components};
-    use crate::location::Location;
+    use crate::module::components::{Component, Components};
     use crate::lowercase::lwc;
-    use crate::module::file_mod::FileModule;
     use crate::module::file_module_origin::FileModuleOrigin;
     use crate::module::gen_mod::{GeneratedMod, GenModComponent};
+    use crate::module::location::{Source, Location};
     use crate::module::module::Module;
     use crate::module::weidu_mod::WeiduMod;
     use crate::post_install::PostInstall;
@@ -112,7 +111,7 @@ mod test_deserialize {
                             name: lwc!("aaa"),
                             components: Components::List(vec! [ Component::Simple(1) ]),
                             location: Some(Location {
-                                source: crate::location::Source::Http { http: "http://example.com/my-mod".to_string(), rename: None },
+                                source: Source::Http { http: "http://example.com/my-mod".to_string(), rename: None },
                                 ..Default::default()
                             }),
                             ..Default::default()
@@ -123,7 +122,7 @@ mod test_deserialize {
                             name: lwc!("aaaa"),
                             components: Components::List(vec! [ Component::Simple(1) ]),
                             location: Some(Location {
-                                source: crate::location::Source::Http { http: "http://example.com/my-mod".to_string(), rename: None },
+                                source: Source::Http { http: "http://example.com/my-mod".to_string(), rename: None },
                                 ..Default::default()
                             }),
                             description: Some("some description".to_string()),
@@ -181,7 +180,7 @@ mod test_deserialize {
                         name: lwc!("aaa"),
                         components: Components::List(vec! [ Component::Simple(1) ]),
                         location: Some(Location {
-                            source: crate::location::Source::Http { http: "http://example.com/my-mod".to_string(), rename: None },
+                            source: Source::Http { http: "http://example.com/my-mod".to_string(), rename: None },
                             ..Default::default()
                         }),
                         ignore_warnings: true,

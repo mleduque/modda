@@ -11,9 +11,9 @@ use anyhow::bail;
 use chrono::Local;
 use log::info;
 
+use crate::module::manifest::Manifest;
 use crate::timeline::InstallTimeline;
 use crate::timeline::SetupTimeline;
-use crate::manifest::Manifest;
 use crate::module::gen_mod::GeneratedMod;
 use crate::module::module_conf::ModuleContent;
 use crate::module::weidu_mod::WeiduMod;

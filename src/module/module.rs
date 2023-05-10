@@ -4,7 +4,7 @@ use serde::de::IntoDeserializer;
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
 
-use crate::components::{Components, Component};
+use crate::module::components::{Components, Component};
 use crate::lowercase::LwcString;
 use crate::post_install::{PostInstallExec, PostInstallOutcome};
 

@@ -1,8 +1,12 @@
 
+pub mod components;
 pub mod file_mod;
 pub mod file_module_origin;
 pub mod gen_mod;
 pub mod install_comment;
+pub mod language;
+pub mod location;
+pub mod manifest;
 pub mod module;
 pub mod module_conf;
 pub mod pre_copy_command;
@@ -14,15 +18,14 @@ mod test_deserialize {
     use serde_yaml::Deserializer;
 
     use crate::lowercase::lwc;
-    use crate::components::{Components, Component};
+    use crate::module::components::{Components, Component};
     use crate::module::file_mod::FileModule;
     use crate::module::file_module_origin::FileModuleOrigin;
     use crate::module::gen_mod::{GeneratedMod, GenModComponent};
-    use crate::module::module::Module;
+    use crate::module::location::{Location, Source, Github, GithubDescriptor};
     use crate::module::module_conf::{ModuleConf, ModuleContent};
     use crate::module::weidu_mod::WeiduMod;
     use crate::post_install::PostInstall;
-    use crate::location::{Location, Source, GithubDescriptor, Github};
     use crate::patch_source::{PatchEncoding, PatchSource, PatchDesc};
     use crate::archive_layout::Layout;
 

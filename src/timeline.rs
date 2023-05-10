@@ -69,17 +69,6 @@ fn format_duration(duration: Duration) -> String {
     humantime::format_duration(duration_as_seconds.to_std().unwrap()).to_string()
 }
 
-fn format_duration_2(duration: Duration) -> String {
-    let minutes = duration.num_minutes();
-    let minutes_string = format!("{}", minutes);
-    let minutes_string = if minutes_string.len() < 2 { format!("0{}", minutes_string) } else{ minutes_string };
-    let rest = duration - Duration::minutes(minutes);
-    let seconds = rest.num_seconds();
-    let rest = rest - Duration::seconds(seconds);
-    let millis = rest.num_milliseconds();
-    format!("{}min {:02}s {:02}ms", minutes_string, seconds, millis)
-}
-
 #[derive(Default, Debug, Clone)]
 pub struct SetupTimeline {
     pub start: DateTime<Local>,

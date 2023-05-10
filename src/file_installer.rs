@@ -28,14 +28,6 @@ impl <'a> FileInstaller<'a> {
         self.copy_from_globs(&globs, target, allow_overwrite)
     }
 
-    pub fn copy_from_origin(&self, origin: &FileModuleOrigin, target: &PathBuf, allow_overwrite: bool) -> Result<()> {
-        let origins = vec![origin];
-        self.copy_from_origins(&origins, target, allow_overwrite)
-    }
-    pub fn resolve_from_game_dir(&self, rel_path: &str) -> PathBuf {
-        self.game_dir.join_path(rel_path)
-    }
-
     fn get_file_globs(&self, origins: &[&FileModuleOrigin]) -> Result<Vec<CopyGlob>> {
         let results: Vec<_> = origins.iter().map(|origin| (self.get_origin_base(origin), origin.glob()))
                                     .collect();
@@ -191,12 +183,6 @@ pub enum CopyMode {
 pub struct CopyOptions {
     pub allow_overwrite: AllowOverwrite,
     pub copy_mode: CopyMode,
-}
-
-impl CopyOptions {
-    fn new(allow_overwrite: AllowOverwrite, copy_mode: CopyMode) -> CopyOptions {
-        CopyOptions { allow_overwrite, copy_mode }
-    }
 }
 
 struct CopyGlob {

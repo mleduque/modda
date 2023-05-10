@@ -8,11 +8,11 @@ use log::debug;
 
 use crate::args::AppendMod;
 use crate::canon_path::CanonPath;
-use crate::components::{Components, Component, FullComponent};
-use crate::language::{select_language_pref, LanguageSelection};
+use crate::module::components::{Components, Component, FullComponent};
+use crate::module::language::{select_language_pref, LanguageSelection};
 use crate::list_components::list_components;
 use crate::lowercase::LwcString;
-use crate::manifest::Manifest;
+use crate::module::manifest::Manifest;
 use crate::module::module::Module;
 use crate::module::weidu_mod::WeiduMod;
 use crate::pathext::append_extension;

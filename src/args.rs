@@ -72,6 +72,10 @@ pub struct Install {
     /// If set, prints duration information.
     #[arg(long)]
     pub timeline: bool,
+
+    /// If set, prints duration information.
+    #[arg(long, short)]
+    pub record: Option<String>,
 }
 
 #[derive(Args, Debug)]
