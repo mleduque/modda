@@ -44,7 +44,7 @@ pub fn reset(args: &Reset, game_dir: &CanonPath, config: &Config) -> Result<()> 
     ).collect::<Vec<_>>();
 
     let (index, _) = match component_matches.as_slice() {
-        &[] => bail!("Mod fragment was not installed (orwas not found)"),
+        &[] => bail!("Mod fragment was not installed (or was not found)"),
         &[single_match] => single_match,
         _=> bail!("Found multiple occurrences of mod/component in weidu.log - aborting reset"),
     };
