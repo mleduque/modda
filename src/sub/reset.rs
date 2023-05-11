@@ -18,9 +18,11 @@ pub fn reset(args: &Reset, game_dir: &CanonPath, config: &Config) -> Result<()> 
     let installed = extract_bare_mods()?;
     let manifest = Manifest::read_path(&args.manifest_path)?;
 
+    let reset_index = args.to_index;
+
     // ensure the index actually exists in the manifest
-    let target_module = match manifest.modules.get(args.to_index) { // to_index is the first fragment that should be removed
-        None => bail!("No module at index {} in manifest (last index is {})", args.to_index, manifest.modules.len()),
+    let target_module = match manifest.modules.get(reset_index) { // to_index is the first fragment that should be removed
+        None => bail!("No module at index {} in manifest (last index is {})", reset_index, manifest.modules.len()),
         Some(module) => module,
     };
     let weidu_mod = match target_module {
@@ -37,7 +39,8 @@ pub fn reset(args: &Reset, game_dir: &CanonPath, config: &Config) -> Result<()> 
         .filter(|(_, module)| module.name == weidu_mod.name)
         .collect::<Vec<_>>();
     if name_matches.is_empty() {
-        bail!("No components for module {} were installed", target_module.get_name());
+        info!("Nothing to remove, next mod at position {} ({}) was not installed", reset_index + 1, target_module.get_name());
+        return Ok(());
     }
     let component_matches = name_matches.iter().filter(|(_, module)|
         components.iter().all(|comp| module.components.iter().any(|item| item.index == comp.index()))
@@ -48,7 +51,7 @@ pub fn reset(args: &Reset, game_dir: &CanonPath, config: &Config) -> Result<()> 
         &[single_match] => single_match,
         _=> bail!("Found multiple occurrences of mod/component in weidu.log - aborting reset"),
     };
-    let removed = &installed[(index - 1)..];
+    let removed = &installed[*index..];
     let prompt = format!("Will uninstall these (in reverse order)\n  {}\nProceed? ", removed.iter().map(|item| item.short()).join("\n  "));
     if dialoguer::Confirm::new().with_prompt(prompt).interact()? {
         for fragment in removed.iter().rev() {

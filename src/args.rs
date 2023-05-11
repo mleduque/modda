@@ -30,7 +30,7 @@ pub enum Commands {
     /// Append all components of a mod to a manifest. This can result in an uninstallable mod (incompatible components, GROUPs etc.)
     /// so it should probably manually edited.
     AppendMod(AppendMod),
-    /// Tries to uninstall modules that are after a given index in the manifest.
+    /// Tries to uninstall modules that are after a given index in the manifest (EXPERIMENTAL).
     Reset(Reset),
 }
 
