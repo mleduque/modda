@@ -5,6 +5,7 @@ use std::process::{Command, Stdio};
 use anyhow::{bail, Result};
 use chrono::Utc;
 use lazy_static::lazy_static;
+use log::debug;
 use regex::Regex;
 
 use crate::args::Install;
@@ -230,6 +231,8 @@ pub fn run_weidu_uninstall(tp2: &str, module: &BareMod, config: &Config) -> Resu
         tp2.to_owned(),
         "--no-exit-pause".to_owned(),
         "--skip-at-view".to_owned(),
+        "--language".to_owned(),
+        "0".to_owned(), // no need to select a specific language just to uninstall
         "--log".to_owned(),    // Log output and details to X.
         format!("setup-{}-uninstall-{}.debug", module.name, now),
     ];
@@ -241,6 +244,7 @@ pub fn run_weidu_uninstall(tp2: &str, module: &BareMod, config: &Config) -> Resu
         .stdin(Stdio::inherit())
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit());
+    debug!("uninstall command:\n{:?}", command);
     command.output()?;
     Ok(())
 }
