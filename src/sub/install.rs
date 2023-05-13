@@ -69,7 +69,7 @@ pub fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &
 
     let mut timelines = vec![];
     for (index, module) in modules.iter().enumerate() {
-        let real_index = index + opts.from_index.unwrap_or(0);
+        let real_index = index + opts.from_index.unwrap_or(0) + 1;
         info!("module {} - {}", real_index, module.describe());
         debug!("{:?}", module);
 
@@ -108,7 +108,7 @@ pub fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &
             match module.exec_post_install(&module.get_name()) {
                 PostInstallOutcome::Stop => {
                     info!("{}",  Blue.bold().paint(format!("Interruption requested for module {} - {}",
-                                                            real_index + 1, module.describe())));
+                                                            real_index, module.describe())));
                     return Ok(());
                 }
                 PostInstallOutcome::Continue => {}

@@ -44,7 +44,7 @@ pub fn process_weidu_mod(weidu_mod: &WeiduMod, weidu_context: &WeiduContext, man
             let setup_log = match module_downloader.get_module(&weidu_mod) {
                 Err(error) => {
                     let message = format!("module {name} (index={idx}/{len}) download/installation failed, stopping.",
-                                                    name = weidu_mod.name, idx = real_index + 1, len = mod_count);
+                                                    name = weidu_mod.name, idx = real_index, len = mod_count);
                     weidu_context.log(&message)?;
                     info!("{}", Red.bold().paint(message));
                     return Err(error)
@@ -64,7 +64,7 @@ pub fn process_weidu_mod(weidu_mod: &WeiduMod, weidu_context: &WeiduContext, man
                 Ok(tp2) => tp2,
                 Err(error) => {
                     let message = format!("module {name} (index={idx}/{len}) mod installed but no tp2 found, stopping.",
-                                                    name = weidu_mod.name, idx = real_index + 1, len = mod_count);
+                                                    name = weidu_mod.name, idx = real_index, len = mod_count);
                     weidu_context.log(&message)?;
                     info!("{}", Red.bold().paint(message));
                     return Err(error)
@@ -91,7 +91,7 @@ pub fn process_weidu_mod(weidu_mod: &WeiduMod, weidu_context: &WeiduContext, man
     let must_stop = match single_result.status_code() {
         Some(0) => {
             let message = format!("module {name} (index={index}/{len}) finished with success.",
-                            name = weidu_mod.name, index = real_index + 1, len = mod_count);
+                            name = weidu_mod.name, index = real_index, len = mod_count);
             weidu_context.log(&message)?;
             info!("{}", Green.bold().paint(message));
             false
@@ -110,20 +110,20 @@ pub fn process_weidu_mod(weidu_mod: &WeiduMod, weidu_context: &WeiduContext, man
         }
         Some(value) => {
             let message = format!("module {name} (index={idx}/{len}) finished with error (status={status}), stopping.",
-                                    name = weidu_mod.name, idx = real_index + 1, len = mod_count, status = value);
+                                    name = weidu_mod.name, idx = real_index, len = mod_count, status = value);
             weidu_context.log(&message)?;
             info!("{}", Red.bold().paint(message));
             true
         }
         None => if !single_result.success() {
             let message = format!("module {name} (index={idx}/{len}) finished with success.",
-                                    name = weidu_mod.name, idx = real_index + 1, len = mod_count);
+                                    name = weidu_mod.name, idx = real_index, len = mod_count);
             weidu_context.log(&message)?;
             info!("{}", Green.bold().paint(message));
             false
         } else {
             let message = format!("module {name} (index={idx}/{len}) finished with error, stopping.",
-                                name = weidu_mod.name, idx = real_index + 1, len = mod_count);
+                                name = weidu_mod.name, idx = real_index, len = mod_count);
             weidu_context.log(&message)?;
             info!("{}", Red.bold().paint(message));
             true
