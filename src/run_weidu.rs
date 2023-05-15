@@ -8,7 +8,7 @@ use lazy_static::lazy_static;
 use log::debug;
 use regex::Regex;
 
-use crate::args::Install;
+use crate::args::{Install, Reset};
 use crate::global::Global;
 use crate::module::language::{LanguageOption, LanguageSelection, select_language};
 use crate::module::components::{Component, Components};
@@ -223,7 +223,7 @@ fn weidu_command(config: &Config, check_exist: bool) -> Result<String> {
     }
 }
 
-pub fn run_weidu_uninstall(tp2: &str, module: &BareMod, config: &Config) -> Result<()> {
+pub fn run_weidu_uninstall(tp2: &str, module: &BareMod, config: &Config, opts: &Reset) -> Result<()> {
     let now = Utc::now().naive_local().format("%Y-%m-%d_%H:%M:%S");
 
     let mut command = Command::new(weidu_command(config, false)?);
@@ -245,6 +245,12 @@ pub fn run_weidu_uninstall(tp2: &str, module: &BareMod, config: &Config) -> Resu
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit());
     debug!("uninstall command:\n{:?}", command);
-    command.output()?;
-    Ok(())
+
+    if opts.dry_run {
+        println!("would execute {:?}", command);
+        Ok(())
+    } else {
+        command.output()?;
+        Ok(())
+    }
 }

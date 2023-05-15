@@ -162,4 +162,8 @@ pub struct Reset {
     /// zero means before the first module.
     #[arg(long, short)]
     pub to_index: usize,
+
+    /// If set, doesn't actually run the weidu command, only prints what would be executed
+    #[arg(long, short)]
+    pub dry_run: bool,
 }

@@ -55,8 +55,8 @@ pub fn reset(args: &Reset, game_dir: &CanonPath, config: &Config) -> Result<()> 
     let prompt = format!("Will uninstall these (in reverse order)\n  {}\nProceed? ", removed.iter().map(|item| item.short()).join("\n  "));
     if dialoguer::Confirm::new().with_prompt(prompt).interact()? {
         for fragment in removed.iter().rev() {
-            let tp2 = find_tp2_str(game_dir, &weidu_mod.name)?;
-            run_weidu_uninstall(&tp2, fragment, config)?;
+            let tp2 = find_tp2_str(game_dir, &fragment.name)?;
+            run_weidu_uninstall(&tp2, fragment, config, args)?;
         }
         Ok(())
     } else {
