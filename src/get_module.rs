@@ -9,10 +9,10 @@ use crate::archive_extractor::Extractor;
 use crate::args::Install;
 use crate::cache::Cache;
 use crate::canon_path::CanonPath;
-use crate::download::Downloader;
+use crate::download::{Downloader};
 use crate::global::Global;
 use crate::timeline::SetupTimeline;
-use crate::module::location::Location;
+use crate::module::location::{Location};
 use crate::lowercase::LwcString;
 use crate::module::weidu_mod::WeiduMod;
 use crate::replace::ReplaceSpec;
@@ -74,7 +74,7 @@ impl <'a> ModuleDownload<'a> {
         let dest = self.cache.join(loc.source.save_subdir()?);
         let save_name = loc.source.save_name(&module.name)?;
         match &loc.source {
-            Http { http, .. } => self.downloader.download(http, &dest, save_name).await,
+            Http(http) => http.download(self.downloader, &dest, save_name).await,
             Github(github) => github.get_github(&self.downloader, &dest, save_name).await,
             Absolute { path } => Ok(PathBuf::from(path)),
             Local { local } => self.get_local_mod_path(local),
@@ -128,7 +128,7 @@ mod test_retrieve_location {
     use crate::download::{Downloader};
     use crate::args::{Install};
     use crate::get_module::ModuleDownload;
-    use crate::module::location::{Location, Source, Github};
+    use crate::module::location::{Location, Source, Github, Http};
     use crate::module::weidu_mod::WeiduMod;
     use crate:: settings::Config;
     use crate::canon_path::CanonPath;
@@ -152,6 +152,7 @@ mod test_retrieve_location {
                     release: Some("V1".to_string()),
                     asset: "repository_v1.zip".to_string(),
                 },
+                ..Default::default()
             }),
             ..Location::default()
         };
@@ -175,8 +176,8 @@ mod test_retrieve_location {
 
         let mut downloader = Downloader::faux();
         when!(
-            downloader.download(_, {expected_dest}, _)
-        ).then(|(_, _, _)| Ok(PathBuf::from("cache_dir/directory/filename.zip")));
+            downloader.download(_, {expected_dest}, _, _)
+        ).then(|(_, _, _, _)| Ok(PathBuf::from("cache_dir/directory/filename.zip")));
         when!(
             downloader.download_partial(_, _, _)
         ).then(|(_, _, _)| bail!("Should not be called"));
@@ -200,13 +201,12 @@ mod test_retrieve_location {
     * */
     #[tokio::test]
     async fn retrieve_http_location() {
-        use crate::module::location::Source::Http;
 
         let location = Location {
-            source: Http {
+            source: Source::Http(Http {
                 http: "http://example.com/some_mod.zip".to_string(),
-                rename: None
-            },
+                ..Default::default()
+            }),
             ..Location::default()
         };
         let module = WeiduMod {
@@ -229,8 +229,8 @@ mod test_retrieve_location {
 
         let mut downloader = Downloader::faux();
         when!(
-            downloader.download(_, {expected_dest}, _)
-        ).then(|(_, _, _)| Ok(PathBuf::from("/cache_path/http/example.com/some_mod.zip")));
+            downloader.download(_, {expected_dest}, _, _)
+        ).then(|(_, _, _, _)| Ok(PathBuf::from("/cache_path/http/example.com/some_mod.zip")));
         when!(
             downloader.download_partial(_, _, _)
         ).then(|(_, _, _)| bail!("Should not be called"));
@@ -281,7 +281,7 @@ mod test_retrieve_location {
         let module_download = ModuleDownload::new(&config, &global, &opts,
                                                                             &downloader, &game_dir, &cache);
 
-        let result = module_download.retrieve_location(&location, &module);
+        let result = module_download.retrieve_location(&location, &module,);
         assert_eq!(
             result.await.unwrap(),
             PathBuf::from("/some/path/file.zip")

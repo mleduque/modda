@@ -10,6 +10,7 @@ pub mod manifest;
 pub mod module;
 pub mod module_conf;
 pub mod pre_copy_command;
+pub mod refresh;
 pub mod weidu_mod;
 
 
@@ -22,7 +23,7 @@ mod test_deserialize {
     use crate::module::file_mod::FileModule;
     use crate::module::file_module_origin::FileModuleOrigin;
     use crate::module::gen_mod::{GeneratedMod, GenModComponent};
-    use crate::module::location::{Location, Source, Github, GithubDescriptor};
+    use crate::module::location::{Location, Source, Github, GithubDescriptor, Http};
     use crate::module::module_conf::{ModuleConf, ModuleContent};
     use crate::module::weidu_mod::WeiduMod;
     use crate::post_install::PostInstall;
@@ -58,6 +59,7 @@ mod test_deserialize {
                             release: Some("v1.3".to_string()),
                             asset: "lin-A7-DlcMerger-v1.3.zip".to_string(),
                         },
+                        ..Default::default()
                     }),
                     layout: Layout::single_dir(3),
                     ..Location::default()
@@ -97,6 +99,7 @@ mod test_deserialize {
                             release: Some("v1.3".to_string()),
                             asset: "lin-A7-DlcMerger-v1.3.zip".to_string(),
                         },
+                        ..Default::default()
                     }),
                     layout: Layout::multi_dir(vec!["a".to_string(),"b".to_string()]),
                     ..Location::default()
@@ -201,10 +204,11 @@ mod test_deserialize {
                 name: lwc!("DlcMerger"),
                 components: Components::List(vec! [ Component::Simple(1) ]),
                 location: Some(Location {
-                    source: Source::Http {
+                    source: Source::Http(Http {
                         http: "https://module.location".to_owned(),
                         rename: None,
-                    },
+                        ..Default::default()
+                    }),
                     layout: Layout::default(),
                     patch: Some(PatchDesc {
                         patch_source: PatchSource::Http {
@@ -230,10 +234,11 @@ mod test_deserialize {
                 name: lwc!("modulename"),
                 components: Components::List(vec! [ Component::Simple(1) ]),
                 location: Some(Location {
-                    source: Source::Http {
+                    source: Source::Http(Http {
                         http: "https://module.location".to_owned(),
                         rename: None,
-                    },
+                        ..Default::default()
+                    }),
                     layout: Layout::default(),
                     patch: Some(PatchDesc {
                         patch_source: PatchSource::Inline {
