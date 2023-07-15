@@ -1,17 +1,26 @@
 
 use std::cmp::min;
 use std::fs::File;
-use std::io::Write;
+use std::io::{Write, ErrorKind};
 use std::path::{PathBuf};
 
 use anyhow::{bail, Result};
+use filetime::FileTime;
 use futures_util::stream::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle, ProgressState};
 use log::{debug, info};
 
+use crate::module::refresh::RefreshCondition;
+
 
 #[cfg_attr(test, faux::create)]
 pub struct Downloader {}
+
+#[derive(Debug, Clone)]
+pub struct DownloadOpts {
+    pub no_cache: bool,
+    pub refresh: RefreshCondition,
+}
 
 #[cfg_attr(test, faux::methods)]
 impl Downloader {
@@ -19,12 +28,13 @@ impl Downloader {
         Downloader {}
     }
 
-    pub async fn download(&self, url: &str, dest_dir: &PathBuf, file_name: PathBuf) -> Result<PathBuf> {
+    pub async fn download(&self, url: &str, dest_dir: &PathBuf, file_name: PathBuf, opts: &DownloadOpts)-> Result<PathBuf> {
         info!("obtaining {:?}, url is {} (cache={:?})", file_name, url, dest_dir);
 
         // check if archive exists in the cache
         let file_name = dest_dir.join(file_name);
-        if self.target_exists(&file_name) {
+
+        if use_from_cache(opts, &file_name)? {
             info!("File already downloaded before, reusing");
             return Ok(file_name.to_owned());
         }
@@ -37,11 +47,14 @@ impl Downloader {
             bail!("download_partial failed for {} to {:?}\n  {}", url, partial_name, error);
         };
 
-        if let Err(error) = self.rename_partial(&partial_name, &file_name) {
-            bail!("rename_partial failed for {:?} to {:?}\n  {}", partial_name, file_name, error);
-        };
-
-        Ok(file_name)
+        if opts.no_cache {
+            Ok(partial_name)
+        } else {
+            if let Err(error) = self.rename_partial(&partial_name, &file_name) {
+                bail!("rename_partial failed for {:?} to {:?}\n  {}", partial_name, file_name, error);
+            };
+            Ok(file_name)
+        }
     }
 
     pub async fn download_partial(&self, url: &str, partial_name: &PathBuf, dest_dir: &PathBuf)  -> Result<()> {
@@ -149,4 +162,143 @@ fn get_partial_filename(file_name: &PathBuf) -> Result<PathBuf> {
     partial_name.push(".partial");
 
     Ok(PathBuf::from(partial_name))
+}
+
+fn use_from_cache(opts: &DownloadOpts, file_name: &PathBuf) -> Result<bool> {
+    match opts.refresh {
+        RefreshCondition::Always => Ok(false),
+        RefreshCondition::Never => Ok(file_name.exists()),
+        RefreshCondition::Duration(duration) => {
+            let metadata = match std::fs::metadata(file_name) {
+                Err(error) if error.kind() == ErrorKind::NotFound  => return Ok(false),
+                Err(error) => bail!("error trying to check file in cache\n {:?}", error),
+                Ok(metadata) => metadata,
+            };
+            let mtime_seconds = FileTime::from_last_modification_time(&metadata).unix_seconds();
+            let now_seconds = FileTime::now().unix_seconds();
+            let duration_seconds = duration.as_secs();
+            let eol = match mtime_seconds.checked_add_unsigned(duration_seconds) {
+                None => return Ok(true), // or maybe bail?
+                Some(value) => value,
+            };
+            if now_seconds > eol {
+                Ok(false)
+            } else {
+                Ok(true)
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod test_cache_duration {
+    use std::fs::OpenOptions;
+    use std::path::PathBuf;
+    use std::time::SystemTime;
+
+    use anyhow::{Result, Context};
+    use filetime::FileTime;
+    use function_name::named;
+    use log::{warn, info};
+    use crate::module::refresh::RefreshCondition;
+
+    use super::DownloadOpts;
+
+    struct Cleanup(String);
+    impl Drop for Cleanup {
+        fn drop(&mut self) {
+            // avoid panic
+            let project = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+            let path = project.join("target").join("test_data").join("caching").join(&self.0);
+            info!("Deleting test file {:?}...", path);
+            match  std::fs::remove_file(&path) {
+                Err(error) =>warn!("Could not delete test file {:?}\n {:?}", path, error),
+                Ok(_) => info!("Test file {:?} was deleted", path),
+            }
+        }
+    }
+
+    #[test]
+    #[named]
+    fn cached_file_is_expired() -> Result<()> {
+        let _cleanup = Cleanup(function_name!().to_string());
+
+        let opts = DownloadOpts { no_cache: false, refresh: RefreshCondition::Duration(humantime::parse_duration("1day")?) };
+
+        let project = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let file_loc = project.join("target").join("test_data").join("caching");
+        std::fs::create_dir_all(&file_loc)?;
+        let file_path = file_loc.join(function_name!());
+        OpenOptions::new().create(true).truncate(true).write(true).open(&file_path)?;
+
+        let age = humantime::parse_duration("25h")?;
+        let mtime = FileTime::from_system_time(SystemTime::now().checked_sub(age).with_context(|| "subtract overflow")?);
+        filetime::set_file_mtime(&file_path, mtime)?;
+
+        assert_eq!(super::use_from_cache(&opts, &file_path)?, false);
+        Ok(())
+    }
+
+    #[test]
+    #[named]
+    fn cached_file_is_not_expired() -> Result<()> {
+        let _cleanup = Cleanup(function_name!().to_string());
+
+        let opts = DownloadOpts { no_cache: false, refresh: RefreshCondition::Duration(humantime::parse_duration("1day")?) };
+
+        let project = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let file_loc = project.join("target").join("test_data").join("caching");
+        std::fs::create_dir_all(&file_loc)?;
+        let file_path = file_loc.join(function_name!());
+        OpenOptions::new().create(true).truncate(true).write(true).open(&file_path)?;
+
+        let age = humantime::parse_duration("23h")?;
+        let mtime = FileTime::from_system_time(SystemTime::now().checked_sub(age).with_context(|| "sub overflow")?);
+        filetime::set_file_mtime(&file_path, mtime)?;
+
+        assert_eq!(super::use_from_cache(&opts, &file_path)?, true);
+        Ok(())
+    }
+
+    #[test]
+    #[named]
+    fn cached_file_is_always_refreshed() -> Result<()> {
+        let _cleanup = Cleanup(function_name!().to_string());
+
+        let opts = DownloadOpts { no_cache: false, refresh: RefreshCondition::Always };
+
+        let project = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let file_loc = project.join("target").join("test_data").join("caching");
+        std::fs::create_dir_all(&file_loc)?;
+        let file_path = file_loc.join(function_name!());
+        OpenOptions::new().create(true).truncate(true).write(true).open(&file_path)?;
+
+        let age = humantime::parse_duration("23h")?;
+        let mtime = FileTime::from_system_time(SystemTime::now().checked_sub(age).with_context(|| "sub overflow")?);
+        filetime::set_file_mtime(&file_path, mtime)?;
+
+        assert_eq!(super::use_from_cache(&opts, &file_path)?, false);
+        Ok(())
+    }
+
+    #[test]
+    #[named]
+    fn cached_file_is_never_refreshed() -> Result<()> {
+        let _cleanup = Cleanup(function_name!().to_string());
+
+        let opts = DownloadOpts { no_cache: false, refresh: RefreshCondition::Never };
+
+        let project = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let file_loc = project.join("target").join("test_data").join("caching");
+        std::fs::create_dir_all(&file_loc)?;
+        let file_path = file_loc.join(function_name!());
+        OpenOptions::new().create(true).truncate(true).write(true).open(&file_path)?;
+
+        let age = humantime::parse_duration("23h")?;
+        let mtime = FileTime::from_system_time(SystemTime::now().checked_sub(age).with_context(|| "sub overflow")?);
+        filetime::set_file_mtime(&file_path, mtime)?;
+
+        assert_eq!(super::use_from_cache(&opts, &file_path)?, true);
+        Ok(())
+    }
 }
