@@ -10,11 +10,11 @@ use crate::lowercase::LwcString;
 use crate::module::pre_copy_command::PrecopyCommand;
 use crate::{archive_layout::Layout, patch_source::PatchDesc, replace::ReplaceSpec, download::Downloader};
 
-use super::refresh::{RefreshCondition, self};
+use super::refresh::RefreshCondition;
 
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, PartialEq, Default, Clone)]
-pub struct Location {
+pub struct ConcreteLocation {
     #[serde(flatten)]
     pub source: Source,
     /// Specifies which files from the archive will be copied to the game directory.
@@ -259,7 +259,7 @@ mod test_deserialize {
     use crate::replace::ReplaceSpec;
     use crate::module::refresh::RefreshCondition::Never;
 
-    use super::Location;
+    use super::ConcreteLocation;
 
     #[test]
     fn deserialize_source_github_branch() {
@@ -375,10 +375,10 @@ mod test_deserialize {
                   replace: typpo
                   with: typo
         "#;
-        let location : Location = serde_yaml::from_str(yaml).unwrap();
+        let location : ConcreteLocation = serde_yaml::from_str(yaml).unwrap();
         assert_eq!(
             location,
-            Location {
+            ConcreteLocation {
                 source: Source::Github(Github {
                     github_user: "pseudo".to_string(),
                     repository: "my-big-project".to_string(),

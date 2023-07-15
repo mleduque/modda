@@ -12,7 +12,7 @@ use crate::canon_path::CanonPath;
 use crate::download::{Downloader};
 use crate::global::Global;
 use crate::timeline::SetupTimeline;
-use crate::module::location::{Location};
+use crate::module::location::{ConcreteLocation};
 use crate::lowercase::LwcString;
 use crate::module::weidu_mod::WeiduMod;
 use crate::replace::ReplaceSpec;
@@ -68,7 +68,7 @@ impl <'a> ModuleDownload<'a> {
         }
     }
 
-    pub async fn retrieve_location(&self, loc: &Location, module: &WeiduMod) -> Result<PathBuf> {
+    pub async fn retrieve_location(&self, loc: &ConcreteLocation, module: &WeiduMod) -> Result<PathBuf> {
         use crate::module::location::Source::*;
 
         let dest = self.cache.join(loc.source.save_subdir()?);
@@ -128,7 +128,7 @@ mod test_retrieve_location {
     use crate::download::{Downloader};
     use crate::args::{Install};
     use crate::get_module::ModuleDownload;
-    use crate::module::location::{Location, Source, Github, Http};
+    use crate::module::location::{ConcreteLocation, Source, Github, Http};
     use crate::module::weidu_mod::WeiduMod;
     use crate:: settings::Config;
     use crate::canon_path::CanonPath;
@@ -144,7 +144,7 @@ mod test_retrieve_location {
     async fn retrieve_github_location() {
         use crate::module::location::GithubDescriptor::Release;
 
-        let location = Location {
+        let location = ConcreteLocation {
             source: Source::Github(Github {
                 github_user: "username".to_string(),
                 repository: "repository".to_string(),
@@ -154,7 +154,7 @@ mod test_retrieve_location {
                 },
                 ..Default::default()
             }),
-            ..Location::default()
+            ..ConcreteLocation::default()
         };
         let module = WeiduMod {
             location: Some(location.clone()),
@@ -202,12 +202,12 @@ mod test_retrieve_location {
     #[tokio::test]
     async fn retrieve_http_location() {
 
-        let location = Location {
+        let location = ConcreteLocation {
             source: Source::Http(Http {
                 http: "http://example.com/some_mod.zip".to_string(),
                 ..Default::default()
             }),
-            ..Location::default()
+            ..ConcreteLocation::default()
         };
         let module = WeiduMod {
             location: Some(location.clone()),
@@ -255,9 +255,9 @@ mod test_retrieve_location {
     #[tokio::test]
     async fn retrieve_absolute_location() {
         use crate::module::location::Source::Absolute;
-        let location = Location {
+        let location = ConcreteLocation {
             source: Absolute { path: "/some/path/file.zip".to_string() },
-            ..Location::default()
+            ..ConcreteLocation::default()
         };
         let module = WeiduMod {
             location: Some(location.clone()),
@@ -295,9 +295,9 @@ mod test_retrieve_location {
     #[tokio::test]
     async fn retrieve_local_location() {
         use crate::module::location::Source::Local;
-        let location = Location {
+        let location = ConcreteLocation {
             source: Local { local: "some/path/file.zip".to_string() },
-            ..Location::default()
+            ..ConcreteLocation::default()
         };
         let module = WeiduMod {
             location: Some(location.clone()),

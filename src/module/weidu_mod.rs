@@ -8,7 +8,7 @@ use crate::lowercase::LwcString;
 use crate::post_install::PostInstall;
 
 use super::install_comment::InstallationComments;
-use super::location::Location;
+use super::location::ConcreteLocation;
 use super::module_conf::ModuleConf;
 
 /** Definition of a mod. */
@@ -49,7 +49,7 @@ pub struct WeiduMod {
     /// If absent, it is assumed to be in the game install.
     /// In that case, it checks a `<mod_name.tp2>`,`setup-mod_name>.tp2` in the game dir and in
     /// `<nod_name>` sub-directory. If it is not found, the installation aborts.
-    pub location: Option<Location>,
+    pub location: Option<ConcreteLocation>,
     /// Decides what will be done after the mod installation (in case of success).
     /// - `interrupt` will stop the installation and exist the program
     /// - `wait_seconds: xxx will wait xxx second before continuing to the next mod

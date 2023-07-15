@@ -1,7 +1,7 @@
 
 use crate::args::Invalidate;
 use crate::cache::Cache;
-use crate::module::location::{Location, Source};
+use crate::module::location::{ConcreteLocation, Source};
 use crate::lowercase::lwc;
 use crate::module::manifest::Manifest;
 use crate::module::module::Module;
@@ -34,7 +34,7 @@ pub fn invalidate(params: &Invalidate, cache: &Cache) -> Result<()> {
     bail!("Module {} not found or location not provided", mod_name);
 }
 
-fn clear_mod_archive(location: &Location, module :&WeiduMod, cache: &Cache) -> Result<()> {
+fn clear_mod_archive(location: &ConcreteLocation, module :&WeiduMod, cache: &Cache) -> Result<()> {
     match location.source {
         Source::Local {..} | Source::Absolute{..} => bail!("Can't invalidate mods with absolute or local sources"),
         _ => {}

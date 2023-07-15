@@ -10,6 +10,7 @@ use crate::global::Global;
 use crate::module::module::Module;
 
 
+
 #[derive(Deserialize, Serialize, Debug)]
 pub struct VersionDetect {
     pub version: String,
@@ -21,8 +22,8 @@ pub struct Manifest {
     pub version: String,
     /// Manifest-wide definitions
     pub global: Global,
-    #[serde(default)]
     /// List of modules
+    #[serde(default)]
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub modules: Vec<Module>,
 }
@@ -63,7 +64,7 @@ mod test_deserialize {
     use crate::lowercase::lwc;
     use crate::module::file_module_origin::FileModuleOrigin;
     use crate::module::gen_mod::{GeneratedMod, GenModComponent};
-    use crate::module::location::{Source, Location, Http};
+    use crate::module::location::{Source, ConcreteLocation, Http};
     use crate::module::module::Module;
     use crate::module::weidu_mod::WeiduMod;
     use crate::post_install::PostInstall;
@@ -110,7 +111,7 @@ mod test_deserialize {
                         weidu_mod: WeiduMod {
                             name: lwc!("aaa"),
                             components: Components::List(vec! [ Component::Simple(1) ]),
-                            location: Some(Location {
+                            location: Some(ConcreteLocation {
                                 source: Source::Http(Http { http: "http://example.com/my-mod".to_string(), rename: None, ..Default::default() }),
                                 ..Default::default()
                             }),
@@ -121,7 +122,7 @@ mod test_deserialize {
                         weidu_mod: WeiduMod {
                             name: lwc!("aaaa"),
                             components: Components::List(vec! [ Component::Simple(1) ]),
-                            location: Some(Location {
+                            location: Some(ConcreteLocation {
                                 source: Source::Http(Http { http: "http://example.com/my-mod".to_string(), rename: None, ..Default::default() }),
                                 ..Default::default()
                             }),
@@ -179,7 +180,7 @@ mod test_deserialize {
                     weidu_mod: WeiduMod {
                         name: lwc!("aaa"),
                         components: Components::List(vec! [ Component::Simple(1) ]),
-                        location: Some(Location {
+                        location: Some(ConcreteLocation {
                             source: Source::Http(Http { http: "http://example.com/my-mod".to_string(), rename: None, ..Default::default() }),
                             ..Default::default()
                         }),

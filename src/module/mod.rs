@@ -23,7 +23,7 @@ mod test_deserialize {
     use crate::module::file_mod::FileModule;
     use crate::module::file_module_origin::FileModuleOrigin;
     use crate::module::gen_mod::{GeneratedMod, GenModComponent};
-    use crate::module::location::{Location, Source, Github, GithubDescriptor, Http};
+    use crate::module::location::{ConcreteLocation, Source, Github, GithubDescriptor, Http};
     use crate::module::module_conf::{ModuleConf, ModuleContent};
     use crate::module::weidu_mod::WeiduMod;
     use crate::post_install::PostInstall;
@@ -51,7 +51,7 @@ mod test_deserialize {
             WeiduMod {
                 name: lwc!("DlcMerger"),
                 components: Components::List(vec! [ Component::Simple(1) ]),
-                location: Some(Location {
+                location: Some(ConcreteLocation {
                     source: Source::Github(Github {
                         github_user: "Argent77".to_string(),
                         repository: "A7-DlcMerger".to_string(),
@@ -62,7 +62,7 @@ mod test_deserialize {
                         ..Default::default()
                     }),
                     layout: Layout::single_dir(3),
-                    ..Location::default()
+                    ..ConcreteLocation::default()
                 }),
                 ..WeiduMod::default()
             }
@@ -91,7 +91,7 @@ mod test_deserialize {
             WeiduMod {
                 name: lwc!("DlcMerger"),
                 components: Components::List(vec! [ Component::Simple(1) ]),
-                location: Some(Location {
+                location: Some(ConcreteLocation {
                     source: Source::Github(Github {
                         github_user: "Argent77".to_string(),
                         repository: "A7-DlcMerger".to_string(),
@@ -102,7 +102,7 @@ mod test_deserialize {
                         ..Default::default()
                     }),
                     layout: Layout::multi_dir(vec!["a".to_string(),"b".to_string()]),
-                    ..Location::default()
+                    ..ConcreteLocation::default()
                 }),
                 ..WeiduMod::default()
             }
@@ -203,7 +203,7 @@ mod test_deserialize {
             WeiduMod {
                 name: lwc!("DlcMerger"),
                 components: Components::List(vec! [ Component::Simple(1) ]),
-                location: Some(Location {
+                location: Some(ConcreteLocation {
                     source: Source::Http(Http {
                         http: "https://module.location".to_owned(),
                         rename: None,
@@ -216,7 +216,7 @@ mod test_deserialize {
                         },
                         encoding: PatchEncoding::UTF8,
                     }),
-                    ..Location::default()
+                    ..ConcreteLocation::default()
                 }),
                 ..WeiduMod::default()
             }
@@ -233,7 +233,7 @@ mod test_deserialize {
             WeiduMod {
                 name: lwc!("modulename"),
                 components: Components::List(vec! [ Component::Simple(1) ]),
-                location: Some(Location {
+                location: Some(ConcreteLocation {
                     source: Source::Http(Http {
                         http: "https://module.location".to_owned(),
                         rename: None,
@@ -246,7 +246,7 @@ mod test_deserialize {
                         },
                         encoding: PatchEncoding::UTF8,
                     }),
-                    ..Location::default()
+                    ..ConcreteLocation::default()
                 }),
                 ..WeiduMod::default()
             }
