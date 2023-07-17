@@ -64,7 +64,8 @@ mod test_deserialize {
     use crate::lowercase::lwc;
     use crate::module::file_module_origin::FileModuleOrigin;
     use crate::module::gen_mod::{GeneratedMod, GenModComponent};
-    use crate::module::location::{Source, ConcreteLocation, Http};
+    use crate::module::location::http::Http;
+    use crate::module::location::{Source, ConcreteLocation};
     use crate::module::module::Module;
     use crate::module::weidu_mod::WeiduMod;
     use crate::post_install::PostInstall;

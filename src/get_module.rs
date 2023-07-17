@@ -1,4 +1,4 @@
-use std::path::{PathBuf};
+use std::path::PathBuf;
 
 use anyhow::{bail, Result};
 use chrono::Local;
@@ -9,10 +9,10 @@ use crate::archive_extractor::Extractor;
 use crate::args::Install;
 use crate::cache::Cache;
 use crate::canon_path::CanonPath;
-use crate::download::{Downloader};
+use crate::download::Downloader;
 use crate::global::Global;
 use crate::timeline::SetupTimeline;
-use crate::module::location::{ConcreteLocation};
+use crate::module::location::ConcreteLocation;
 use crate::lowercase::LwcString;
 use crate::module::weidu_mod::WeiduMod;
 use crate::replace::ReplaceSpec;
@@ -122,13 +122,16 @@ mod test_retrieve_location {
 
 
     use std::collections::HashMap;
-    use std::{path::PathBuf};
+    use std::path::PathBuf;
 
     use crate::global::Global;
-    use crate::download::{Downloader};
-    use crate::args::{Install};
+    use crate::download::Downloader;
+    use crate::args::Install;
     use crate::get_module::ModuleDownload;
-    use crate::module::location::{ConcreteLocation, Source, Github, Http};
+    use crate::module::location::github::Github;
+    use crate::module::location::github::GithubDescriptor::Release;
+    use crate::module::location::http::Http;
+    use crate::module::location::{ConcreteLocation, Source};
     use crate::module::weidu_mod::WeiduMod;
     use crate:: settings::Config;
     use crate::canon_path::CanonPath;
@@ -142,7 +145,6 @@ mod test_retrieve_location {
      */
     #[tokio::test]
     async fn retrieve_github_location() {
-        use crate::module::location::GithubDescriptor::Release;
 
         let location = ConcreteLocation {
             source: Source::Github(Github {

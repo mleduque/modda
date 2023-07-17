@@ -1,16 +1,21 @@
 
+pub mod github;
+pub mod http;
+
 use std::{path::PathBuf, borrow::Cow};
 
 use anyhow::{bail, Result};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
-use crate::download::DownloadOpts;
 use crate::lowercase::LwcString;
+use crate::module::location::github::{GithubDescriptor, GitBranch};
 use crate::module::pre_copy_command::PrecopyCommand;
-use crate::{archive_layout::Layout, patch_source::PatchDesc, replace::ReplaceSpec, download::Downloader};
+use crate::{archive_layout::Layout, patch_source::PatchDesc, replace::ReplaceSpec};
 
-use super::refresh::RefreshCondition;
+use self::github::Github;
+use self::http::Http;
+
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
 pub enum Location {
@@ -103,7 +108,7 @@ impl Source {
                                                     Ok(PathBuf::from(asset.to_owned())),
                 GithubDescriptor::Commit { commit } =>
                                                     Ok(PathBuf::from(format!("{}-{}.zip", module_name, commit))),
-                GithubDescriptor::Branch(Branch { branch, .. }) =>
+                GithubDescriptor::Branch(GitBranch { branch, .. }) =>
                                                     Ok(PathBuf::from(format!("{}-{}.zip", module_name, branch))),
                 GithubDescriptor::Tag { tag } => Ok(PathBuf::from(format!("{}-{}.zip", module_name, tag))),
             }
@@ -120,111 +125,6 @@ impl Source {
         }
     }
 }
-
-#[derive(Deserialize, Serialize, Debug, PartialEq, Default, Clone)]
-pub struct Http {
-    pub http: String,
-    pub rename: Option<String>,
-    #[serde(default)]
-    pub no_cache: bool,
-    #[serde(default)]
-    #[serde(with = "crate::module::refresh::RefreshConditionAsString")]
-    pub refresh: RefreshCondition,
-}
-
-impl Http {
-    pub async fn download(&self, downloader: &Downloader, dest: &PathBuf, save_name: PathBuf) -> Result<PathBuf> {
-        let opts = &DownloadOpts { no_cache: self.no_cache, refresh: self.refresh.clone() };
-        downloader.download(&self.http, dest, save_name, opts).await
-    }
-}
-
-#[derive(Deserialize, Serialize, Debug, PartialEq, Default, Clone)]
-pub struct Github {
-    pub github_user: String,
-    pub repository: String,
-    #[serde(flatten)]
-    pub descriptor: GithubDescriptor,
-    /// If set, will not cache the artifact after downloading it
-    #[serde(default)]
-    pub no_cache: bool,
-}
-impl Github {
-    pub async fn get_github(&self, downloader: &Downloader, dest: &PathBuf, save_name: PathBuf) -> Result<PathBuf> {
-        let url = self.descriptor.get_url(&self.github_user, &self.repository);
-        let opts = &DownloadOpts { no_cache: self.no_cache, refresh: self.refresh() };
-        downloader.download(&url, dest, save_name, opts).await
-    }
-
-    pub fn refresh(&self) -> RefreshCondition {
-        match &self.descriptor {
-            GithubDescriptor::Branch(Branch { refresh, .. }) => refresh.clone(),
-            _ => RefreshCondition::Never,
-        }
-    }
-}
-
-#[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
-#[serde(untagged)]
-pub enum GithubDescriptor {
-    Release { release: Option<String>, asset: String },
-    Commit { commit: String },
-    Branch(Branch),
-    Tag { tag: String },
-}
-
-#[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
-pub struct Branch {
-    pub branch: String,
-    #[serde(default)]
-    #[serde(with = "crate::module::refresh::RefreshConditionAsString")]
-    pub refresh: RefreshCondition,
-}
-
-impl Default for GithubDescriptor {
-    fn default() -> Self {
-        GithubDescriptor::Tag { tag: "".to_string() }
-    }
-}
-
-impl GithubDescriptor {
-    pub fn get_url(&self, user: &str, repository: &str) -> String {
-        use GithubDescriptor::*;
-        match self {
-            Release { release, asset } => {
-                let release = match &release {
-                    None => String::from("latest"),
-                    Some(release) => release.to_owned(),
-                };
-                format!("https://github.com/{user}/{repo}/releases/download/{release}/{asset}",
-                    user = user,
-                    repo = repository,
-                    release = release,
-                    asset = asset.replace("{{release}}", &release),
-                )
-            }
-            Tag { tag } =>
-                format!("https://github.com/{user}/{repo}/archive/refs/tags/{tag}.zip",
-                    user = user,
-                    repo = repository,
-                    tag = tag,
-                ),
-            Branch(crate::module::location::Branch { branch, refresh}) =>
-                format!("https://github.com/{user}/{repo}/archive/refs/heads/{branch}.zip",
-                    user = user,
-                    repo = repository,
-                    branch = branch,
-                ),
-            Commit { commit } =>
-                format!("https://github.com/{user}/{repo}/archive/{commit}.zip",
-                    user = user,
-                    repo = repository,
-                    commit = commit,
-                ),
-        }
-    }
-}
-
 
 #[cfg(test)]
 impl Source {
@@ -250,7 +150,7 @@ impl Source {
             Github {
                 github_user: "".to_string(),
                 repository: "".to_string(),
-                descriptor: GithubDescriptor::Branch(Branch { branch: "".to_string(), refresh: Never }),
+                descriptor: GithubDescriptor::Branch(GitBranch { branch: "".to_string(), refresh: Never }),
                 ..Default::default()
             }
         )
@@ -261,7 +161,7 @@ impl Source {
 #[cfg(test)]
 mod test_deserialize {
     use super::{Github, Source, GithubDescriptor};
-    use crate::module::location::Branch;
+    use crate::module::location::github::GitBranch;
     use crate::replace::ReplaceSpec;
     use crate::module::refresh::RefreshCondition::Never;
 
@@ -280,7 +180,7 @@ mod test_deserialize {
             Source::Github(Github {
                 github_user: "my_user".to_string(),
                 repository: "my_repo".to_string(),
-                descriptor: GithubDescriptor::Branch(Branch { branch: "main".to_string(), refresh: Never }),
+                descriptor: GithubDescriptor::Branch(GitBranch { branch: "main".to_string(), refresh: Never }),
                 ..Default::default()
             })
         );
@@ -364,7 +264,7 @@ mod test_deserialize {
             Source::Github(Github {
                 github_user: "my_user".to_string(),
                 repository: "my_repo".to_string(),
-                descriptor: GithubDescriptor::Branch(Branch { branch: "main".to_string(), refresh: Never }),
+                descriptor: GithubDescriptor::Branch(GitBranch { branch: "main".to_string(), refresh: Never }),
                 ..Default::default()
             })
         );
