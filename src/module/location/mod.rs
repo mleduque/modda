@@ -12,6 +12,12 @@ use crate::{archive_layout::Layout, patch_source::PatchDesc, replace::ReplaceSpe
 
 use super::refresh::RefreshCondition;
 
+#[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
+pub enum Location {
+    Ref { r#ref: String },
+    Concrete { concrete: ConcreteLocation },
+}
+
 #[skip_serializing_none]
 #[derive(Deserialize, Serialize, Debug, PartialEq, Default, Clone)]
 pub struct ConcreteLocation {
