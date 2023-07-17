@@ -2,7 +2,7 @@
 use std::cmp::min;
 use std::fs::File;
 use std::io::{Write, ErrorKind};
-use std::path::{PathBuf};
+use std::path::PathBuf;
 
 use anyhow::{bail, Result};
 use filetime::FileTime;

@@ -79,7 +79,7 @@ impl GithubDescriptor {
                     repo = repository,
                     tag = tag,
                 ),
-            Branch(GitBranch { branch, refresh}) =>
+            Branch(GitBranch { branch, refresh: _}) =>
                 format!("https://github.com/{user}/{repo}/archive/refs/heads/{branch}.zip",
                     user = user,
                     repo = repository,

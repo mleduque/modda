@@ -3,6 +3,7 @@ pub mod components;
 pub mod file_mod;
 pub mod file_module_origin;
 pub mod gen_mod;
+pub mod global_locations;
 pub mod install_comment;
 pub mod language;
 pub mod location;
@@ -25,7 +26,7 @@ mod test_deserialize {
     use crate::module::gen_mod::{GeneratedMod, GenModComponent};
     use crate::module::location::github::{Github, GithubDescriptor};
     use crate::module::location::http::Http;
-    use crate::module::location::ConcreteLocation;
+    use crate::module::location::{ConcreteLocation, Location};
     use crate::module::location::source::Source;
     use crate::module::module_conf::{ModuleConf, ModuleContent};
     use crate::module::weidu_mod::WeiduMod;
@@ -54,7 +55,8 @@ mod test_deserialize {
             WeiduMod {
                 name: lwc!("DlcMerger"),
                 components: Components::List(vec! [ Component::Simple(1) ]),
-                location: Some(ConcreteLocation {
+                location: Some(Location::Concrete {
+                    concrete: ConcreteLocation {
                     source: Source::Github(Github {
                         github_user: "Argent77".to_string(),
                         repository: "A7-DlcMerger".to_string(),
@@ -66,7 +68,8 @@ mod test_deserialize {
                     }),
                     layout: Layout::single_dir(3),
                     ..ConcreteLocation::default()
-                }),
+                }
+            }),
                 ..WeiduMod::default()
             }
         );
@@ -94,19 +97,20 @@ mod test_deserialize {
             WeiduMod {
                 name: lwc!("DlcMerger"),
                 components: Components::List(vec! [ Component::Simple(1) ]),
-                location: Some(ConcreteLocation {
-                    source: Source::Github(Github {
-                        github_user: "Argent77".to_string(),
-                        repository: "A7-DlcMerger".to_string(),
-                        descriptor: GithubDescriptor::Release {
-                            release: Some("v1.3".to_string()),
-                            asset: "lin-A7-DlcMerger-v1.3.zip".to_string(),
-                        },
-                        ..Default::default()
-                    }),
-                    layout: Layout::multi_dir(vec!["a".to_string(),"b".to_string()]),
-                    ..ConcreteLocation::default()
-                }),
+                location: Some(Location::Concrete {
+                    concrete: ConcreteLocation {
+                        source: Source::Github(Github {
+                            github_user: "Argent77".to_string(),
+                            repository: "A7-DlcMerger".to_string(),
+                            descriptor: GithubDescriptor::Release {
+                                release: Some("v1.3".to_string()),
+                                asset: "lin-A7-DlcMerger-v1.3.zip".to_string(),
+                            },
+                            ..Default::default()
+                        }),
+                        layout: Layout::multi_dir(vec!["a".to_string(),"b".to_string()]),
+                        ..ConcreteLocation::default()
+                    }}),
                 ..WeiduMod::default()
             }
         );
@@ -206,20 +210,22 @@ mod test_deserialize {
             WeiduMod {
                 name: lwc!("DlcMerger"),
                 components: Components::List(vec! [ Component::Simple(1) ]),
-                location: Some(ConcreteLocation {
-                    source: Source::Http(Http {
-                        http: "https://module.location".to_owned(),
-                        rename: None,
-                        ..Default::default()
-                    }),
-                    layout: Layout::default(),
-                    patch: Some(PatchDesc {
-                        patch_source: PatchSource::Http {
-                            http: "https://patch.location".to_owned(),
-                        },
-                        encoding: PatchEncoding::UTF8,
-                    }),
-                    ..ConcreteLocation::default()
+                location: Some(Location::Concrete {
+                    concrete: ConcreteLocation {
+                        source: Source::Http(Http {
+                            http: "https://module.location".to_owned(),
+                            rename: None,
+                            ..Default::default()
+                        }),
+                        layout: Layout::default(),
+                        patch: Some(PatchDesc {
+                            patch_source: PatchSource::Http {
+                                http: "https://patch.location".to_owned(),
+                            },
+                            encoding: PatchEncoding::UTF8,
+                        }),
+                        ..ConcreteLocation::default()
+                    }
                 }),
                 ..WeiduMod::default()
             }
@@ -236,20 +242,22 @@ mod test_deserialize {
             WeiduMod {
                 name: lwc!("modulename"),
                 components: Components::List(vec! [ Component::Simple(1) ]),
-                location: Some(ConcreteLocation {
-                    source: Source::Http(Http {
-                        http: "https://module.location".to_owned(),
-                        rename: None,
-                        ..Default::default()
-                    }),
-                    layout: Layout::default(),
-                    patch: Some(PatchDesc {
-                        patch_source: PatchSource::Inline {
-                            inline: expected_content.to_owned(),
-                        },
-                        encoding: PatchEncoding::UTF8,
-                    }),
-                    ..ConcreteLocation::default()
+                location: Some(Location::Concrete {
+                    concrete: ConcreteLocation {
+                        source: Source::Http(Http {
+                            http: "https://module.location".to_owned(),
+                            rename: None,
+                            ..Default::default()
+                        }),
+                        layout: Layout::default(),
+                        patch: Some(PatchDesc {
+                            patch_source: PatchSource::Inline {
+                                inline: expected_content.to_owned(),
+                            },
+                            encoding: PatchEncoding::UTF8,
+                        }),
+                        ..ConcreteLocation::default()
+                    }
                 }),
                 ..WeiduMod::default()
             }

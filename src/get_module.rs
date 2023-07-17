@@ -1,3 +1,4 @@
+
 use std::path::PathBuf;
 
 use anyhow::{bail, Result};
@@ -11,9 +12,10 @@ use crate::cache::Cache;
 use crate::canon_path::CanonPath;
 use crate::download::Downloader;
 use crate::global::Global;
+use crate::module::global_locations::GlobalLocations;
 use crate::module::location::source::Source;
 use crate::timeline::SetupTimeline;
-use crate::module::location::ConcreteLocation;
+use crate::module::location::{ConcreteLocation, Location};
 use crate::lowercase::LwcString;
 use crate::module::weidu_mod::WeiduMod;
 use crate::replace::ReplaceSpec;
@@ -21,6 +23,7 @@ use crate::settings::Config;
 
 pub struct ModuleDownload<'a> {
     pub global: &'a Global,
+    pub global_locations: &'a GlobalLocations,
     pub opts: &'a Install,
     pub downloader: &'a Downloader,
     pub extractor: Extractor<'a>,
@@ -30,10 +33,12 @@ pub struct ModuleDownload<'a> {
 
 impl <'a> ModuleDownload<'a> {
 
-    pub fn new(config: &'a Config, global: &'a Global, opts: &'a Install, downloader: &'a Downloader,
+    pub fn new(config: &'a Config, global: &'a Global, global_locations: &'a GlobalLocations,
+                opts: &'a Install, downloader: &'a Downloader,
                 game_dir: &'a CanonPath, cache:&'a Cache) -> Self {
         Self {
             global,
+            global_locations,
             opts,
             downloader,
             extractor: Extractor::new(game_dir, config),
@@ -47,32 +52,41 @@ impl <'a> ModuleDownload<'a> {
     #[tokio::main]
     pub async fn get_module(&self, module: &WeiduMod) -> Result<SetupTimeline> {
         match &module.location {
-            None => bail!("No location provided to retrieve missing module {}", module.name),
-            Some(location) => {
-                let start = Local::now();
-                let archive = match self.retrieve_location(&location, &module).await {
-                    Ok(archive) => archive,
-                    Err(error) => bail!("retrieve archive failed for module {}\n-> {:?}", module.name, error),
-                };
-                let downloaded = Some(Local::now());
-
-                let dest = std::env::current_dir()?;
-                let dest = CanonPath::new(dest)?;
-                self.extractor.extract_files(&archive, &module.name, location)?;
-                let copied = Some(Local::now());
-                patch_module(&dest, &module.name, &location.patch, &self.opts).await?;
-                let patched = Some(Local::now());
-                replace_module(&dest, &module.name, &location.replace)?;
-                let replaced = Some(Local::now());
-                Ok(SetupTimeline { start, downloaded, copied, patched, replaced, configured: None })
+            None => match self.global_locations.find(&module.name) {
+                None => bail!("No location provided for missing mod {}", module.name),
+                Some(found) => self.get_mod_from_concrete_location(found, &module.name).await,
+            }
+            Some(Location::Concrete { concrete }) =>
+                    self.get_mod_from_concrete_location(concrete, &module.name).await,
+            Some(Location::Ref { r#ref: reference }) => match self.global_locations.find(reference) {
+                None => bail!("Provided location reference for  mod {} was not found (at location key {})", module.name, reference),
+                Some(found) => self.get_mod_from_concrete_location(found, &module.name).await,
             }
         }
     }
 
-    pub async fn retrieve_location(&self, loc: &ConcreteLocation, module: &WeiduMod) -> Result<PathBuf> {
+    async fn get_mod_from_concrete_location(&self, location: &ConcreteLocation, mod_name: &LwcString) -> Result<SetupTimeline> {
+        let start = Local::now();
+        let archive = match self.retrieve_location(&location, &mod_name).await {
+            Ok(archive) => archive,
+            Err(error) => bail!("retrieve archive failed for module {}\n-> {:?}", mod_name, error),
+        };
+        let downloaded = Some(Local::now());
 
+        let dest = std::env::current_dir()?;
+        let dest = CanonPath::new(dest)?;
+        self.extractor.extract_files(&archive, &mod_name , location)?;
+        let copied = Some(Local::now());
+        patch_module(&dest, &mod_name , &location.patch, &self.opts).await?;
+        let patched = Some(Local::now());
+        replace_module(&dest, &mod_name , &location.replace)?;
+        let replaced = Some(Local::now());
+        Ok(SetupTimeline { start, downloaded, copied, patched, replaced, configured: None })
+    }
+
+    pub async fn retrieve_location(&self, loc: &ConcreteLocation, mod_name: &LwcString) -> Result<PathBuf> {
         let dest = self.cache.join(loc.source.save_subdir()?);
-        let save_name = loc.source.save_name(&module.name)?;
+        let save_name = loc.source.save_name(mod_name)?;
         match &loc.source {
             Source::Http(http) => http.download(self.downloader, &dest, save_name).await,
             Source::Github(github) => github.get_github(&self.downloader, &dest, save_name).await,
@@ -128,10 +142,11 @@ mod test_retrieve_location {
     use crate::download::Downloader;
     use crate::args::Install;
     use crate::get_module::ModuleDownload;
+    use crate::module::global_locations::GlobalLocations;
     use crate::module::location::github::Github;
     use crate::module::location::github::GithubDescriptor::Release;
     use crate::module::location::http::Http;
-    use crate::module::location::ConcreteLocation;
+    use crate::module::location::{ConcreteLocation, Location};
     use crate::module::location::source::Source;
     use crate::module::weidu_mod::WeiduMod;
     use crate:: settings::Config;
@@ -160,10 +175,11 @@ mod test_retrieve_location {
             ..ConcreteLocation::default()
         };
         let module = WeiduMod {
-            location: Some(location.clone()),
+            location: Some(Location::Concrete { concrete: location.clone() }),
             ..WeiduMod::default()
         };
         let global = Global::default();
+        let global_locations = GlobalLocations::default();
         let opts = Install::default();
         let config = Config {
             archive_cache: Some("/cache_path".to_string()),
@@ -188,10 +204,10 @@ mod test_retrieve_location {
             downloader.rename_partial(_, _)
         ).then(|(_, _)| bail!("Should not be called"));
 
-        let module_download = ModuleDownload::new(&config, &global, &opts,
+        let module_download: ModuleDownload<'_> = ModuleDownload::new(&config, &global, &global_locations, &opts,
                                                                             &downloader, &game_dir, &cache);
 
-        let result = module_download.retrieve_location(&location, &module);
+        let result = module_download.retrieve_location(&location, &module.name);
         assert_eq!(
             result.await.unwrap(),
             PathBuf::from("cache_dir/directory/filename.zip")
@@ -213,10 +229,11 @@ mod test_retrieve_location {
             ..ConcreteLocation::default()
         };
         let module = WeiduMod {
-            location: Some(location.clone()),
+            location: Some(Location::Concrete { concrete: location.clone() }),
             ..WeiduMod::default()
         };
         let global = Global::default();
+        let global_locations = GlobalLocations::default();
         let opts = Install::default();
         let config = Config {
             archive_cache: Some("/cache_path".to_string()),
@@ -241,10 +258,10 @@ mod test_retrieve_location {
             downloader.rename_partial(_, _)
         ).then(|(_, _)| bail!("Should not be called"));
 
-        let module_download = ModuleDownload::new(&config, &global, &opts,
+        let module_download: ModuleDownload<'_> = ModuleDownload::new(&config, &global, &global_locations, &opts,
                                                                             &downloader, &game_dir, &cache);
 
-        let result = module_download.retrieve_location(&location, &module);
+        let result = module_download.retrieve_location(&location, &module.name);
         assert_eq!(
             result.await.unwrap(),
             PathBuf::from("/cache_path/http/example.com/some_mod.zip")
@@ -262,13 +279,14 @@ mod test_retrieve_location {
             ..ConcreteLocation::default()
         };
         let module = WeiduMod {
-            location: Some(location.clone()),
+            location: Some(Location::Concrete { concrete: location.clone() }),
             ..WeiduMod::default()
         };
         let global = Global {
             local_mods: Some("my_mods".to_string()),
             ..Default::default()
         };
+        let global_locations = GlobalLocations::default();
         let opts = Install {
             manifest_path: "/home/me/my_install.yaml".to_string(),
             ..Install::default()
@@ -280,10 +298,10 @@ mod test_retrieve_location {
 
         let downloader = Downloader::faux();
 
-        let module_download = ModuleDownload::new(&config, &global, &opts,
+        let module_download = ModuleDownload::new(&config, &global, &global_locations, &opts,
                                                                             &downloader, &game_dir, &cache);
 
-        let result = module_download.retrieve_location(&location, &module,);
+        let result = module_download.retrieve_location(&location, &module.name,);
         assert_eq!(
             result.await.unwrap(),
             PathBuf::from("/some/path/file.zip")
@@ -301,13 +319,14 @@ mod test_retrieve_location {
             ..ConcreteLocation::default()
         };
         let module = WeiduMod {
-            location: Some(location.clone()),
+            location: Some(Location::Concrete { concrete: location.clone() }),
             ..WeiduMod::default()
         };
         let global = Global {
             local_mods: Some("my_mods".to_string()),
             ..Default::default()
         };
+        let global_locations = GlobalLocations::default();
         let opts = Install {
             manifest_path: "/home/me/my_install.yaml".to_string(),
             ..Install::default()
@@ -319,10 +338,10 @@ mod test_retrieve_location {
 
         let downloader = Downloader::faux();
 
-        let module_download = ModuleDownload::new(&config, &global, &opts,
+        let module_download = ModuleDownload::new(&config, &global, &global_locations, &opts,
                                                                             &downloader, &game_dir, &cache);
 
-        let result = module_download.retrieve_location(&location, &module);
+        let result = module_download.retrieve_location(&location, &module.name);
         assert_eq!(
             result.await.unwrap(),
             PathBuf::from("/home/me/my_mods/some/path/file.zip")

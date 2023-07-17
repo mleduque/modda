@@ -1,7 +1,7 @@
 
 use crate::args::Invalidate;
 use crate::cache::Cache;
-use crate::module::location::ConcreteLocation;
+use crate::module::location::{ConcreteLocation, Location};
 use crate::lowercase::lwc;
 use crate::module::location::source::Source;
 use crate::module::manifest::Manifest;
@@ -22,13 +22,22 @@ pub fn invalidate(params: &Invalidate, cache: &Cache) -> Result<()> {
         if &mod_name == item.get_name() {
             match item {
                 Module::Mod { weidu_mod } => match &weidu_mod.location {
-                    None => {} // continue to search a mod wit hsame name and a location location
-                    Some(location) => {
-                        clear_mod_archive(location, &weidu_mod, cache)?;
+                    None => {} // continue to search a mod with same name and a location location
+                    Some(Location::Concrete { concrete }) => {
+                        clear_mod_archive(concrete, &weidu_mod, cache)?;
                         return Ok(()) // only once per name
                     }
+                    Some(Location::Ref { r#ref }) => {
+                        match manifest.locations.find(r#ref) {
+                            None => {} // continue to search a mod with same name and a location location
+                            Some(location) => {
+                                clear_mod_archive(location, &weidu_mod, cache)?;
+                                return Ok(()) // only once per name
+                            }
+                        }
+                    }
                 }
-                Module::Generated { .. } => return Ok(()), // generated, not downloaded
+                Module::Generated { .. } => return Ok(()), // generated, not downloaded
             }
         }
     }

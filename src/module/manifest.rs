@@ -9,6 +9,8 @@ use serde_yaml::Deserializer;
 use crate::global::Global;
 use crate::module::module::Module;
 
+use super::global_locations::GlobalLocations;
+
 
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -22,6 +24,10 @@ pub struct Manifest {
     pub version: String,
     /// Manifest-wide definitions
     pub global: Global,
+    /// List of global locations
+    #[serde(default)]
+    #[serde(skip_serializing_if = "GlobalLocations::is_empty")]
+    pub locations: GlobalLocations,
     /// List of modules
     #[serde(default)]
     #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -64,8 +70,9 @@ mod test_deserialize {
     use crate::lowercase::lwc;
     use crate::module::file_module_origin::FileModuleOrigin;
     use crate::module::gen_mod::{GeneratedMod, GenModComponent};
+    use crate::module::global_locations::GlobalLocations;
     use crate::module::location::http::Http;
-    use crate::module::location::ConcreteLocation;
+    use crate::module::location::{ConcreteLocation, Location};
     use crate::module::location::source::Source;
     use crate::module::module::Module;
     use crate::module::weidu_mod::WeiduMod;
@@ -88,6 +95,7 @@ mod test_deserialize {
                     local_mods: None,
                     local_files: None,
                 },
+                locations : GlobalLocations::default(),
                 modules : vec![],
             }
         )
@@ -108,14 +116,17 @@ mod test_deserialize {
                     local_mods: Some("mods".to_string()),
                     local_files: None,
                 },
+                locations : GlobalLocations::default(),
                 modules : vec![
                     Module::Mod {
                         weidu_mod: WeiduMod {
                             name: lwc!("aaa"),
                             components: Components::List(vec! [ Component::Simple(1) ]),
-                            location: Some(ConcreteLocation {
-                                source: Source::Http(Http { http: "http://example.com/my-mod".to_string(), rename: None, ..Default::default() }),
-                                ..Default::default()
+                            location: Some(Location::Concrete {
+                                concrete: ConcreteLocation {
+                                    source: Source::Http(Http { http: "http://example.com/my-mod".to_string(), rename: None, ..Default::default() }),
+                                    ..Default::default()
+                                }
                             }),
                             ..Default::default()
                         },
@@ -124,9 +135,11 @@ mod test_deserialize {
                         weidu_mod: WeiduMod {
                             name: lwc!("aaaa"),
                             components: Components::List(vec! [ Component::Simple(1) ]),
-                            location: Some(ConcreteLocation {
-                                source: Source::Http(Http { http: "http://example.com/my-mod".to_string(), rename: None, ..Default::default() }),
-                                ..Default::default()
+                            location: Some(Location::Concrete {
+                                concrete: ConcreteLocation {
+                                    source: Source::Http(Http { http: "http://example.com/my-mod".to_string(), rename: None, ..Default::default() }),
+                                    ..Default::default()
+                                }
                             }),
                             description: Some("some description".to_string()),
                             post_install: Some(PostInstall::Interrupt),
@@ -177,14 +190,17 @@ mod test_deserialize {
                 local_mods: Some("mods".to_string()),
                 local_files: None,
             },
+            locations : GlobalLocations::default(),
             modules : vec![
                 Module::Mod {
                     weidu_mod: WeiduMod {
                         name: lwc!("aaa"),
                         components: Components::List(vec! [ Component::Simple(1) ]),
-                        location: Some(ConcreteLocation {
-                            source: Source::Http(Http { http: "http://example.com/my-mod".to_string(), rename: None, ..Default::default() }),
-                            ..Default::default()
+                        location: Some(Location::Concrete {
+                            concrete: ConcreteLocation {
+                                source: Source::Http(Http { http: "http://example.com/my-mod".to_string(), rename: None, ..Default::default() }),
+                                ..Default::default()
+                            }
                         }),
                         ignore_warnings: true,
                         ..Default::default()
