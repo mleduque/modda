@@ -51,16 +51,20 @@ impl <'a> ModuleDownload<'a> {
     // concurrently as soon as modules are there
     #[tokio::main]
     pub async fn get_module(&self, module: &WeiduMod) -> Result<SetupTimeline> {
+        let concrete_location = self.get_module_location(module)?;
+        self.get_mod_from_concrete_location(concrete_location, &module.name).await
+    }
+
+    pub fn get_module_location(&'a self, module: &'a WeiduMod) -> Result<&'a ConcreteLocation> {
         match &module.location {
             None => match self.global_locations.find(&module.name) {
                 None => bail!("No location provided for missing mod {}", module.name),
-                Some(found) => self.get_mod_from_concrete_location(found, &module.name).await,
+                Some(found) => Ok(found),
             }
-            Some(Location::Concrete { concrete }) =>
-                    self.get_mod_from_concrete_location(concrete, &module.name).await,
+            Some(Location::Concrete { concrete }) => Ok(concrete),
             Some(Location::Ref { r#ref: reference }) => match self.global_locations.find(reference) {
                 None => bail!("Provided location reference for  mod {} was not found (at location key {})", module.name, reference),
-                Some(found) => self.get_mod_from_concrete_location(found, &module.name).await,
+                Some(found) => Ok(found),
             }
         }
     }
@@ -142,6 +146,7 @@ mod test_retrieve_location {
     use crate::download::Downloader;
     use crate::args::Install;
     use crate::get_module::ModuleDownload;
+    use crate::lowercase::lwc;
     use crate::module::global_locations::GlobalLocations;
     use crate::module::location::github::Github;
     use crate::module::location::github::GithubDescriptor::Release;
@@ -346,5 +351,102 @@ mod test_retrieve_location {
             result.await.unwrap(),
             PathBuf::from("/home/me/my_mods/some/path/file.zip")
         );
+    }
+
+    #[tokio::test]
+    async fn use_explicit_location_reference() {
+        let module = WeiduMod {
+            name: lwc!("my_mod"),
+            location: Some(Location::Ref { r#ref: lwc!("my_key") }),
+            ..WeiduMod::default()
+        };
+        let global = Global::default();
+        let my_location = ConcreteLocation {
+            source: Source::Http(Http {
+                http: "http://example.com/some_mod.zip".to_string(),
+                ..Default::default()
+            }),
+            ..ConcreteLocation::default()
+        };
+        let other_location = ConcreteLocation {
+            source: Source::Http(Http {
+                http: "http://somewhere.else/other_mod.zip".to_string(),
+                ..Default::default()
+            }),
+            ..ConcreteLocation::default()
+        };
+        let global_locations = GlobalLocations::default()
+                .put(&lwc!("my_key"), my_location.clone())
+                .put(&lwc!("my_mod"), other_location.clone());
+        let opts = Install::default();
+        let config = Config {
+            archive_cache: Some("/cache_path".to_string()),
+            extract_location: Some("/tmp".to_string()),
+            weidu_path: None,
+            extractors: HashMap::new(),
+        };
+
+
+        let game_dir = CanonPath::new("some_dir").unwrap();
+        let cache = Cache::Path(PathBuf::from("/cache_path"));
+
+        let downloader = Downloader::faux();
+
+        let module_download: ModuleDownload<'_> = ModuleDownload::new(&config, &global, &global_locations, &opts,
+                                                                            &downloader, &game_dir, &cache);
+
+        let result = module_download.get_module_location(&module);
+        assert_eq!(
+            result.unwrap(),
+            &my_location
+        )
+    }
+
+    #[tokio::test]
+    async fn use_implicit_location_reference() {
+        let module = WeiduMod {
+            name: lwc!("my_mod"),
+            ..WeiduMod::default()
+        };
+        let global = Global::default();
+        let my_location = ConcreteLocation {
+            source: Source::Http(Http {
+                http: "http://example.com/some_mod.zip".to_string(),
+                ..Default::default()
+            }),
+            ..ConcreteLocation::default()
+        };
+        let other_location = ConcreteLocation {
+            source: Source::Http(Http {
+                http: "http://somewhere.else/other_mod.zip".to_string(),
+                ..Default::default()
+            }),
+            ..ConcreteLocation::default()
+        };
+        let global_locations = GlobalLocations::default()
+                .put(&lwc!("my_key"), my_location.clone())
+                .put(&lwc!("my_mod"), other_location.clone());
+        let opts = Install::default();
+        let config = Config {
+            archive_cache: Some("/cache_path".to_string()),
+            extract_location: Some("/tmp".to_string()),
+            weidu_path: None,
+            extractors: HashMap::new(),
+        };
+
+
+        let game_dir = CanonPath::new("some_dir").unwrap();
+        let cache = Cache::Path(PathBuf::from("/cache_path"));
+
+        let downloader = Downloader::faux();
+
+        let module_download: ModuleDownload<'_> = ModuleDownload::new(&config, &global, &global_locations, &opts,
+                                                                            &downloader, &game_dir, &cache);
+
+        let result = module_download.get_module_location(&module);
+        assert_eq!(
+            result.unwrap(),
+            &other_location
+        )
     }
 }

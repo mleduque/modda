@@ -22,4 +22,9 @@ impl GlobalLocations {
             .find(|(key, _)| key == &name)
             .map(|(_, value)| value)
     }
+
+    pub fn put(mut self, key: &LwcString, value: ConcreteLocation) -> GlobalLocations {
+        self.entries.insert(key.clone(), value);
+        self
+    }
 }
