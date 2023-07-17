@@ -1,8 +1,9 @@
 
 use crate::args::Invalidate;
 use crate::cache::Cache;
-use crate::module::location::{ConcreteLocation, Source};
+use crate::module::location::ConcreteLocation;
 use crate::lowercase::lwc;
+use crate::module::location::source::Source;
 use crate::module::manifest::Manifest;
 use crate::module::module::Module;
 use crate::module::weidu_mod::WeiduMod;

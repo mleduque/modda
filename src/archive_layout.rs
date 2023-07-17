@@ -2,8 +2,8 @@
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
-use crate::lowercase::{LwcString};
-use crate::module::location::Source;
+use crate::lowercase::LwcString;
+use crate::module::location::source::Source;
 
 
 #[skip_serializing_none]
@@ -144,7 +144,7 @@ impl Layout {
 
 #[test]
 fn test_to_glob() {
-    use crate::lowercase::{lwc};
+    use crate::lowercase::lwc;
 
     let http_source = Source::http_source();
 
