@@ -9,6 +9,9 @@ use serde_yaml::Deserializer;
 use crate::global::Global;
 use crate::module::module::Module;
 
+use super::global_locations::GlobalLocations;
+
+
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct VersionDetect {
@@ -21,8 +24,12 @@ pub struct Manifest {
     pub version: String,
     /// Manifest-wide definitions
     pub global: Global,
+    /// List of global locations
     #[serde(default)]
+    #[serde(skip_serializing_if = "GlobalLocations::is_empty")]
+    pub locations: GlobalLocations,
     /// List of modules
+    #[serde(default)]
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub modules: Vec<Module>,
 }
@@ -59,11 +66,17 @@ impl Manifest {
 #[cfg(test)]
 mod test_deserialize {
 
+    use std::collections::HashMap;
+
     use crate::module::components::{Component, Components};
     use crate::lowercase::lwc;
     use crate::module::file_module_origin::FileModuleOrigin;
     use crate::module::gen_mod::{GeneratedMod, GenModComponent};
-    use crate::module::location::{Source, Location, Http};
+    use crate::module::global_locations::GlobalLocations;
+    use crate::module::location::github::{Github, GithubDescriptor};
+    use crate::module::location::http::Http;
+    use crate::module::location::{ConcreteLocation, Location};
+    use crate::module::location::source::Source;
     use crate::module::module::Module;
     use crate::module::weidu_mod::WeiduMod;
     use crate::post_install::PostInstall;
@@ -85,6 +98,7 @@ mod test_deserialize {
                     local_mods: None,
                     local_files: None,
                 },
+                locations : GlobalLocations::default(),
                 modules : vec![],
             }
         )
@@ -105,14 +119,17 @@ mod test_deserialize {
                     local_mods: Some("mods".to_string()),
                     local_files: None,
                 },
+                locations : GlobalLocations::default(),
                 modules : vec![
                     Module::Mod {
                         weidu_mod: WeiduMod {
                             name: lwc!("aaa"),
                             components: Components::List(vec! [ Component::Simple(1) ]),
-                            location: Some(Location {
-                                source: Source::Http(Http { http: "http://example.com/my-mod".to_string(), rename: None, ..Default::default() }),
-                                ..Default::default()
+                            location: Some(Location::Concrete {
+                                concrete: ConcreteLocation {
+                                    source: Source::Http(Http { http: "http://example.com/my-mod".to_string(), rename: None, ..Default::default() }),
+                                    ..Default::default()
+                                }
                             }),
                             ..Default::default()
                         },
@@ -121,9 +138,11 @@ mod test_deserialize {
                         weidu_mod: WeiduMod {
                             name: lwc!("aaaa"),
                             components: Components::List(vec! [ Component::Simple(1) ]),
-                            location: Some(Location {
-                                source: Source::Http(Http { http: "http://example.com/my-mod".to_string(), rename: None, ..Default::default() }),
-                                ..Default::default()
+                            location: Some(Location::Concrete {
+                                concrete: ConcreteLocation {
+                                    source: Source::Http(Http { http: "http://example.com/my-mod".to_string(), rename: None, ..Default::default() }),
+                                    ..Default::default()
+                                }
                             }),
                             description: Some("some description".to_string()),
                             post_install: Some(PostInstall::Interrupt),
@@ -174,14 +193,17 @@ mod test_deserialize {
                 local_mods: Some("mods".to_string()),
                 local_files: None,
             },
+            locations : GlobalLocations::default(),
             modules : vec![
                 Module::Mod {
                     weidu_mod: WeiduMod {
                         name: lwc!("aaa"),
                         components: Components::List(vec! [ Component::Simple(1) ]),
-                        location: Some(Location {
-                            source: Source::Http(Http { http: "http://example.com/my-mod".to_string(), rename: None, ..Default::default() }),
-                            ..Default::default()
+                        location: Some(Location::Concrete {
+                            concrete: ConcreteLocation {
+                                source: Source::Http(Http { http: "http://example.com/my-mod".to_string(), rename: None, ..Default::default() }),
+                                ..Default::default()
+                            }
                         }),
                         ignore_warnings: true,
                         ..Default::default()
@@ -223,4 +245,36 @@ mod test_deserialize {
             serde_yaml::from_str(&serialized).unwrap()
         )
     }
+
+
+    #[test]
+    fn check_read_manifest_with_locations() {
+        use crate::module::location::github::Github;
+        let manifest_path = format!("{}/{}", env!("CARGO_MANIFEST_DIR"), "resources/test/manifest_with_locations.yml");
+        let manifest = Manifest::read_path(&manifest_path).unwrap();
+        assert_eq!(
+            manifest,
+            super::Manifest {
+                version : "1".to_string(),
+                global : super::Global {
+                    game_language: "fr_FR".to_string(),
+                    lang_preferences: Some(vec!["french".to_string()]),
+                    patch_path: None,
+                    local_mods: Some("mods".to_string()),
+                    local_files: None,
+                },
+                locations : GlobalLocations::from([
+                    (lwc!("aaa"), ConcreteLocation { source: Source::Http(Http::from("http://example.com/my-mod")), ..Default::default() }),
+                    (lwc!("aaaa"), ConcreteLocation { source: Source::Local { local: "directory/my-other-mod.zip".to_owned() }, ..Default::default() }),
+                    (lwc!("bbb"),ConcreteLocation { source: Source::Github(Github {
+                        github_user: "some_user".to_owned(), repository: "mod-repo".to_owned(),
+                        descriptor: GithubDescriptor::Tag { tag: "v324".to_owned() },
+                        ..Default::default()
+                    }), ..Default::default() })
+                ]),
+                modules : vec![],
+            }
+        )
+    }
+
 }

@@ -7,7 +7,7 @@ use std::path::PathBuf;
 
 use ansi_term::Colour::{Blue, Green, Red};
 use anyhow::{Result, anyhow, bail};
-use chrono::{Local};
+use chrono::Local;
 use itertools::Itertools;
 use log::{debug, info, error, warn};
 
@@ -59,7 +59,7 @@ pub fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &
     }
 
     let downloader = Downloader::new();
-    let module_downloader = ModuleDownload::new(&settings, &manifest.global, &opts,
+    let module_downloader = ModuleDownload::new(&settings, &manifest.global, &manifest.locations, &opts,
                                                                         &downloader, &game_dir, cache);
     let file_installer = FileInstaller::new(&manifest.global, &opts, &game_dir);
 
