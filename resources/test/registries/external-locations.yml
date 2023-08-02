@@ -1,0 +1,9 @@
+
+aaa:
+  http: http://example.com/conflicting-my-mod
+aaaa:
+  local: directory/my-other-mod.zip
+bbb:
+  github_user: some_user
+  repository: mod-repo
+  tag: v324

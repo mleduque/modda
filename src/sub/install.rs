@@ -35,7 +35,7 @@ use super::extract_manifest::extract_unique_components;
 
 pub fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &Cache) -> Result<()> {
 
-    let manifest = Manifest::read_path(&opts.manifest_path)?;
+    let manifest = Manifest::assemble_from_path(&opts.manifest_path, &opts.get_manifest_root(game_dir))?;
     check_weidu_conf_lang(game_dir, &manifest.global.game_language)?;
     let modules = &manifest.modules;
 

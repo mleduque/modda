@@ -1,15 +1,21 @@
 
+use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 use std::fs::File;
-use std::io::{BufReader, Seek, SeekFrom};
+use std::io::{BufReader, Seek, SeekFrom, Result as IoResult};
+use std::path::PathBuf;
+use log::info;
 use serde::{Deserialize, Serialize};
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Result, Ok, anyhow};
 use serde_yaml::Deserializer;
 
 use crate::global::Global;
+use crate::lowercase::LwcString;
 use crate::module::module::Module;
 
-use super::global_locations::GlobalLocations;
+use super::global_locations::{GlobalLocations, LocationRegistry};
+use super::location::ConcreteLocation;
 
 
 
@@ -35,11 +41,30 @@ pub struct Manifest {
 }
 
 impl Manifest {
+    pub fn assemble_from_path(path: &str, manifest_root: &PathBuf) -> Result<Self> {
+        let mut base = Self::read_path(path)?;
+        if !base.locations.external.is_empty() {
+            let init: HashMap<LwcString, ConcreteLocation> = HashMap::new();
+            let locations = base.locations.external.iter()
+                .try_fold(init,|mut acc, curr| {
+                    let mut locations = read_external_registry(curr, manifest_root)?;
+                    for location in locations {
+                        match acc.entry(location.0) {
+                            Entry::Occupied(entry) =>
+                                info!("Ignoring location {} from external registry {:?} because the key already exists", entry.key(), curr),
+                            Entry::Vacant(entry) => { entry.insert(location.1); }
+                        }
+                    }
+                    Ok(acc)
+                })?;
+            base.merge_location_registry(locations);
+        }
+        Ok(base)
+    }
+
     pub fn read_path(path: &str) -> Result<Self> {
-        let file = match std::fs::File::open(path) {
-            Err(error) => bail!("Could not open manifest file {} - {:?}", path, error),
-            Ok(file) => file,
-        };
+        let file = std::fs::File::open(path)
+                .map_err(|error| anyhow!("Could not open manifest file {} - {:?}", path, error))?;
         Self::read_file(file)
     }
 
@@ -55,23 +80,47 @@ impl Manifest {
         let reader = BufReader::new(file);
         let deserializer = Deserializer::from_reader(reader);
         let result: Result<Manifest, _> = serde_path_to_error::deserialize(deserializer);
-        let manifest: Manifest = match result {
-            Ok(manifest) => manifest,
-            Err(error) => bail!("Failed to parse manifest\n -> {}\npath:{}", error, error.path()),
-        };
+        let manifest: Manifest = result
+                    .map_err(|error| anyhow!("Failed to parse manifest\n -> {}\npath:{}", error, error.path()))?;
         Ok(manifest)
     }
+
+    pub fn merge_location_registry(&mut self, locations: HashMap<LwcString, ConcreteLocation>) {
+        for location in locations {
+            match self.locations.entries.entry(location.0) {
+                Entry::Occupied(entry) =>
+                    info!("Ignoring location {} from external registries because the key already exists in `entries`", entry.key()),
+                Entry::Vacant(entry) => { entry.insert(location.1); }
+            }
+        }
+    }
+}
+
+fn read_external_registry(registry: &LocationRegistry, manifest_root: &PathBuf) -> Result<HashMap<LwcString, ConcreteLocation>> {
+    let path = match registry {
+        LocationRegistry::Absolute { path } => PathBuf::from(path),
+        LocationRegistry::Local { local } => manifest_root.join(local),
+    };
+    let file = std::fs::File::open(&path)
+            .map_err(|error| anyhow!("Could not open location registry file {:?} - {:?}", path, error))?;
+    let reader = BufReader::new(file);
+    let deserializer = Deserializer::from_reader(reader);
+    let result: Result<HashMap<LwcString, ConcreteLocation>, _> = serde_path_to_error::deserialize(deserializer);
+
+    result.map_err(|error| anyhow!("Failed to parse location registry {:?}\n -> {}\npath:{}", registry, error, error.path()))
 }
 
 #[cfg(test)]
 mod test_deserialize {
+
+    use std::path::PathBuf;
 
     use crate::module::components::{Component, Components};
     use crate::lowercase::lwc;
     use crate::module::file_module_origin::FileModuleOrigin;
     use crate::module::gen_mod::{GeneratedMod, GenModComponent};
     use crate::module::global_locations::{GlobalLocations, LocationRegistry};
-    use crate::module::location::github::{Github, GithubDescriptor};
+    use crate::module::location::github::GithubDescriptor;
     use crate::module::location::http::Http;
     use crate::module::location::{ConcreteLocation, Location};
     use crate::module::location::source::Source;
@@ -290,6 +339,37 @@ mod test_deserialize {
                     local_files: None,
                 },
                 locations : GlobalLocations::from([]),
+                modules : vec![],
+            }
+        )
+    }
+
+    #[test]
+    fn assemble_manifest_with_locations() {
+        use crate::module::location::github::Github;
+        let manifest_root = format!("{}/{}", env!("CARGO_MANIFEST_DIR"), "resources/test");
+        let manifest_path = format!("{}/{}", manifest_root, "manifest_with_real_ext_locations.yml");
+        let manifest = Manifest::assemble_from_path(&manifest_path, &PathBuf::from(&manifest_root)).unwrap();
+        assert_eq!(
+            manifest,
+            super::Manifest {
+                version : "1".to_string(),
+                global : super::Global {
+                    game_language: "fr_FR".to_string(),
+                    lang_preferences: Some(vec!["french".to_string()]),
+                    patch_path: None,
+                    local_mods: Some("mods".to_string()),
+                    local_files: None,
+                },
+                locations : GlobalLocations::from([
+                    (lwc!("aaa"), ConcreteLocation { source: Source::Http(Http::from("http://example.com/my-mod")), ..Default::default() }),
+                    (lwc!("aaaa"), ConcreteLocation { source: Source::Local { local: "directory/my-other-mod.zip".to_owned() }, ..Default::default() }),
+                    (lwc!("bbb"),ConcreteLocation { source: Source::Github(Github {
+                        github_user: "some_user".to_owned(), repository: "mod-repo".to_owned(),
+                        descriptor: GithubDescriptor::Tag { tag: "v324".to_owned() },
+                        ..Default::default()
+                    }), ..Default::default() })
+                ]).with_external(LocationRegistry::Local { local: "registries/external-locations.yml".to_owned() }),
                 modules : vec![],
             }
         )

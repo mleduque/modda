@@ -1,6 +1,9 @@
 
+use std::path::PathBuf;
+
 use clap_derive::{Parser, Subcommand, Args};
 
+use crate::canon_path::CanonPath;
 use crate::lowercase::LwcString;
 use crate::progname::PROGNAME;
 
@@ -80,6 +83,16 @@ pub struct Install {
     /// If set along with `--record`, will not ask for confirmation before recording.
     #[arg(long, requires = "record")]
     pub record_no_confirm: bool,
+}
+
+impl Install {
+    pub fn get_manifest_root(&self, game_dir: &CanonPath) -> PathBuf {
+        let manifest = PathBuf::from(&self.manifest_path);
+        match manifest.parent() {
+            None => PathBuf::from(game_dir),
+            Some(path) => PathBuf::from(path),
+        }
+    }
 }
 
 #[derive(Args, Debug)]

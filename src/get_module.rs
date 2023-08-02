@@ -100,7 +100,7 @@ impl <'a> ModuleDownload<'a> {
     }
 
     fn get_local_mod_path(&self, local_mod_name: &String) -> Result<PathBuf, anyhow::Error> {
-        let manifest_path = self.get_manifest_root().clean();
+        let manifest_path = self.opts.get_manifest_root(self.game_dir).clean();
         let local_mods = match &self.global.local_mods {
             None => PathBuf::new(),
             Some(path) => PathBuf::from(path).clean(),
@@ -113,14 +113,6 @@ impl <'a> ModuleDownload<'a> {
             bail!("Invalid local value");
         }
         Ok(manifest_path.join(local_mods).join(mod_name))
-    }
-
-    pub fn get_manifest_root(&self) -> PathBuf {
-        let manifest = PathBuf::from(&self.opts.manifest_path);
-        match manifest.parent() {
-            None => PathBuf::from(&self.game_dir),
-            Some(path) => PathBuf::from(path),
-        }
     }
 }
 

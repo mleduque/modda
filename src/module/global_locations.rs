@@ -7,12 +7,30 @@ use crate::lowercase::LwcString;
 
 use super::location::ConcreteLocation;
 
+///
+/// Global locations, used when a mod is not present in game directory and has no location defined in-site.
+/// Can contain both a list of location definitions and a list of external files, that each defines locations
+///
+/// ```yaml
+/// entries:
+///     TDD:
+///         #location definition, same as in-site location
+///         http: http://europe.iegmc.net/tdd-weidu/TDDv1.14.rar
+/// external:
+///     - path: /directory/my-global-locations.yml
+///     - local: my-local-loctions.yml
+/// ```
+///
+/// * `entries` locations are looked at first
+/// * then (if no match) `external` files are searched, in the order they are listed
+///
+/// Both `external` and `entries` can be omitted.
 #[derive(Deserialize, Serialize, Debug, PartialEq, Default, Clone)]
 pub struct GlobalLocations {
     #[serde(default)]
-    external: Vec<LocationRegistry>,
+    pub external: Vec<LocationRegistry>,
     #[serde(default)]
-    entries: HashMap<LwcString, ConcreteLocation>,
+    pub entries: HashMap<LwcString, ConcreteLocation>,
 }
 
 impl GlobalLocations {

@@ -54,7 +54,7 @@ impl <'a> FileInstaller<'a> {
     }
 
     fn get_local_base_path(&self, file_path: &String) -> Result<PathBuf, anyhow::Error> {
-        let manifest_path = self.get_manifest_root().clean();
+        let manifest_path = self.opts.get_manifest_root(self.game_dir).clean();
         let local_files = match &self.global.local_files {
             None => PathBuf::new(),
             Some(path) => PathBuf::from(path).clean(),
@@ -67,14 +67,6 @@ impl <'a> FileInstaller<'a> {
             bail!("Invalid local value");
         }
         Ok(manifest_path.join(local_files).join(file_path))
-    }
-
-    fn get_manifest_root(&self) -> PathBuf {
-        let manifest = PathBuf::from(&self.opts.manifest_path);
-        match manifest.parent() {
-            None => PathBuf::from(&self.game_dir),
-            Some(path) => PathBuf::from(path),
-        }
     }
 
     fn copy_from_globs(&self, globs: &[CopyGlob], target: &PathBuf, allow_overwrite: bool) -> Result<()> {
