@@ -66,13 +66,11 @@ impl Manifest {
 #[cfg(test)]
 mod test_deserialize {
 
-    use std::collections::HashMap;
-
     use crate::module::components::{Component, Components};
     use crate::lowercase::lwc;
     use crate::module::file_module_origin::FileModuleOrigin;
     use crate::module::gen_mod::{GeneratedMod, GenModComponent};
-    use crate::module::global_locations::GlobalLocations;
+    use crate::module::global_locations::{GlobalLocations, LocationRegistry};
     use crate::module::location::github::{Github, GithubDescriptor};
     use crate::module::location::http::Http;
     use crate::module::location::{ConcreteLocation, Location};
@@ -246,7 +244,6 @@ mod test_deserialize {
         )
     }
 
-
     #[test]
     fn check_read_manifest_with_locations() {
         use crate::module::location::github::Github;
@@ -271,10 +268,30 @@ mod test_deserialize {
                         descriptor: GithubDescriptor::Tag { tag: "v324".to_owned() },
                         ..Default::default()
                     }), ..Default::default() })
-                ]),
+                ]).with_external(LocationRegistry::Absolute { path: "/directory/locations.yml".to_owned() }),
                 modules : vec![],
             }
         )
     }
 
+    #[test]
+    fn check_read_manifest_with_empty_locations() {
+        let manifest_path = format!("{}/{}", env!("CARGO_MANIFEST_DIR"), "resources/test/manifest_with_empty_locations.yml");
+        let manifest = Manifest::read_path(&manifest_path).unwrap();
+        assert_eq!(
+            manifest,
+            super::Manifest {
+                version : "1".to_string(),
+                global : super::Global {
+                    game_language: "fr_FR".to_string(),
+                    lang_preferences: Some(vec!["french".to_string()]),
+                    patch_path: None,
+                    local_mods: Some("mods".to_string()),
+                    local_files: None,
+                },
+                locations : GlobalLocations::from([]),
+                modules : vec![],
+            }
+        )
+    }
 }

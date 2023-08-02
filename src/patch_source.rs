@@ -2,7 +2,7 @@
 
 use std::{borrow::Cow, fmt::Debug};
 
-use encoding_rs::{Encoding};
+use encoding_rs::Encoding;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]

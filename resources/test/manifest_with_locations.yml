@@ -5,12 +5,15 @@ global:
     - french
   local_mods: mods
 locations:
-  aaa:
-    http: http://example.com/my-mod
-  aaaa:
-    local: directory/my-other-mod.zip
-  bbb:
-    github_user: some_user
-    repository: mod-repo
-    tag: v324
+  entries:
+    aaa:
+      http: http://example.com/my-mod
+    aaaa:
+      local: directory/my-other-mod.zip
+    bbb:
+      github_user: some_user
+      repository: mod-repo
+      tag: v324
+  external:
+    - path: /directory/locations.yml
 modules:

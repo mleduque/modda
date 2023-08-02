@@ -1,0 +1,8 @@
+version: "1"
+global:
+  lang_dir: "fr_FR"
+  lang_preferences:
+    - french
+  local_mods: mods
+locations:
+modules:
