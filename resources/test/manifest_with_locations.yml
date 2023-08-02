@@ -1,0 +1,16 @@
+version: "1"
+global:
+  lang_dir: "fr_FR"
+  lang_preferences:
+    - french
+  local_mods: mods
+locations:
+  aaa:
+    http: http://example.com/my-mod
+  aaaa:
+    local: directory/my-other-mod.zip
+  bbb:
+    github_user: some_user
+    repository: mod-repo
+    tag: v324
+modules:

@@ -1,5 +1,6 @@
 
 use std::fmt::{Display, Formatter, Result, Debug};
+use std::str::FromStr;
 
 use serde::{Serialize, Deserialize};
 
@@ -40,6 +41,14 @@ impl PartialEq<&str> for LwcString {
 
 impl From<&str> for LwcString {
     fn from(base: &str) -> Self { LwcString(base.to_lowercase()) }
+}
+
+impl FromStr for LwcString {
+    type Err = Void;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        Ok(lwc!(s))
+    }
 }
 
 impl Display for LwcString {
@@ -94,6 +103,7 @@ macro_rules! lwc {
     }};
 }
 pub(crate) use lwc;
+use void::Void;
 
 pub trait ContainsStr {
     fn contains_str(&self, value: &str) -> bool;

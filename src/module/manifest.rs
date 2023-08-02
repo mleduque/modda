@@ -66,11 +66,14 @@ impl Manifest {
 #[cfg(test)]
 mod test_deserialize {
 
+    use std::collections::HashMap;
+
     use crate::module::components::{Component, Components};
     use crate::lowercase::lwc;
     use crate::module::file_module_origin::FileModuleOrigin;
     use crate::module::gen_mod::{GeneratedMod, GenModComponent};
     use crate::module::global_locations::GlobalLocations;
+    use crate::module::location::github::{Github, GithubDescriptor};
     use crate::module::location::http::Http;
     use crate::module::location::{ConcreteLocation, Location};
     use crate::module::location::source::Source;
@@ -242,4 +245,36 @@ mod test_deserialize {
             serde_yaml::from_str(&serialized).unwrap()
         )
     }
+
+
+    #[test]
+    fn check_read_manifest_with_locations() {
+        use crate::module::location::github::Github;
+        let manifest_path = format!("{}/{}", env!("CARGO_MANIFEST_DIR"), "resources/test/manifest_with_locations.yml");
+        let manifest = Manifest::read_path(&manifest_path).unwrap();
+        assert_eq!(
+            manifest,
+            super::Manifest {
+                version : "1".to_string(),
+                global : super::Global {
+                    game_language: "fr_FR".to_string(),
+                    lang_preferences: Some(vec!["french".to_string()]),
+                    patch_path: None,
+                    local_mods: Some("mods".to_string()),
+                    local_files: None,
+                },
+                locations : GlobalLocations::from([
+                    (lwc!("aaa"), ConcreteLocation { source: Source::Http(Http::from("http://example.com/my-mod")), ..Default::default() }),
+                    (lwc!("aaaa"), ConcreteLocation { source: Source::Local { local: "directory/my-other-mod.zip".to_owned() }, ..Default::default() }),
+                    (lwc!("bbb"),ConcreteLocation { source: Source::Github(Github {
+                        github_user: "some_user".to_owned(), repository: "mod-repo".to_owned(),
+                        descriptor: GithubDescriptor::Tag { tag: "v324".to_owned() },
+                        ..Default::default()
+                    }), ..Default::default() })
+                ]),
+                modules : vec![],
+            }
+        )
+    }
+
 }
