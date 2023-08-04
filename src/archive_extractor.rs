@@ -46,26 +46,28 @@ impl <'a> Extractor<'a> {
                 None => bail!("Couldn't determine archive type for file {:?}", archive),
                 Some("zip") | Some("iemod") => self.extract_zip(archive, module_name, location),
                 Some("tgz") => self.extract_tgz(archive, module_name, location),
-                Some("gz") => {
-                    let stem = archive.file_stem();
-                    match stem {
-                        Some(stem) => {
-                            let stem_path = PathBuf::from(stem);
-                            let sub_ext = stem_path.extension();
-                            match sub_ext {
-                                None => bail!("unsupported .gz file for archive {:?}", archive),
-                                Some(sub_ext) => match sub_ext.to_str() {
-                                    Some("tar") => self.extract_tgz(archive, module_name, location),
-                                    _ =>  bail!("unsupported .gz file for archive {:?}", archive),
-                                }
-                            }
-                        }
-                        None => bail!("unsupported .gz file for archive {:?}", archive)
-                    }
-                }
+                Some("gz") => self.extract_gz(archive, module_name, location),
                 Some(ext) => self.extract_external(archive, module_name, ext, location),
             }
             None => bail!("archive file has no extension {:?}", archive),
+        }
+    }
+
+    fn extract_gz(&self, archive: &Path, module_name: &LwcString, location: &ConcreteLocation) -> Result<()> {
+        let stem = archive.file_stem();
+        match stem {
+            Some(stem) => {
+                let stem_path = PathBuf::from(stem);
+                let sub_ext = stem_path.extension();
+                match sub_ext {
+                    None => bail!("unsupported .gz file for archive {:?}", archive),
+                    Some(sub_ext) => match sub_ext.to_str() {
+                        Some("tar") => self.extract_tgz(archive, module_name, location),
+                        _ =>  bail!("unsupported .gz file for archive {:?}", archive),
+                    }
+                }
+            }
+            None => bail!("unsupported .gz file for archive {:?}", archive)
         }
     }
 
