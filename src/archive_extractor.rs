@@ -37,7 +37,21 @@ impl <'a> Extractor<'a> {
         debug!("extract_files from archive {:?} for {}", archive, module_name);
         let result = self.extract_files_to_temp(archive, module_name, location);
         debug!("done extracting files, ended in {}", result.as_ref().map(|_| "success".to_owned()).unwrap_or_else(|_| "failure".to_owned()));
-        result.map(|_| ())
+
+        let temp_dir = result?;
+        if let Some(command) = &location.precopy {
+            if let Err(error) = self.run_precopy_command(&temp_dir.as_ref(), command) {
+                bail!("Couldn't run precopy command for mod {}\n{}\n{:?}", module_name, command.command, error);
+            }
+        }
+
+        debug!("Moving mod content to game location ...");
+        if let Err(error) = self.move_from_temp_dir(&temp_dir.as_ref(), module_name, location) {
+            bail!("Failed to copy file for archive {:?} from temp dir to game dir\n -> {:?}", archive, error);
+        }
+        debug!("files done moving to final destination");
+
+        Ok(())
     }
 
     /// Extracts (if needed) the archive toa temporary location.
@@ -93,15 +107,6 @@ impl <'a> Extractor<'a> {
             bail!("Zip extraction failed for {:?}\n-> {:?}", archive, error);
         }
         debug!("zip extraction done");
-        if let Some(command) = &location.precopy {
-            if let Err(error) = self.run_precopy_command(&temp_dir.as_ref(), command) {
-                bail!("Couldn't run precopy command for mod {}\n{}\n{:?}", module_name, command.command, error);
-            }
-        }
-        if let Err(error) = self.move_from_temp_dir(&temp_dir.as_ref(), module_name, location) {
-            bail!("Failed to copy file for archive {:?} from temp dir to game dir\n -> {:?}", archive, error);
-        }
-        debug!("files done moving to final destinatino");
 
         Ok(temp_dir)
     }
@@ -120,10 +125,6 @@ impl <'a> Extractor<'a> {
             bail!("Tgz extraction failed for {:?} - {:?}", archive, error);
         }
 
-        if let Err(error) = self.move_from_temp_dir(temp_dir.as_ref(), module_name, location) {
-            bail!("Failed to copy file for archive {:?} from temp dir to game dir\n -> {:?}", archive, error);
-        }
-
         Ok(temp_dir)
     }
 
@@ -136,10 +137,6 @@ impl <'a> Extractor<'a> {
 
         if let Err(error) = self.external_extractor_tool(archive, extension, &temp_dir) {
             bail!("Extraction with external tool failed for {:?} - {:?}", archive, error);
-        }
-
-        if let Err(error) = self.move_from_temp_dir(temp_dir.as_ref(), module_name, location) {
-            bail!("Failed to copy file for archive {:?} from temp dir to game dir\n -> {:?}", archive, error);
         }
 
         Ok(temp_dir)
@@ -180,7 +177,7 @@ impl <'a> Extractor<'a> {
 
     fn files_to_move(&self, base: &Path, module_name: &LwcString, location:&ConcreteLocation) -> Result<HashSet<PathBuf>> {
         let mut items = HashSet::new();
-        debug!("move_from_temp_dir temp dir={:?}", base);
+        debug!("files_to_move temp dir={:?}", base);
 
         let glob_descs = location.layout.to_glob(module_name, &location.source);
         if glob_descs.patterns.is_empty() || glob_descs.patterns.iter().all(|entry| entry.trim().is_empty()) {
