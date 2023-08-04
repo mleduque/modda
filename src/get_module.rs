@@ -69,6 +69,15 @@ impl <'a> ModuleDownload<'a> {
         }
     }
 
+    ///
+    /// Executes steps to ensure the mod is present in the game dir
+    /// 1. Retrieve from location (if needed) -> the mod "archive" is available locally (in the cache or in its original location for
+    ///    absolute/local/directory/git/...)
+    /// 2. Extract the "archive" if needed (zip, rar, tge,...) -> the mod content is in a temporary location
+    /// 3. run `precopy` command if any -> the mod content is modified in-place (temp location)
+    /// 4. move content (whole or part, according to `layout`) to the game directory -> the mod content is in the game directory
+    /// 5. apply `patch` in-place (on mod data in game directory)
+    /// 5. apply `replace` in-place (on mod data in game directory)
     async fn get_mod_from_concrete_location(&self, location: &ConcreteLocation, mod_name: &LwcString) -> Result<SetupTimeline> {
         let start = Local::now();
         let archive = match self.retrieve_location(&location, &mod_name).await {
