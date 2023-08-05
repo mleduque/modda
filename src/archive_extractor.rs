@@ -40,13 +40,13 @@ impl <'a> Extractor<'a> {
 
         let temp_dir = result?;
         if let Some(command) = &location.precopy {
-            if let Err(error) = self.run_precopy_command(&temp_dir.as_ref(), command) {
+            if let Err(error) = self.run_precopy_command(&temp_dir.as_path_buf(), command) {
                 bail!("Couldn't run precopy command for mod {}\n{}\n{:?}", module_name, command.command, error);
             }
         }
 
         debug!("Moving mod content to game location ...");
-        if let Err(error) = self.move_from_temp_dir(&temp_dir.as_ref(), module_name, location) {
+        if let Err(error) = self.move_from_temp_dir(&temp_dir.as_path_buf(), module_name, location) {
             bail!("Failed to copy file for archive {:?} from temp dir to game dir\n -> {:?}", archive, error);
         }
         debug!("files done moving to final destination");
@@ -56,20 +56,37 @@ impl <'a> Extractor<'a> {
 
     /// Extracts (if needed) the archive toa temporary location.
     /// Returns the path to the extracted content.
-    fn extract_files_to_temp(&self, archive: &Path, module_name: &LwcString, location: &ConcreteLocation) -> Result<TempDir> {
-        match archive.extension() {
-            Some(ext) =>  match ext.to_str() {
-                None => bail!("Couldn't determine archive type for file {:?}", archive),
-                Some("zip") | Some("iemod") => self.extract_zip(archive, module_name, location),
-                Some("tgz") => self.extract_tgz(archive, module_name, location),
-                Some("gz") => self.extract_gz(archive, module_name, location),
-                Some(ext) => self.extract_external(archive, module_name, ext, location),
+    fn extract_files_to_temp(&self, archive: &Path, module_name: &LwcString, location: &ConcreteLocation) -> Result<ExtractLocation> {
+        if archive.is_dir() {
+            if location.precopy.is_some() {
+                // precopy could modify the content so make a temp copy to preserve original
+                let temp_dir_attempt = self.create_temp_dir();
+                let temp_dir = match temp_dir_attempt {
+                    Ok(dir) => dir,
+                    Err(error) => bail!("Creation of temp copy of mod {} failed\n -> {:?}", module_name, error),
+                };
+                self.copy_to_temp_dir(archive, &temp_dir)?;
+                Ok(ExtractLocation::Temp(temp_dir))
+            } else {
+                // will not change the source directory, no need to create a temporary copy
+                Ok(ExtractLocation::Regular(archive.to_owned()))
             }
-            None => bail!("archive file has no extension {:?}", archive),
+        } else {
+            let tmp_dir = match archive.extension() {
+                Some(ext) =>  match ext.to_str() {
+                    None => bail!("Couldn't determine archive type for file {:?}", archive),
+                    Some("zip") | Some("iemod") => self.extract_zip(archive, module_name),
+                    Some("tgz") => self.extract_tgz(archive, module_name),
+                    Some("gz") => self.extract_gz(archive, module_name),
+                    Some(ext) => self.extract_external(archive, module_name, ext),
+                }
+                None => bail!("archive file has no extension {:?}", archive),
+            };
+            tmp_dir.map(|dir| ExtractLocation::Temp(dir))
         }
     }
 
-    fn extract_gz(&self, archive: &Path, module_name: &LwcString, location: &ConcreteLocation) -> Result<TempDir> {
+    fn extract_gz(&self, archive: &Path, module_name: &LwcString) -> Result<TempDir> {
         let stem = archive.file_stem();
         match stem {
             Some(stem) => {
@@ -78,7 +95,7 @@ impl <'a> Extractor<'a> {
                 match sub_ext {
                     None => bail!("unsupported .gz file for archive {:?}", archive),
                     Some(sub_ext) => match sub_ext.to_str() {
-                        Some("tar") => self.extract_tgz(archive, module_name, location),
+                        Some("tar") => self.extract_tgz(archive, module_name),
                         _ =>  bail!("unsupported .gz file for archive {:?}", archive),
                     }
                 }
@@ -87,7 +104,7 @@ impl <'a> Extractor<'a> {
         }
     }
 
-    fn extract_zip(&self, archive: &Path,  module_name: &LwcString, location: &ConcreteLocation) -> Result<TempDir> {
+    fn extract_zip(&self, archive: &Path,  module_name: &LwcString) -> Result<TempDir> {
         let file = match File::open(archive) {
             Ok(file) => file,
             Err(error) => bail!("Could not open archive {:?} - {:?}", archive, error)
@@ -111,7 +128,7 @@ impl <'a> Extractor<'a> {
         Ok(temp_dir)
     }
 
-    fn extract_tgz(&self, archive: &Path, module_name: &LwcString, location: &ConcreteLocation) -> Result<TempDir> {
+    fn extract_tgz(&self, archive: &Path, module_name: &LwcString) -> Result<TempDir> {
         let tar_gz = File::open(archive)?;
         let tar = flate2::read::GzDecoder::new(tar_gz);
         let mut tar_archive = tar::Archive::new(tar);
@@ -128,7 +145,7 @@ impl <'a> Extractor<'a> {
         Ok(temp_dir)
     }
 
-    fn extract_external(&self, archive: &Path, module_name: &LwcString, extension: &str, location: &ConcreteLocation) -> Result<TempDir> {
+    fn extract_external(&self, archive: &Path, module_name: &LwcString, extension: &str) -> Result<TempDir> {
         let temp_dir_attempt = self.create_temp_dir();
         let temp_dir = match temp_dir_attempt {
             Ok(dir) => dir,
@@ -160,6 +177,18 @@ impl <'a> Extractor<'a> {
         }
     }
 
+    fn copy_to_temp_dir(&self, source: &Path,  temp_dir: &TempDir) -> Result<()> {
+        let copy_options = fs_extra::dir::CopyOptions {
+            copy_inside: true,
+            content_only: true,
+            ..Default::default()
+        };
+        if let Err(error) = fs_extra::dir::copy(source, temp_dir.as_ref(), &copy_options) {
+            bail!("Could not copy dir source to temp location - {:?} to {:?}\n  {}", source, temp_dir, error);
+        } else {
+            Ok(())
+        }
+    }
 
     fn move_from_temp_dir(&self, temp_dir: &Path, module_name: &LwcString, location: &ConcreteLocation) -> Result<()> {
         let items = match self.files_to_move(temp_dir, module_name, location) {
@@ -266,6 +295,20 @@ impl <'a> Extractor<'a> {
         match self.config.extractors.get(&lwc!(extension)) {
             Some(extractor) => Ok(extractor),
             None => bail!("No extractor configured for {extension}"),
+        }
+    }
+}
+
+enum ExtractLocation {
+    Temp(TempDir),
+    Regular(PathBuf),
+}
+
+impl ExtractLocation {
+    pub fn as_path_buf(&self) -> PathBuf {
+        match self {
+            ExtractLocation::Temp(temp_dir) => temp_dir.path().to_owned(),
+            ExtractLocation::Regular(path_buf) => path_buf.to_owned()
         }
     }
 }

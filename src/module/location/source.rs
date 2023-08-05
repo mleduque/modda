@@ -17,9 +17,15 @@ use super::http::Http;
 #[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum Source {
+    /// An artifact will be downloaded using HTTP/HTTPS
     Http(Http),
+    /// The artifact is hosted on github an obtained by http request
     Github(Github),
+    /// The artifact is on the local computer filesystem.\
+    /// It can be either an archive (zip/tgz/...) or a directory
     Absolute { path: String },
+    /// The artifact is on the local computer filesystem, the location is relative to the manifest file.\
+    /// It can be either an archive (zip/tgz/...) or a directory
     Local { local: String },
 }
 
