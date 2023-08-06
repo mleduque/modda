@@ -45,12 +45,29 @@ impl <'a> Extractor<'a> {
             }
         }
 
-        debug!("Moving mod content to game location ...");
-        if let Err(error) = self.move_from_temp_dir(&temp_dir.as_path_buf(), module_name, location) {
-            bail!("Failed to copy file for archive {:?} from temp dir to game dir\n -> {:?}", archive, error);
-        }
-        debug!("files done moving to final destination");
+        self.move_content_to_game_dir(&temp_dir, module_name, location)?;
 
+        Ok(())
+    }
+
+    fn move_content_to_game_dir(&self, temp_dir: &ExtractLocation,  module_name: &LwcString, location: &ConcreteLocation) -> Result<()> {
+        match temp_dir {
+            ExtractLocation::Temp(temp_dir) => {
+                debug!("Moving mod content to game location ...");
+                if let Err(error) = self.move_from_temp_dir(&temp_dir.as_ref(), module_name, location) {
+                    bail!("Failed to move files for mod {} from temp dir to game dir\n -> {:?}", module_name, error);
+                }
+                debug!("files done moving to final destination");
+
+            }
+            ExtractLocation::Regular(source) => {
+                debug!("Copying mod content to game location ...");
+                if let Err(error) = self.copy_to_game_dir(source) {
+                    bail!("Failed to copy files for mod {} from source dir to game dir\n -> {:?}", module_name, error);
+                }
+                debug!("files done copying to final destination");
+            }
+        }
         Ok(())
     }
 
@@ -185,6 +202,19 @@ impl <'a> Extractor<'a> {
         };
         if let Err(error) = fs_extra::dir::copy(source, temp_dir.as_ref(), &copy_options) {
             bail!("Could not copy dir source to temp location - {:?} to {:?}\n  {}", source, temp_dir, error);
+        } else {
+            Ok(())
+        }
+    }
+
+    fn copy_to_game_dir(&self, source: &Path) -> Result<()> {
+        let copy_options = fs_extra::dir::CopyOptions {
+            copy_inside: true,
+            content_only: true,
+            ..Default::default()
+        };
+        if let Err(error) = fs_extra::dir::copy(source, &self.game_dir.path(), &copy_options) {
+            bail!("Could not copy dir source to game location - {:?} to {:?}\n  {}", source, &self.game_dir.path(), error);
         } else {
             Ok(())
         }
