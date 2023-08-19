@@ -8,7 +8,7 @@ use log::{info, error, warn};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
-use crate::pathext::append_extension;
+use crate::utils::pathext::append_extension;
 
 
 

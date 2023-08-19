@@ -17,7 +17,7 @@ use shellexpand::full;
 use crate::global::Global;
 use crate::lowercase::LwcString;
 use crate::module::module::Module;
-use crate::pathext;
+use crate::utils::pathext;
 
 use super::global_locations::{GlobalLocations, LocationRegistry};
 use super::location::ConcreteLocation;

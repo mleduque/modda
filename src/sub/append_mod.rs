@@ -15,7 +15,7 @@ use crate::lowercase::LwcString;
 use crate::module::manifest::Manifest;
 use crate::module::module::Module;
 use crate::module::weidu_mod::WeiduMod;
-use crate::pathext::append_extension;
+use crate::utils::pathext::append_extension;
 use crate::run_weidu::WeiduComponent;
 use crate::settings::Config;
 use crate::sub::extract_manifest::generate_manifest;
