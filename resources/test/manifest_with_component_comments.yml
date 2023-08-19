@@ -1,0 +1,14 @@
+version: "1"
+global:
+  lang_dir: "fr_FR"
+  lang_preferences:
+    - french
+modules:
+  - name: aaa
+    components:
+      - 1 # yaml comment
+      - index: 2
+        component_name: comment as field
+  - name: bbb
+    components:
+      - 1

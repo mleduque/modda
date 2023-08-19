@@ -27,7 +27,7 @@ pub fn append_mod(params: &AppendMod, game_dir: &CanonPath, config: &Config) -> 
     let existing: Result<Option<Manifest>> = match OpenOptions::new().read(true).open(&params.output) {
         Err(err)if err.kind() == ErrorKind::NotFound => Ok(None),
         Err(err) => bail!("Error reading output file {}\n  {}", &params.output, err),
-        Ok(file) => Ok(Some(Manifest::read_file(file)?)),
+        Ok(file) => Ok(Some(Manifest::read_file(file, true)?)),
     };
     let existing = existing?;
 

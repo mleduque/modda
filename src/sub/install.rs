@@ -1,9 +1,7 @@
 
-
 use std::cell::RefCell;
-use std::fs::OpenOptions;
 use std::io::BufWriter;
-use std::path::PathBuf;
+use std::path::{PathBuf, Path};
 
 use ansi_term::Colour::{Blue, Green, Red};
 use anyhow::{Result, anyhow, bail};
@@ -88,8 +86,9 @@ pub fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &
         let process_result = match module {
             Module::Mod { weidu_mod } => {
                 let result = process_weidu_mod(weidu_mod, &weidu_context, &manifest, real_index, settings)?;
-                if let (true, Some(output_path)) = (module.get_components().is_ask(), &opts.record ){
-                    record_selection(index, weidu_mod, &output_path, &manifest, opts.record_no_confirm)?;
+                if let (true, Some(output_path)) = (module.get_components().is_ask(), &opts.record) {
+                    let manifest_path = PathBuf::from(&opts.manifest_path);
+                    record_selection(index, weidu_mod, &output_path, &manifest_path, opts)?;
                 }
                 result
             }
@@ -220,13 +219,13 @@ pub enum SafetyResult {
     Abort,
 }
 
-fn record_selection(index: usize, module: &WeiduMod, output_file: &str, original_manifest: &Manifest, no_confirm_flag: bool) -> Result<()> {
+fn record_selection(index: usize, module: &WeiduMod, output_file: &str, original_manifest_path: &Path, opts: &Install) -> Result<()> {
     let log_rows = parse_weidu_log(None)?;
     let output_path = PathBuf::from(output_file);
     let mut record_manifest = if output_path.exists() {
-        Manifest::read_path(output_file)?
+        Manifest::read_path_convert_comments(&output_path)?
     } else {
-        original_manifest.clone()
+        Manifest::read_path_convert_comments(original_manifest_path)?
     };
 
     let previous_mod = record_manifest.modules[..index].iter().rev().find(|item| match item.get_components() {
@@ -263,7 +262,7 @@ fn record_selection(index: usize, module: &WeiduMod, output_file: &str, original
         Component::Full(FullComponent { index: row.component_index, component_name: row.component_name.to_owned() })
     ).collect_vec();
 
-    if confirm_record(no_confirm_flag, &selection_rows, &module.name)? {
+    if confirm_record(opts.record_no_confirm, &selection_rows, &module.name)? {
         // update manifest with new component selection
         let components = if selection.is_empty() {
             Components::None
@@ -277,20 +276,8 @@ fn record_selection(index: usize, module: &WeiduMod, output_file: &str, original
         } };
 
         // write updated manifest to new file
-        let temp_path = PathBuf::from(format!("{}.new", output_file));
-        let dest = match OpenOptions::new().create(true).truncate(true).write(true).open(&temp_path) {
-            Err(err) => bail!("Could not create temp output file\n  {}", err),
-            Ok(file) => file,
-        };
-        let buf_writer = BufWriter::new(&dest);
-        serde_yaml::to_writer(buf_writer, &record_manifest)?;
+        record_manifest.write(&output_path, opts.record_with_comment_as_field)?;
 
-        // rename temp file to output file
-        if let Err(error) = std::fs::rename(&temp_path, output_file) {
-            bail!("Failed to rename temp output file {:?} to {:?}\n -> {:?}", temp_path, output_file, error);
-        } else {
-            debug!("renamed temp output file to {:?}", output_file);
-        }
     }
 
     Ok(())
