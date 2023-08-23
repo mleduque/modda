@@ -11,11 +11,11 @@ use lazy_static::lazy_static;
 use log::{warn, info};
 use regex::{Regex, RegexBuilder};
 
-use crate::bufread_raw::BufReadRaw;
-use crate::module::components::Components;
 use crate::lowercase::LwcString;
+use crate::module::components::Components;
 use crate::module::module::Module;
 use crate::module::weidu_mod::WeiduMod;
+use crate::utils::bufread_raw::BufReadRaw;
 
 // doesn't support --quick-log generated logs ATM
 // just need to actually look at then and set field as optional and update regexes

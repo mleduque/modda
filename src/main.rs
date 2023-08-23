@@ -3,7 +3,6 @@ mod archive_layout;
 mod archive_extractor;
 mod apply_patch;
 mod args;
-mod bufread_raw;
 mod cache;
 mod canon_path;
 mod download;
