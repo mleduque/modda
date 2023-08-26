@@ -1,8 +1,9 @@
 name: build
 
 on:
-  push
-
+  push:
+    branches:
+      - '**'
 
 env:
   CARGO_TERM_COLOR: always
@@ -23,7 +24,7 @@ jobs:
     # checkout
     - uses: actions/checkout@v3
     # set up rust cache
-    - uses: Swatinem/rust-cache@v2        
+    - uses: Swatinem/rust-cache@v2
     # build
     - name: Build
       run: cargo build --verbose
