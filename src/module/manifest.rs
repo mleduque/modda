@@ -12,7 +12,6 @@ use serde::{Deserialize, Serialize};
 
 use anyhow::{bail, Result, Ok, anyhow};
 use serde_yaml::Deserializer;
-use shellexpand::full;
 
 use crate::global::Global;
 use crate::lowercase::LwcString;

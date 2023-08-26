@@ -136,23 +136,24 @@ pub fn process_generated_mod(gen_mod: &GeneratedMod, weidu_context: &WeiduContex
                                 manifest: &Manifest, real_index: usize, config: &Config) -> Result<ProcessResult, anyhow::Error> {
     let WeiduContext { current, file_installer, ..} = weidu_context;
 
-    if let Ok(found) = find_tp2(current, &gen_mod.gen_mod) {
-        bail!("Can't generate mod {}, tp2 with same name exists: {:?}", gen_mod.gen_mod, found)
-    }
-    let mod_dir = current.join(&gen_mod.gen_mod.as_ref())?;
-    if let Err(err) = std::fs::create_dir(&mod_dir) {
-        bail!("Could not create mod directory {:?} for generated mod '{}'\n  {}", mod_dir, gen_mod.gen_mod, err);
-    }
-    let data_dir = mod_dir.join("data")?;
-    if let Err(err) = std::fs::create_dir(&data_dir) {
-        bail!("Could not create data directory {:?} for generated mod '{}'\n  {}", data_dir, gen_mod.gen_mod, err);
-    }
-    if let Err(err) = file_installer.copy_from_origins(&gen_mod.files.iter().collect::<Vec<_>>(),
-                                                                    &data_dir.path().to_path_buf(), gen_mod.allow_overwrite) {
-        bail!("Could not copy files to target for generated mod {}\n  {}", gen_mod.gen_mod, err);
-    }
-    if let Err(err) = create_tp2(gen_mod, &mod_dir) {
-        bail!("Could not generate tp2 file for {}\n  {}", gen_mod.gen_mod, err);
+    if  find_tp2(current, &gen_mod.gen_mod).is_err() {
+        let mod_dir = current.join(&gen_mod.gen_mod.as_ref())?;
+        if let Err(err) = std::fs::create_dir(&mod_dir) {
+            bail!("Could not create mod directory {:?} for generated mod '{}'\n  {}", mod_dir, gen_mod.gen_mod, err);
+        }
+        let data_dir = mod_dir.join("data")?;
+        if let Err(err) = std::fs::create_dir(&data_dir) {
+            bail!("Could not create data directory {:?} for generated mod '{}'\n  {}", data_dir, gen_mod.gen_mod, err);
+        }
+        if let Err(err) = file_installer.copy_from_origins(&gen_mod.files.iter().collect::<Vec<_>>(),
+                                                                        &data_dir.path().to_path_buf(), gen_mod.allow_overwrite) {
+            bail!("Could not copy files to target for generated mod {}\n  {}", gen_mod.gen_mod, err);
+        }
+        if let Err(err) = create_tp2(gen_mod, &mod_dir) {
+            bail!("Could not generate tp2 file for {}\n  {}", gen_mod.gen_mod, err);
+        }
+    } else {
+        info!("Skip generated mod creation (already present)");
     }
     let weidu_mod = gen_mod.as_weidu();
     process_weidu_mod(&weidu_mod, weidu_context, manifest, real_index, config)
