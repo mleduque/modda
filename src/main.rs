@@ -3,7 +3,6 @@ mod archive_layout;
 mod archive_extractor;
 mod apply_patch;
 mod args;
-mod bufread_raw;
 mod cache;
 mod canon_path;
 mod download;
@@ -17,7 +16,6 @@ mod module;
 #[macro_use]
 mod named_unit_variant;
 mod patch_source;
-mod pathext;
 mod post_install;
 mod process_weidu_mod;
 mod progname;
@@ -30,6 +28,7 @@ mod timeline;
 mod tp2;
 mod tp2_template;
 mod unique_component;
+mod utils;
 mod weidu_conf;
 mod weidu_context;
 

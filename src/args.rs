@@ -83,6 +83,10 @@ pub struct Install {
     /// If set along with `--record`, will not ask for confirmation before recording.
     #[arg(long, requires = "record")]
     pub record_no_confirm: bool,
+
+    /// If set along with `--record`, will not ask for confirmation before recording.
+    #[arg(long, requires = "record")]
+    pub record_with_comment_as_field: bool,
 }
 
 impl Install {

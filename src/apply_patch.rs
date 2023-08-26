@@ -6,7 +6,7 @@ use anyhow::{bail, Result};
 use log::{debug, info, warn};
 use patch::{Patch, Line};
 
-use crate::args::{Install};
+use crate::args::Install;
 use crate::canon_path::CanonPath;
 use crate::lowercase::LwcString;
 use crate::patch_source::{PatchDesc, PatchEncoding, PatchSource};
@@ -95,7 +95,7 @@ fn patch_files(old: &CanonPath, new: &CanonPath, diff: &Patch, encoding: PatchEn
         Ok(new_lines) => new_lines,
     };
 
-    let save_old_path = crate::pathext::append_extension("old", &old.to_path_buf());
+    let save_old_path = crate::utils::pathext::append_extension("old", &old.to_path_buf());
     if let Err(error) = std::fs::write(&save_old_path, old_lines.join("\n")) {
         bail!("Error saving old file to {:?}\n -> {:?}", save_old_path, error);
     }

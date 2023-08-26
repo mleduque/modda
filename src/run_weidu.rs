@@ -168,7 +168,7 @@ pub fn list_available_languages(tp2: &str, mod_name: &LwcString, config: &Config
     // with [<some file name>] ...
     // then n language lines in the form
     // <integer>COLON<string(language name)>
-    let lines = crate::bufread_raw::BufReadRaw::new(&output.stdout[..]).raw_lines();
+    let lines = crate::utils::bufread_raw::BufReadRaw::new(&output.stdout[..]).raw_lines();
 
     let mut lines_ok = vec![];
     for line in lines {
