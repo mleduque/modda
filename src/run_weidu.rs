@@ -4,6 +4,8 @@ use std::process::{Command, Stdio};
 
 use anyhow::{bail, Result};
 use chrono::Utc;
+use expectrl::{Session, spawn, Eof};
+use expectrl::process::Process;
 use lazy_static::lazy_static;
 use log::debug;
 use regex::Regex;
@@ -31,7 +33,7 @@ pub fn run_weidu_install(tp2: &str, module: &WeiduMod, opts: &Install, global: &
         Components::None => Ok(RunResult::Dry("Explicitly requested no components to be installed".to_string())),
         Components::Ask => run_weidu_install_interactive(tp2, module, opts, &global.game_language, config),
         Components::List(comp) if comp.is_empty() => run_weidu_install_interactive(tp2, module, opts, &global.game_language, config),
-        Components::List(components) => run_weidu_install_auto(tp2, module, components, opts, &global.game_language, language_id, config)
+        Components::List(components) => run_weidu_with_expect(tp2, module, components, opts, &global.game_language, language_id, config)
     }
 }
 
@@ -73,6 +75,44 @@ fn run_weidu_install_auto(tp2: &str, module: &WeiduMod, components: &[Component]
         Ok(RunResult::Dry(format!("{:?}", command)))
     } else {
         Ok(RunResult::Real(command.output()?))
+    }
+}
+
+fn run_weidu_with_expect(tp2: &str, module: &WeiduMod, components: &[Component], opts: &Install,
+                        game_lang: &str, language_id: u32, config: &Config) -> Result<RunResult> {
+
+    let mut command = Command::new(weidu_command(config, false)?);
+    let mut args = vec![
+        tp2.to_owned(),
+        "--no-exit-pause".to_owned(),
+        "--skip-at-view".to_owned(),
+        "--log".to_owned(),    // Log output and details to X.
+        format!("setup-{}.debug", module.name),
+        "--logapp".to_owned(), // Append to log file instead of overwriting it.
+        "--use-lang".to_owned(),
+        game_lang.to_owned(),
+        "--language".to_owned(),
+        language_id.to_string(),
+    ];
+    // component list
+    args.push("--force-install-list".to_owned());
+    args.extend(components.iter().map(|id| id.index().to_string()));
+
+    command.args(&args);
+    if opts.dry_run {
+        println!("would execute {:?}", command);
+        Ok(RunResult::Dry(format!("{:?}", command)))
+    } else {
+        let mut p = Session::spawn(command)?;
+        if let Some(interactions) = &module.automate {
+            for interaction in interactions {
+                p.expect(interaction.when)?;
+                p.send_line(interaction.answer)?;
+            }
+            p.expect(Eof)?;
+        }
+        p.get_process_mut().wait()?;
+        Ok(RunResult::Real(p.get_stream().output()?))
     }
 }
 

@@ -1,4 +1,5 @@
 
+pub mod automation;
 pub mod components;
 pub mod file_mod;
 pub mod file_module_origin;
