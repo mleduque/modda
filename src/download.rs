@@ -9,8 +9,10 @@ use filetime::FileTime;
 use futures_util::stream::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle, ProgressState};
 use log::{debug, info};
+use reqwest::header::{HeaderMap, USER_AGENT};
 
 use crate::module::refresh::RefreshCondition;
+use crate::progname::PROGNAME;
 
 
 #[cfg_attr(test, faux::create)]
@@ -28,7 +30,8 @@ impl Downloader {
         Downloader {}
     }
 
-    pub async fn download(&self, url: &str, dest_dir: &PathBuf, file_name: PathBuf, opts: &DownloadOpts)-> Result<PathBuf> {
+    pub async fn download(&self, url: &str, dest_dir: &PathBuf, file_name: PathBuf, opts: &DownloadOpts,
+                            headers: &Option<HeaderMap>) -> Result<PathBuf> {
         info!("obtaining {:?}, url is {} (cache={:?})", file_name, url, dest_dir);
 
         // check if archive exists in the cache
@@ -43,7 +46,7 @@ impl Downloader {
 
         let partial_name = get_partial_filename(&file_name)?;
 
-        if let Err(error) = self.download_partial(url, &partial_name, &dest_dir).await {
+        if let Err(error) = self.download_partial(url, &partial_name, &dest_dir, headers).await {
             bail!("download_partial failed for {} to {:?}\n  {}", url, partial_name, error);
         };
 
@@ -57,7 +60,8 @@ impl Downloader {
         }
     }
 
-    pub async fn download_partial(&self, url: &str, partial_name: &PathBuf, dest_dir: &PathBuf)  -> Result<()> {
+    pub async fn download_partial(&self, url: &str, partial_name: &PathBuf, dest_dir: &PathBuf,
+                                    headers: &Option<HeaderMap>)  -> Result<()> {
         info!("download {} to {:?}", url, dest_dir);
         std::fs::create_dir_all(dest_dir)?;
 
@@ -67,8 +71,14 @@ impl Downloader {
             Err(error) => bail!("failed to create file {:?}\n -> {:?}", partial_name, error),
             Ok(file) => file,
         };
+        let mut request = client.get(url)
+            .header(USER_AGENT, PROGNAME);
 
-        let response = match client.get(url).send().await {
+        if let Some(headers) = headers {
+            request = request.headers(headers.to_owned());
+        }
+
+        let response = match request.send().await {
             Ok(response) => response,
             Err(error) => bail!("HTTP download failed\n -> {:?}", error),
         };

@@ -24,6 +24,6 @@ impl Http {
 
     pub async fn download(&self, downloader: &Downloader, dest: &PathBuf, save_name: PathBuf) -> Result<PathBuf> {
         let opts = &DownloadOpts { no_cache: self.no_cache, refresh: self.refresh.clone() };
-        downloader.download(&self.http, dest, save_name, opts).await
+        downloader.download(&self.http, dest, save_name, opts, &None).await
     }
 }
