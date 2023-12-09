@@ -5,6 +5,7 @@ mod apply_patch;
 mod args;
 mod cache;
 mod canon_path;
+mod credentials;
 mod download;
 mod file_installer;
 mod get_module;

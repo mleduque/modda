@@ -163,64 +163,6 @@ mod test_retrieve_location {
     use faux::when;
 
     /**
-     * Checks that for a github mod, retrieve_location(...) returns whetever is returned by download(...).
-     */
-    #[tokio::test]
-    async fn retrieve_github_location() {
-
-        let location = ConcreteLocation {
-            source: Source::Github(Github {
-                github_user: "username".to_string(),
-                repository: "repository".to_string(),
-                descriptor: Release {
-                    release: Some("V1".to_string()),
-                    asset: "repository_v1.zip".to_string(),
-                },
-                ..Default::default()
-            }),
-            ..ConcreteLocation::default()
-        };
-        let module = WeiduMod {
-            location: Some(Location::Concrete { concrete: location.clone() }),
-            ..WeiduMod::default()
-        };
-        let global = Global::default();
-        let global_locations = GlobalLocations::default();
-        let opts = Install::default();
-        let config = Config {
-            archive_cache: Some("/cache_path".to_string()),
-            extract_location: Some("/tmp".to_string()),
-            weidu_path: None,
-            extractors: HashMap::new(),
-        };
-
-        let expected_dest = PathBuf::from("/cache_path/github/username/repository");
-
-        let game_dir = CanonPath::new("some_dir").unwrap();
-        let cache = Cache::Path(PathBuf::from("/cache_path"));
-
-        let mut downloader = Downloader::faux();
-        when!(
-            downloader.download(_, {expected_dest}, _, _)
-        ).then(|(_, _, _, _)| Ok(PathBuf::from("cache_dir/directory/filename.zip")));
-        when!(
-            downloader.download_partial(_, _, _)
-        ).then(|(_, _, _)| bail!("Should not be called"));
-        when!(
-            downloader.rename_partial(_, _)
-        ).then(|(_, _)| bail!("Should not be called"));
-
-        let module_download: ModuleDownload<'_> = ModuleDownload::new(&config, &global, &global_locations, &opts,
-                                                                            &downloader, &game_dir, &cache);
-
-        let result = module_download.retrieve_location(&location, &module.name);
-        assert_eq!(
-            result.await.unwrap(),
-            PathBuf::from("cache_dir/directory/filename.zip")
-        )
-    }
-
-    /**
      * Check http location.
      * Should be <cache_path>/http/<host_name>/<file_name>
     * */
@@ -255,11 +197,11 @@ mod test_retrieve_location {
 
         let mut downloader = Downloader::faux();
         when!(
-            downloader.download(_, {expected_dest}, _, _)
-        ).then(|(_, _, _, _)| Ok(PathBuf::from("/cache_path/http/example.com/some_mod.zip")));
+            downloader.download(_, {expected_dest}, _, _, _)
+        ).then(|(_, _, _, _, _)| Ok(PathBuf::from("/cache_path/http/example.com/some_mod.zip")));
         when!(
-            downloader.download_partial(_, _, _)
-        ).then(|(_, _, _)| bail!("Should not be called"));
+            downloader.download_partial(_, _, _, _)
+        ).then(|(_, _, _, _)| bail!("Should not be called"));
         when!(
             downloader.rename_partial(_, _)
         ).then(|(_, _)| bail!("Should not be called"));

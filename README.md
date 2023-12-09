@@ -315,6 +315,33 @@ All properties are optional.
 # can be an absolute path, or can use ~ exapansion on UNIX-like OSes
 archive_cache: ~/path/to/my/cache
 ```
+## Authenticated github downloads
+
+It is possible to download from a private repository.
+
+- create a _Personal Access Token_ , see https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-personal-access-token-classic
+- create a `modda-credentials.yml` file in the configuration location (the same location as `modda.yml`` file)
+
+```yaml
+github:
+    personal_tokens:
+        my_repositories: XXXXX # copied from github
+```
+
+Then the `location` property of the mod needs to tell which token must be used.
+
+```yaml
+mods:
+  - name: MysteriousMod
+    components:
+      - 0
+    location:
+      github_user: Myself
+      repository: my_private_repo
+      release: V1.0
+      asset: my_private_asset.zip
+      auth: PAT my_repositories
+```
 
 ## Weidu
 
