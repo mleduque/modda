@@ -23,6 +23,7 @@ pub enum RefreshCondition {
     ///  - 1day
     ///  - 30min
     Duration(Duration),
+    Ask,
 }
 
 serde_with::serde_conv!(
@@ -31,6 +32,7 @@ serde_with::serde_conv!(
     |condition: &RefreshCondition| match condition {
         RefreshCondition::Never => "never".to_string(),
         RefreshCondition::Always => "always".to_string(),
+        RefreshCondition::Ask => "ask".to_string(),
         RefreshCondition::Duration(duration) => humantime::format_duration(*duration).to_string(),
     },
     |value: String| RefreshCondition::from_str(&value)
@@ -43,6 +45,7 @@ impl FromStr for RefreshCondition {
         return match s {
             "never" => Ok(RefreshCondition::Never),
             "always" => Ok(RefreshCondition::Always),
+            "ask" => Ok(RefreshCondition::Ask),
             value => match parse_duration(value) {
                 Ok(result) => Ok(RefreshCondition::Duration(result)),
                 Err(error) => Err(ParseRefreshConditionError(error.to_string()))
