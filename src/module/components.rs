@@ -11,6 +11,7 @@ use serde::de::{self, Visitor, SeqAccess};
 pub enum Components {
     Ask,
     None,
+    All,
     List(Vec<Component>),
 }
 
@@ -35,6 +36,7 @@ impl Serialize for Components {
         match self {
             Components::Ask => serializer.serialize_str("ask"),
             Components::None => serializer.serialize_str("none"),
+            Components::All => serializer.serialize_str("all"),
             Components::List(list) => serializer.collect_seq(list.iter()),
         }
     }
@@ -67,6 +69,7 @@ impl FromStr for Components {
         return match s {
             "ask" => Ok(Components::Ask),
             "none" => Ok(Components::None),
+            "all" => Ok(Components::All),
             _ => Err(ParseComponentError(s.to_string())),
         }
     }
@@ -166,6 +169,23 @@ mod test_deserialize {
             WeiduMod {
                 name: lwc!("mod_name"),
                 components: Components::None,
+                ..Default::default()
+            }
+        );
+    }
+
+    #[test]
+    fn deserialize_all() {
+        let yaml = r#"
+        name: mod_name
+        components: all
+        "#;
+        let module: WeiduMod = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(
+            module,
+            WeiduMod {
+                name: lwc!("mod_name"),
+                components: Components::All,
                 ..Default::default()
             }
         );

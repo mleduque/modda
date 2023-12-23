@@ -108,6 +108,7 @@ fn check_installed_components(module: &WeiduMod) -> Result<Vec<u32>> {
     match &module.components {
         Components::None => Ok(vec![]),
         Components::Ask => Ok(vec![]),
+        Components::All => Ok(vec![]),
         Components::List(components) => {
             let log_rows = match parse_weidu_log(Some(&module.name)) {
                 Ok(log_rows) => log_rows,

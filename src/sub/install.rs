@@ -158,7 +158,7 @@ fn check_safely_installable(module: &Module) -> Result<SafetyResult> {
     let installed = extract_unique_components()?;
     match module.get_components() {
         Components::None => Ok(SafetyResult::Safe),
-        Components::Ask => {
+        Components::Ask | Components::All => {
             let existing = installed.iter().filter(|comp| comp.mod_key == *module.get_name()).collect_vec();
             if !existing.is_empty() {
                 let prompt = format!(r#"
@@ -231,6 +231,7 @@ fn record_selection(index: usize, module: &WeiduMod, output_file: &str, original
     let previous_mod = record_manifest.modules[..index].iter().rev().find(|item| match item.get_components() {
         Components::List(_) => true,
         Components::Ask => true,
+        Components::All => true,
         Components::None => false,
     });
     debug!("record_selection- previous_mod={:?}", previous_mod);
@@ -242,6 +243,7 @@ fn record_selection(index: usize, module: &WeiduMod, output_file: &str, original
             let previous_components = match previous_components {
                 Components::List(ref list) => list,
                 Components::Ask => bail!("components for previous mod fragment were not recorded"),
+                Components::All => bail!("components for previous mod fragment were not recorded"),
                 Components::None => bail!("search incorrectly returned a 'none' component list"),
             };
             let previous_name = previous.get_name();

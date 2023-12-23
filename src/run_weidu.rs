@@ -30,6 +30,7 @@ pub fn run_weidu_install(tp2: &str, module: &WeiduMod, opts: &Install, global: &
     match &module.components {
         Components::None => Ok(RunResult::Dry("Explicitly requested no components to be installed".to_string())),
         Components::Ask => run_weidu_install_interactive(tp2, module, opts, &global.game_language, config),
+        Components::All => run_weidu_install_all(tp2, module, opts, &global.game_language, language_id, config),
         Components::List(comp) if comp.is_empty() => run_weidu_install_interactive(tp2, module, opts, &global.game_language, config),
         Components::List(components) => run_weidu_install_auto(tp2, module, components, opts, &global.game_language, language_id, config)
     }
@@ -101,6 +102,17 @@ fn run_weidu_install_interactive(tp2: &str, module: &WeiduMod, opts: &Install,
     }
 }
 
+fn run_weidu_install_all(tp2: &str, module: &WeiduMod, opts: &Install,
+                    game_lang: &str, language_id: u32, config: &Config) -> Result<RunResult> {
+    let list = match run_weidu_list_components(tp2, language_id, config) {
+        Err(error) => bail!("Could not get component list for 'All' mod\n{error}"),
+        Ok(list) => list,
+    };
+    let components = list.iter()
+        .map(|weidu_comp| Component::Simple(weidu_comp.number))
+        .collect::<Vec<_>>();
+    run_weidu_install_auto(tp2, module, &components, opts, game_lang, language_id, config)
+}
 
 pub fn format_install_result(result: &RunResult, module: &WeiduMod) -> Vec<u8> {
     return match result {
@@ -121,11 +133,17 @@ pub fn format_install_result(result: &RunResult, module: &WeiduMod) -> Vec<u8> {
 
 #[derive(Debug, Clone, serde::Deserialize)]
 pub struct WeiduComponent {
+    // apparition order in component list
     pub index: u32,
+    // component number (as defined by DESIGNATED)
     pub number: u32,
+    // Dunno... FORCED_SUBCOMPONENT maybe?
     pub forced: bool,
+    // Component name (which appears in weidu.log)
     pub name: String,
+    // when the component is one of multiple options GROUP+SUBCOMPONENT - name of the parent group
     pub subgroup: Option<String>,
+    // Component grouping by category for ease of installation
     pub group: Vec<String>,
 }
 

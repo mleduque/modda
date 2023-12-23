@@ -32,6 +32,7 @@ pub fn reset(args: &Reset, game_dir: &CanonPath, config: &Config) -> Result<()> 
     let components = match weidu_mod.components {
         Components::None => bail!("Can't reset to a module fragment which doesn't install components (`components: none`)"),
         Components::Ask => bail!("Can't reset to a module fragment which doesn't specify components explicitly (`components: ask`)"),
+        Components::All => bail!("Can't reset to a module fragment which doesn't specify components explicitly (`components: all`)"),
         Components::List(list) if list.is_empty() => bail!("Can't reset to a module fragment which doesn't install components (`components list is empty`)"),
         Components::List(ref list) => list,
     };
