@@ -180,7 +180,7 @@ fn use_from_cache(opts: &DownloadOpts, file_name: &PathBuf) -> Result<bool> {
         RefreshCondition::Never => Ok(file_name.exists()),
         RefreshCondition::Ask => {
             let name = file_name.as_os_str().to_string_lossy();
-            Ok(dialoguer::Confirm::new().with_prompt(format!("Refresh this mod archive? ({name})")).interact()?)
+            Ok(!dialoguer::Confirm::new().with_prompt(format!("Refresh this mod archive? ({name})")).interact()?)
         }
         RefreshCondition::Duration(duration) => {
             let metadata = match std::fs::metadata(file_name) {
