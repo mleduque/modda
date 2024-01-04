@@ -83,10 +83,7 @@ fn decode_file(path:&CanonPath, encoding: PatchEncoding) -> Result<String> {
 }
 
 fn patch_files(old: &CanonPath, new: &CanonPath, diff: &Patch, encoding: PatchEncoding) -> Result<()> {
-    let old_content = match decode_file(old, encoding) {
-        Ok(lines) => lines,
-        Err(error) => bail!("Error decoding file {:?}\n -> {:?}", old, error),
-    };
+    let old_content = get_old_content(old, encoding)?;
 
     let old_lines: Vec<String> = old_content.split("\n").map(From::from).collect();
 
@@ -108,13 +105,24 @@ fn patch_files(old: &CanonPath, new: &CanonPath, diff: &Patch, encoding: PatchEn
     Ok(())
 }
 
+fn get_old_content(old: &CanonPath, encoding: PatchEncoding) -> Result<String> {
+    if old.path() == PathBuf::from("/dev/null") {
+        Ok("".to_string())
+    } else {
+        match decode_file(old, encoding) {
+            Ok(lines) => Ok(lines),
+            Err(error) => bail!("Error decoding file {:?}\n -> {:?}", old, error),
+        }
+    }
+}
+
 fn apply_patch<'a>(old_lines: &'a[String], diff: &'a Patch) -> Result<Vec<&'a str>> {
     let mut new_lines = vec![];
     let mut old_line = 0;
     for (idx, hunk) in diff.hunks.iter().enumerate() {
         info!("apply hunk {} of {}", idx + 1, diff.hunks.len());
         debug!("hunk {}", hunk);
-        while old_line < hunk.old_range.start - 1 {
+        while old_line + 1 < hunk.old_range.start {
             new_lines.push(old_lines[old_line as usize].as_str());
             old_line += 1;
         }
@@ -247,6 +255,20 @@ mod apply_patch_tests {
                  ~english~
     "#);
 
+    const PATCH_WITH_A_B_PREFIXES: &str = indoc!(r#"
+        --- a/modulename.tp2
+        +++ b/modulename.tp2
+        @@ -1,6 +1,6 @@
+         BACKUP ~weidu_external/backup/modulename~
+         SUPPORT ~http://somewhere.iflucky.org~
+        -VERSION ~1.0~
+        +VERSION ~2.0~
+         //languages
+        +//more comment
+         LANGUAGE ~English~
+                 ~english~
+    "#);
+
 
     const PATCH_WITH_UNMODIFIED_EMPTY_LINE: &str = indoc!(r#"
         --- modulename.tp2
@@ -285,6 +307,13 @@ mod apply_patch_tests {
          //languages
          LANGUAGE ~English~
                  ~english~
+    "#);
+
+    const PATCH_WITH_NEW_FILE: &str = indoc!(r#"
+        --- /dev/null
+        +++ french.tra
+        @@ -0,0 +1 @@
+        +@1 = ~héhé~
     "#);
 
     fn read_all(path: &Path) -> Result<Vec<String>> {
@@ -404,5 +433,27 @@ mod apply_patch_tests {
         let patched_origin = Path::new(env!("CARGO_MANIFEST_DIR")).join("resources/test/patch/modulename_patched.tp2");
         let expected = read_all(&patched_origin).unwrap().join("\n");
         assert_eq!(new_content, expected);
+    }
+
+    #[test]
+    fn apply_add_patch_create_file() {
+        let old = vec![];
+        let patch = Patch::from_single(PATCH_WITH_NEW_FILE).unwrap();
+        let result = apply_patch(&old, &patch);
+
+        assert_eq!(result.unwrap(), vec!["@1 = ~héhé~"]);
+    }
+
+    #[test]
+    fn apply_patch_with_a_b__prefixes() {
+        let origin = Path::new(env!("CARGO_MANIFEST_DIR")).join("resources/test/patch/modulename.tp2");
+        let old = read_all(&origin).unwrap();
+        let patch = Patch::from_single(PATCH_WITH_A_B_PREFIXES).unwrap();
+        let result = apply_patch(&old, &patch);
+
+        let patched_origin = Path::new(env!("CARGO_MANIFEST_DIR")).join("resources/test/patch/modulename_add.tp2");
+        let expected = read_all(&patched_origin).unwrap();
+
+        assert_eq!(result.unwrap(), expected);
     }
 }

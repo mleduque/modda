@@ -3,12 +3,14 @@ use std::process::{Stdio, Command};
 use std::{path::Path, collections::HashSet};
 
 use std::fs::File;
-use std::io::BufReader;
+use std::io::{BufReader, self};
 
 use globwalk::GlobWalkerBuilder;
-use log::{debug, info};
+use log::{debug, info, warn};
 use anyhow::{bail, Result, anyhow};
 use tempfile::TempDir;
+use zip::ZipArchive;
+use zip::result::{ZipResult, ZipError};
 
 use crate::canon_path::CanonPath;
 use crate::module::location::ConcreteLocation;
@@ -137,7 +139,7 @@ impl <'a> Extractor<'a> {
             Err(error) => bail!("Extraction of zip mod {} failed\n -> {:?}", module_name, error),
         };
         debug!("zip extraction starting");
-        if let Err(error) = zip_archive.extract(&temp_dir) {
+        if let Err(error) = extract_zip_archive(&mut zip_archive, &temp_dir) {
             bail!("Zip extraction failed for {:?}\n-> {:?}", archive, error);
         }
         debug!("zip extraction done");
@@ -327,6 +329,33 @@ impl <'a> Extractor<'a> {
             None => bail!("No extractor configured for {extension}"),
         }
     }
+}
+
+// duplicated from zip-rs source
+fn extract_zip_archive<P: AsRef<Path>>(zip_archive: &mut ZipArchive<BufReader<File>>, directory: P) -> ZipResult<()> {
+    use std::fs;
+
+    for i in 0..zip_archive.len() {
+        let mut file = zip_archive.by_index(i)?;
+        let filepath = file
+            .enclosed_name()
+            .ok_or(ZipError::InvalidArchive("Invalid file path"))?;
+
+        let outpath = directory.as_ref().join(filepath);
+
+        if file.name().ends_with('/') {
+            fs::create_dir_all(&outpath)?;
+        } else {
+            if let Some(p) = outpath.parent() {
+                if !p.exists() {
+                    fs::create_dir_all(p)?;
+                }
+            }
+            let mut outfile = fs::File::create(&outpath)?;
+            io::copy(&mut file, &mut outfile)?;
+        }
+    }
+    Ok(())
 }
 
 enum ExtractLocation {
