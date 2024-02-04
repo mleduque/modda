@@ -1,2 +1,2 @@
 [workspace]
-members = ["modda-cli"]
+members = ["modda-cli", "patch-rs"]

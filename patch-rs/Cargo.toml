@@ -1,0 +1,18 @@
+[package]
+name = "patch"
+version = "0.7.0"
+authors = ["phil <uniphil@gmail.com>"]
+description = "Parse patches in the unified diff format"
+repository = "https://github.com/uniphil/patch-rs"
+readme = "README.md"
+keywords = ["patch", "diff", "parse", "nom"]
+license = "MIT"
+edition = "2018"
+
+[dependencies]
+nom = "7.1.0"
+nom_locate = "4.0.0"
+chrono = "0.4.19"
+
+[dev-dependencies]
+pretty_assertions = "1.0.0"
