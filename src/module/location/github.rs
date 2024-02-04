@@ -6,6 +6,7 @@ use anyhow::{Result, bail, anyhow};
 use lazy_static::lazy_static;
 use log::info;
 use reqwest::header::{AUTHORIZATION, HeaderMap, ACCEPT, HeaderValue, HeaderName, USER_AGENT};
+use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 
 use crate::credentials::{Credentials, GithubCredentials};
@@ -124,7 +125,7 @@ impl GithubDescriptor {
                 // First search the release by tag-name
                 let release_info = match GithubClient::new(auth)?.get_release_info(user, repository, &release).await {
                     Ok(value) => value,
-                    Err(error) => bail!("Could not find release {release} in github repository {user}/{repository}\n{error}")
+                    Err(error) => bail!("Could not find release `{release}` in github repository {user}/{repository}\n{error}")
                 };
 
                 // Search a match in the listed assets
@@ -172,6 +173,13 @@ impl GithubClient {
 
         let response = request.send().await?;
         info!("{:?}", response);
+        if !response.status().is_success() {
+            match response.status() {
+                StatusCode::NOT_FOUND => bail!("Release with tag {tag} was not found in {user}/{repository}"),
+                _ => bail!("Couldn't find the release with tag {tag} in {user}/{repository} - HTTP error was {code}",
+                            code = response.status().as_str())
+            }
+        }
         let result = match response.json::<ReleaseInfo>().await {
             Ok(result) => result,
             Err(error) => {
