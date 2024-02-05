@@ -69,25 +69,31 @@ fn consume_content_line(input: Input<'_>) -> IResult<Input<'_>, &str> {
 pub(crate) fn parse_single_patch(s: &str) -> Result<Patch, ParseError<'_>> {
     let (remaining_input, patch) = patch(Input::new(s))?;
     // Parser should return an error instead of producing remaining input
-    assert!(
-        remaining_input.fragment().is_empty(),
-        "bug: failed to parse entire input. \
-        Remaining: '{}'",
-        remaining_input.fragment()
-    );
-    Ok(patch)
+    if remaining_input.fragment().is_empty() {
+        Ok(patch)
+    } else {
+        Err(ParseError{
+            line: remaining_input.location_line(),
+            offset: remaining_input.location_offset(),
+            fragment: remaining_input.fragment(),
+            kind: nom::error::ErrorKind::Eof,
+        })
+    }
 }
 
 pub(crate) fn parse_multiple_patches(s: &str) -> Result<Vec<Patch>, ParseError<'_>> {
     let (remaining_input, patches) = multiple_patches(Input::new(s))?;
     // Parser should return an error instead of producing remaining input
-    assert!(
-        remaining_input.fragment().is_empty(),
-        "bug: failed to parse entire input. \
-        Remaining: '{}'",
-        remaining_input.fragment()
-    );
-    Ok(patches)
+    if remaining_input.fragment().is_empty() {
+        Ok(patches)
+    } else {
+        Err(ParseError{
+            line: remaining_input.location_line(),
+            offset: remaining_input.location_offset(),
+            fragment: remaining_input.fragment(),
+            kind: nom::error::ErrorKind::Eof,
+        })
+    }
 }
 
 fn multiple_patches(input: Input<'_>) -> IResult<Input<'_>, Vec<Patch>> {
