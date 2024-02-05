@@ -1,2 +1,3 @@
 [workspace]
 members = ["modda-cli", "patch-rs"]
+resolver = "2"
