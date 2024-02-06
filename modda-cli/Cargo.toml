@@ -1,6 +1,6 @@
 [package]
 name = "modda"
-version = "1.7.2-pre"
+version = "1.7.2-pre3"
 authors = ["Mickaël <mleduque@gmail.com>"]
 description = "Weidu install automation"
 edition = "2021"
