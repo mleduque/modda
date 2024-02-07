@@ -1,7 +1,7 @@
 # Modda
 
 Automates the installation of a bunch of mods above an Infinity Engine based game.
-(though so far, it was only tested with BG1 & BG2).
+(though so far, it was only tested with BG1 & BG2 in classic and EE version, and on IWD:EE).
 
 It depends on weidu to be accessible somewhere on the computer.
 
@@ -301,7 +301,7 @@ The file is name `modda.yml` and will be taken from the current directory (first
 
 - on linux, it should be `~/.config/modda/modda.yml`
 - on windows, should be around `C:\Users\<username>\AppData\Roaming\modda\config/modda.yml`
-- on macos, something like `$HOME/Library/Application Support/modda/modda.yml`
+- on macos, in `$HOME/Library/Application Support/modda/modda.yml`
 
 Properties:
 - `archive_cache` which tells the program where to store and search for downloaded mod archives.
