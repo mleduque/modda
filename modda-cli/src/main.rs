@@ -1,38 +1,4 @@
 
-mod archive_layout;
-mod archive_extractor;
-mod apply_patch;
-mod args;
-mod cache;
-mod canon_path;
-mod credentials;
-mod download;
-mod file_installer;
-mod get_module;
-mod global;
-mod list_components;
-mod log_parser;
-mod lowercase;
-mod module;
-#[macro_use]
-mod named_unit_variant;
-mod patch_source;
-mod post_install;
-mod process_weidu_mod;
-mod progname;
-mod replace;
-mod run_result;
-mod run_weidu;
-mod settings;
-mod sub;
-mod timeline;
-mod tp2;
-mod tp2_template;
-mod unique_component;
-mod utils;
-mod weidu_conf;
-mod weidu_context;
-
 use std::env::set_current_dir;
 use std::path::PathBuf;
 
@@ -41,14 +7,19 @@ use clap::Parser;
 use env_logger::{Env, Target};
 use log::{info, debug};
 
-use args::{ Cli, Commands };
-use cache::Cache;
-use canon_path::CanonPath;
-use run_weidu::check_weidu_exe;
-use settings::read_settings;
-use sub::install::install;
-use sub::list_components::sub_list_components;
-use sub::search::search;
+use modda_lib::args::{ Cli, Commands };
+use modda_lib::cache::Cache;
+use modda_lib::canon_path::CanonPath;
+use modda_lib::run_weidu::check_weidu_exe;
+use modda_lib::settings::read_settings;
+use modda_lib::sub::append_mod::append_mod;
+use modda_lib::sub::discover::discover;
+use modda_lib::sub::extract_manifest::extract_manifest;
+use modda_lib::sub::install::install;
+use modda_lib::sub::invalidate::invalidate;
+use modda_lib::sub::list_components::sub_list_components;
+use modda_lib::sub::reset::reset;
+use modda_lib::sub::search::search;
 
 
 
@@ -75,10 +46,11 @@ fn main() -> Result<()> {
         Commands::Install(ref install_opts) => install(install_opts, &settings, &current_dir, &cache),
         Commands::Search(ref search_opts) => search(search_opts),
         Commands::ListComponents(ref params) => sub_list_components(params, &current_dir, &settings),
-        Commands::Invalidate(ref params) => sub::invalidate::invalidate(params, &cache),
-        Commands::Reverse(ref params) => sub::extract_manifest::extract_manifest(params, &current_dir),
-        Commands::AppendMod(ref params) => sub::append_mod::append_mod(params, &current_dir, &settings),
-        Commands::Reset(ref reset_args) => sub::reset::reset(reset_args, &current_dir, &settings),
+        Commands::Invalidate(ref params) => invalidate(params, &cache),
+        Commands::Reverse(ref params) => extract_manifest(params, &current_dir),
+        Commands::AppendMod(ref params) => append_mod(params, &current_dir, &settings),
+        Commands::Reset(ref reset_args) => reset(reset_args, &current_dir, &settings),
+        Commands::Discover(ref params) => discover(params, &current_dir, &settings),
     }
 }
 

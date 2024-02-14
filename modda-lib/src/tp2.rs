@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 
 use anyhow::{anyhow, bail, Result};
-use globwalk::{GlobWalkerBuilder};
+use globwalk::GlobWalkerBuilder;
 use log::debug;
 
 use crate::canon_path::CanonPath;
@@ -82,6 +82,49 @@ fn find_glob_casefold(from_base: &CanonPath, module_name: &LwcString, depth: usi
     }
 
     debug!("find_glob_casefold result={:?}", result);
+    Ok(result)
+}
+
+
+pub fn find_game_tp2(from_base: &CanonPath) -> Result<Vec<LwcString>> {
+    debug!("search tp2 from {:?}", from_base);
+    let patterns = vec![
+        "*.tp2",
+    ];
+    let walker = match GlobWalkerBuilder::from_patterns(from_base, &patterns)
+        .case_insensitive(true)
+        .max_depth(2)
+        .build() {
+            Ok(glob) => glob,
+            Err(error) => bail!("Failed to build glob {:?}\n-> {:?}", patterns, error),
+        }.into_iter()
+        .filter_map(Result::ok);
+
+    let mut result = vec![];
+    for item in walker {
+        debug!("find_game_tp2 got {:?}", item);
+        let stripped = match item.path().strip_prefix(from_base) {
+            Err(error) => bail!("Could not strip path from  {:?}\n  {:?}", item.path(), error),
+            Ok(stripped) => stripped
+        };
+        let stripped_str = match stripped.to_str(){
+            None => bail!("Could not lowercase path for {:?}", item.path()),
+            Some(path) => lwc!(path),
+        };
+
+        let name = match stripped.file_stem() {
+            Some(name) => match name.to_str() {
+                None => bail!("Could not lowercase file name for {:?}", item.path()),
+                Some(name) => lwc!(name),
+            }
+            None => bail!("Could not determine file name for {:?}", item.path())
+        };
+        debug!("name is {name}, compare to {stripped_str}");
+        if stripped_str == format!("{name}.tp2") || stripped_str == format!("setup-{name}.tp2")
+            || stripped_str == format!("{name}/{name}.tp2") || stripped_str == format!("{name}/setup-{name}.tp2") {
+                result.push(name)
+            }
+    }
     Ok(result)
 }
 

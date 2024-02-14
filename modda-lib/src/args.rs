@@ -35,6 +35,8 @@ pub enum Commands {
     AppendMod(AppendMod),
     /// Tries to uninstall modules that are after a given index in the manifest (EXPERIMENTAL).
     Reset(Reset),
+    /// Discovers mods in the game directory and builds a manifest skeleton.
+    Discover(Discover),
 }
 
 #[derive(Args, Debug, Default)]
@@ -183,4 +185,11 @@ pub struct Reset {
     /// If set, doesn't actually run the weidu command, only prints what would be executed
     #[arg(long, short)]
     pub dry_run: bool,
+}
+
+#[derive(Args, Debug)]
+pub struct Discover {
+    /// Name of the file that will be generated.
+    #[arg(long, short)]
+    pub output: String,
 }
