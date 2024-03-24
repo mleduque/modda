@@ -1,0 +1,48 @@
+html {
+    height: 100%;
+    width: 100%;
+}
+body {
+    height: 100%;
+    width: 100%;
+}
+#main {
+    height: 100%;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: start;
+    align-items: stretch;
+}
+
+@media (prefers-color-scheme: dark) {
+    .game-dir-selection {
+        border-color: #8b8d96;
+    }
+}
+@media (prefers-color-scheme: light) {
+    .game-dir-selection {
+        border-color: #045292;
+    }
+}
+
+.game-dir-selection {
+    border-radius: 1ex;
+    border-color: #045292;
+    border-width: 1px;
+    border-style: solid;
+    padding: 1ex;
+    margin-bottom: 1em;
+    flex-grow: 0;
+    flex-shrink: 0;
+}
+
+.manifest-choice {
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 1em;
+    justify-content: flex-start;
+    flex-grow: 1;
+    flex-shrink: 1;
+    row-gap: 1em;
+}

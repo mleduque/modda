@@ -1,0 +1,15 @@
+[package]
+name = "modda-gui"
+version = "0.0.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+log = "0.4.21"
+modda-lib = { path = "../modda-lib" }
+dioxus = "0.4.3"
+dioxus-desktop = "0.4.3"
+dioxus-router = "0.4.3"
+directories = "5.0.1"
+rfd = "0.14.0"
