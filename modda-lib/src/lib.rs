@@ -5,6 +5,7 @@ pub mod apply_patch;
 pub mod args;
 pub mod cache;
 pub mod canon_path;
+pub mod chitin;
 pub mod credentials;
 pub mod download;
 pub mod file_installer;
