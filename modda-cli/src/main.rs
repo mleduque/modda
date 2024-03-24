@@ -1,15 +1,14 @@
 
-use std::env::set_current_dir;
-use std::path::PathBuf;
 
 use anyhow::{bail, Result};
 use clap::Parser;
 use env_logger::{Env, Target};
-use log::{info, debug};
+use log::debug;
 
 use modda_lib::args::{ Cli, Commands };
 use modda_lib::cache::Cache;
 use modda_lib::canon_path::CanonPath;
+use modda_lib::chitin::ensure_chitin_key;
 use modda_lib::run_weidu::check_weidu_exe;
 use modda_lib::settings::read_settings;
 use modda_lib::sub::append_mod::append_mod;
@@ -54,19 +53,3 @@ fn main() -> Result<()> {
     }
 }
 
-fn ensure_chitin_key() -> Result<()> {
-    if !PathBuf::from("chitin.key").exists() {
-        if PathBuf::from("game/chitin.key").exists() {
-            if let Err(err) = set_current_dir("game") {
-                bail!("Could not enter game directory 'game' {:?}", err)
-            } else {
-                info!("./game/chitin.key found, entered game subdir");
-            }
-        } else {
-            bail!("no chitin.key of game/chitin.key file");
-        }
-    } else {
-        info!("./chitin.key found");
-    }
-    Ok(())
-}
