@@ -215,6 +215,7 @@ mod apply_patch_tests {
 
     use crate::apply_patch::apply_patch;
     use crate::lowercase::lwc;
+    use crate::utils::read_all::read_all;
 
     const SIMPLEST_PATCH: &str = indoc!(r#"
         --- modulename.tp2
@@ -315,19 +316,6 @@ mod apply_patch_tests {
         @@ -0,0 +1 @@
         +@1 = ~héhé~
     "#);
-
-    fn read_all(path: &Path) -> Result<Vec<String>> {
-        let file = std::fs::File::open(path)?;
-        let buf = std::io::BufReader::new(file);
-        let mut lines = vec![];
-        for line in buf.lines() {
-            match line {
-                Ok(line) => lines.push(line),
-                Err(error) => bail!("Error reading file {:?}\n -> {:?}", path, error),
-            }
-        }
-        Ok(lines)
-    }
 
     fn setup_test_game_dir() -> (tempfile::TempDir, crate::canon_path::CanonPath) {
         let tempdir = tempfile::tempdir().unwrap();
@@ -445,7 +433,7 @@ mod apply_patch_tests {
     }
 
     #[test]
-    fn apply_patch_with_a_b__prefixes() {
+    fn apply_patch_with_a_b_prefixes() {
         let origin = Path::new(env!("CARGO_MANIFEST_DIR")).join("resources/test/patch/modulename.tp2");
         let old = read_all(&origin).unwrap();
         let patch = Patch::from_single(PATCH_WITH_A_B_PREFIXES).unwrap();
