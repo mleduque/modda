@@ -22,7 +22,7 @@ pub struct ReplaceSpec {
     pub with: String,
     pub max_depth: Option<usize>,
     #[serde(default)]
-    pub string: bool,
+    pub regex: bool,
 }
 
 impl ReplaceSpec {
@@ -89,10 +89,10 @@ impl ReplaceSpec {
     pub fn exec(&self, root: &PathBuf) -> Result<()> {
         info!("ReplaceSpec.exec on {:?} - {} => {}", &self.file_globs, &self.replace, &self.with);
         let walker = self.find_matching_files(root)?;
-        let pattern = if self.string {
-            Cow::Owned(regex::escape(&self.replace))
-        } else {
+        let pattern = if self.regex {
             Cow::Borrowed(&self.replace)
+        } else {
+            Cow::Owned(regex::escape(&self.replace))
         };
         debug!("actual regex is {:?}", pattern);
         let regex = match Regex::new(&pattern) {
@@ -148,7 +148,7 @@ mod replace_tests {
             replace: "[A-Z]".to_string(),
             with: "11".to_string(),
             max_depth: Some(1),
-            string: false,
+            regex: true,
         };
         replace_spec.exec(&test_dir).unwrap();
 
@@ -181,7 +181,7 @@ mod replace_tests {
             replace: "(abc)".to_string(),
             with: "$1$1".to_string(),
             max_depth: Some(1),
-            string: false,
+            regex: true,
         };
         replace_spec.exec(&test_dir).unwrap();
 
@@ -214,7 +214,7 @@ mod replace_tests {
             replace: "(abc)".to_string(),
             with: "[11]".to_string(),
             max_depth: Some(1),
-            string: true,
+            regex: false,
         };
         replace_spec.exec(&test_dir).unwrap();
 
