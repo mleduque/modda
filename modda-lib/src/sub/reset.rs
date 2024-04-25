@@ -57,7 +57,7 @@ pub fn reset(args: &Reset, game_dir: &CanonPath, config: &Config) -> Result<()> 
     if dialoguer::Confirm::new().with_prompt(prompt).interact()? {
         for fragment in removed.iter().rev() {
             let tp2 = find_tp2_str(game_dir, &fragment.name)?;
-            run_weidu_uninstall(&tp2, fragment, config, args)?;
+            run_weidu_uninstall(&tp2, fragment, config, args, game_dir)?;
         }
         Ok(())
     } else {

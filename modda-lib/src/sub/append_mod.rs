@@ -39,7 +39,7 @@ pub fn append_mod(params: &AppendMod, game_dir: &CanonPath, config: &Config) -> 
         None => None,
         Some(ref manifest) => manifest.global.lang_preferences.clone(),
     };
-    let selected_lang = match select_language_pref(&tp2, mod_name, &lang_preferences, config) {
+    let selected_lang = match select_language_pref(&tp2, mod_name, &lang_preferences, config, game_dir) {
         Ok(LanguageSelection::Selected(selected)) => selected,
         _ => 0,
     };

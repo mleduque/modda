@@ -187,6 +187,7 @@ mod test_retrieve_location {
             archive_cache: Some("/cache_path".to_string()),
             extract_location: Some("/tmp".to_string()),
             weidu_path: None,
+            ignore_current_dir_weidu: None,
             extractors: HashMap::new(),
         };
 
@@ -326,6 +327,7 @@ mod test_retrieve_location {
             archive_cache: Some("/cache_path".to_string()),
             extract_location: Some("/tmp".to_string()),
             weidu_path: None,
+            ignore_current_dir_weidu: None,
             extractors: HashMap::new(),
         };
 
@@ -374,6 +376,7 @@ mod test_retrieve_location {
             archive_cache: Some("/cache_path".to_string()),
             extract_location: Some("/tmp".to_string()),
             weidu_path: None,
+            ignore_current_dir_weidu: None,
             extractors: HashMap::new(),
         };
 

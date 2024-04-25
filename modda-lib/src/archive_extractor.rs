@@ -6,7 +6,7 @@ use std::fs::File;
 use std::io::{BufReader, self};
 
 use globwalk::GlobWalkerBuilder;
-use log::{debug, info, warn};
+use log::{debug, info};
 use anyhow::{bail, Result, anyhow};
 use tempfile::TempDir;
 use zip::ZipArchive;
