@@ -43,7 +43,8 @@ impl <'a> Extractor<'a> {
         let temp_dir = result?;
         if let Some(command) = &location.precopy {
             if let Err(error) = self.run_precopy_command(&temp_dir.as_path_buf(), command) {
-                bail!("Couldn't run precopy command for mod {}\n{}\n{:?}", module_name, command.command, error);
+                bail!("Couldn't run precopy command for mod {}, command={} with args {:?}\n{:?}",
+                        module_name, command.command, command.args, error);
             }
         }
 
@@ -73,7 +74,7 @@ impl <'a> Extractor<'a> {
         Ok(())
     }
 
-    /// Extracts (if needed) the archive toa temporary location.
+    /// Extracts (if needed) the archive to a temporary location.
     /// Returns the path to the extracted content.
     fn extract_files_to_temp(&self, archive: &Path, module_name: &LwcString, location: &ConcreteLocation) -> Result<ExtractLocation> {
         if archive.is_dir() {
@@ -84,7 +85,8 @@ impl <'a> Extractor<'a> {
                     Ok(dir) => dir,
                     Err(error) => bail!("Creation of temp copy of mod {} failed\n -> {:?}", module_name, error),
                 };
-                self.copy_to_temp_dir(archive, &temp_dir)?;
+                self.copy_to_temp_dir(archive, temp_dir.as_ref())?;
+                debug!("Directory content was copied to {:?} for precopy command", temp_dir);
                 Ok(ExtractLocation::Temp(temp_dir))
             } else {
                 // will not change the source directory, no need to create a temporary copy
@@ -182,7 +184,10 @@ impl <'a> Extractor<'a> {
         let temp_dir_attempt = match &self.config.extract_location {
             None => tempfile::tempdir(),
             Some(location) => {
-                let expanded = shellexpand::tilde(location);
+                let expanded = match shellexpand::full(location) {
+                    Err(error) => bail!("Temporary dir expansion failed\n  {error}"),
+                    Ok(expanded) => expanded.to_string(),
+                };
                 debug!("using {:?} for extraction location", expanded);
                 if let Err(error) = std::fs::create_dir_all(&*expanded) {
                     bail!("Error creating extraction location from config: {}\n -> {:?}", expanded, error);
@@ -196,13 +201,13 @@ impl <'a> Extractor<'a> {
         }
     }
 
-    fn copy_to_temp_dir(&self, source: &Path,  temp_dir: &TempDir) -> Result<()> {
+    fn copy_to_temp_dir(&self, source: &Path,  temp_dir: &Path) -> Result<()> {
         let copy_options = fs_extra::dir::CopyOptions {
             copy_inside: true,
             content_only: true,
             ..Default::default()
         };
-        if let Err(error) = fs_extra::dir::copy(source, temp_dir.as_ref(), &copy_options) {
+        if let Err(error) = fs_extra::dir::copy(source, temp_dir, &copy_options) {
             bail!("Could not copy dir source to temp location - {:?} to {:?}\n  {}", source, temp_dir, error);
         } else {
             Ok(())
@@ -260,13 +265,14 @@ impl <'a> Extractor<'a> {
     }
 
     fn run_precopy_command(&self, from: &Path, precopy: &PrecopyCommand) -> Result<()> {
-        info!("Running precommand `{}` with args {:?} from path `{:?}`", precopy.command, precopy.args, from);
+        info!("Running precopy command `{}` with args {:?} from path `{:?}` in subdir {:?}",
+                precopy.command, precopy.args, from, precopy.subdir);
         let mut command = Command::new(&precopy.command);
-        let workdir = match &precopy.subdir {
+        let work_dir = match &precopy.subdir {
             None => from.to_path_buf(),
             Some(subdir) => from.join(subdir),
         };
-        command.current_dir(workdir)
+        command.current_dir(work_dir)
             .stdin(Stdio::inherit())
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit());

@@ -32,4 +32,4 @@ pub mod tp2_template;
 pub mod unique_component;
 pub mod utils;
 pub mod weidu_conf;
-pub mod weidu_context;
+pub mod modda_context;

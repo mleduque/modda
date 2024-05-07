@@ -15,7 +15,7 @@ use crate::module::components::{Component, Components};
 use crate::lowercase::LwcString;
 use crate::module::weidu_mod::{WeiduMod, BareMod};
 use crate::run_result::RunResult;
-use crate::settings::{self, Config};
+use crate::settings::Config;
 
 #[cfg(target_os="windows")]
 const WEIDU_BIN: &str = "weidu.exe";
