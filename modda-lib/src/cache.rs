@@ -19,7 +19,10 @@ impl Cache {
                 Ok(dir) => Ok(Cache::Tmp(dir),)
             }
             Some(path) => {
-                let expanded = shellexpand::tilde(path);
+                let expanded = match shellexpand::full(path) {
+                    Err(error) => bail!("Cache location expansion failed\n  {error}"),
+                    Ok(expanded) => expanded,
+                };
                 if let Err(error) = std::fs::create_dir_all(&*expanded) {
                     bail!("Could not create destination dir{:?}\n -> {:?}", expanded, error);
                 }

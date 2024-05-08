@@ -208,8 +208,7 @@ fn str_equals_ignore_cr(s1: &str, s2: &str) -> bool {
 
 #[cfg(test)]
 mod apply_patch_tests {
-    use std::{io::BufRead, path::Path};
-    use anyhow::{Result, bail};
+    use std::path::Path;
     use indoc::indoc;
     use patch::Patch;
 

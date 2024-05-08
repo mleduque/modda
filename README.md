@@ -307,7 +307,10 @@ Properties:
 - `archive_cache` which tells the program where to store and search for downloaded mod archives.
 - `extract_location` the temporary place where archive are extracted before being copied to the game directory (using a place on the same file system as the game directory can provide some performance advantage)
 - `weidu_path` where weidu executable can be found
-- `extractors` tells howto extract some archive format with an external program
+- `ignore_current_dir_weidu` if `weidu_path` is not set, whether any weidu binary in the game directory
+  should be ignore (in favor of assuming it's on the path)
+- `extractors` tells how to extract some archive formats with an external program (not required in general
+  for zip/iemod and tgz/tar.gz)
 
 All properties are optional.
 

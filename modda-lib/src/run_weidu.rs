@@ -1,26 +1,32 @@
 
-use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
 use anyhow::{bail, Result};
 use chrono::Utc;
 use lazy_static::lazy_static;
-use log::debug;
+use log::{debug, info, warn};
 use regex::Regex;
 
 use crate::args::{Install, Reset};
+use crate::canon_path::CanonPath;
 use crate::global::Global;
+use crate::modda_context::WeiduContext;
 use crate::module::language::{LanguageOption, LanguageSelection, select_language};
 use crate::module::components::{Component, Components};
 use crate::lowercase::LwcString;
 use crate::module::weidu_mod::{WeiduMod, BareMod};
 use crate::run_result::RunResult;
-use crate::settings::Config;
 
+#[cfg(target_os="windows")]
+const WEIDU_BIN: &str = "weidu.exe";
 
-pub fn run_weidu_install(tp2: &str, module: &WeiduMod, opts: &Install, global: &Global, config: &Config) -> Result<RunResult> {
+#[cfg(not(target_os="windows"))]
+const WEIDU_BIN: &str = "weidu";
+
+pub fn run_weidu_install(tp2: &str, module: &WeiduMod, opts: &Install, global: &Global,
+                        weidu_context: &WeiduContext) -> Result<RunResult> {
     use LanguageSelection::*;
-    let language_id = match select_language(tp2, module, &global.lang_preferences, config) {
+    let language_id = match select_language(tp2, module, &global.lang_preferences, weidu_context) {
         Ok(Selected(id)) => id,
         Ok(NoMatch(list)) if list.is_empty() => 0,
         Ok(NoPrefSet(available))
@@ -29,10 +35,14 @@ pub fn run_weidu_install(tp2: &str, module: &WeiduMod, opts: &Install, global: &
     };
     match &module.components {
         Components::None => Ok(RunResult::Dry("Explicitly requested no components to be installed".to_string())),
-        Components::Ask => run_weidu_install_interactive(tp2, module, opts, &global.game_language, config),
-        Components::All => run_weidu_install_all(tp2, module, opts, &global.game_language, language_id, config),
-        Components::List(comp) if comp.is_empty() => run_weidu_install_interactive(tp2, module, opts, &global.game_language, config),
-        Components::List(components) => run_weidu_install_auto(tp2, module, components, opts, &global.game_language, language_id, config)
+        Components::Ask =>
+                run_weidu_install_interactive(tp2, module, opts, &global.game_language, weidu_context),
+        Components::All =>
+                run_weidu_install_all(tp2, module, opts, &global.game_language, language_id, weidu_context),
+        Components::List(comp) if comp.is_empty() =>
+                run_weidu_install_interactive(tp2, module, opts, &global.game_language, weidu_context),
+        Components::List(components) =>
+                run_weidu_install_auto(tp2, module, components, opts, &global.game_language, language_id, weidu_context),
     }
 }
 
@@ -46,9 +56,9 @@ fn handle_no_language_selected(available: Vec<LanguageOption>, module: &WeiduMod
 }
 
 fn run_weidu_install_auto(tp2: &str, module: &WeiduMod, components: &[Component], opts: &Install,
-                    game_lang: &str, language_id: u32, config: &Config) -> Result<RunResult> {
+                    game_lang: &str, language_id: u32, weidu_context: &WeiduContext) -> Result<RunResult> {
 
-    let mut command = Command::new(weidu_command(config, false)?);
+    let mut command = Command::new(weidu_command(weidu_context)?);
     let mut args = vec![
         tp2.to_owned(),
         "--no-exit-pause".to_owned(),
@@ -78,8 +88,8 @@ fn run_weidu_install_auto(tp2: &str, module: &WeiduMod, components: &[Component]
 }
 
 fn run_weidu_install_interactive(tp2: &str, module: &WeiduMod, opts: &Install,
-                            game_lang: &str, config: &Config) -> Result<RunResult> {
-    let mut command = Command::new(weidu_command(config, false)?);
+                            game_lang: &str, weidu_context: &WeiduContext) -> Result<RunResult> {
+    let mut command = Command::new(weidu_command(weidu_context)?);
     let args = vec![
         tp2.to_owned(),
         "--no-exit-pause".to_owned(),
@@ -103,15 +113,15 @@ fn run_weidu_install_interactive(tp2: &str, module: &WeiduMod, opts: &Install,
 }
 
 fn run_weidu_install_all(tp2: &str, module: &WeiduMod, opts: &Install,
-                    game_lang: &str, language_id: u32, config: &Config) -> Result<RunResult> {
-    let list = match run_weidu_list_components(tp2, language_id, config) {
+                    game_lang: &str, language_id: u32, weidu_context: &WeiduContext) -> Result<RunResult> {
+    let list = match run_weidu_list_components(tp2, language_id, weidu_context) {
         Err(error) => bail!("Could not get component list for 'All' mod\n{error}"),
         Ok(list) => list,
     };
     let components = list.iter()
         .map(|weidu_comp| Component::Simple(weidu_comp.number))
         .collect::<Vec<_>>();
-    run_weidu_install_auto(tp2, module, &components, opts, game_lang, language_id, config)
+    run_weidu_install_auto(tp2, module, &components, opts, game_lang, language_id, weidu_context)
 }
 
 pub fn format_install_result(result: &RunResult, module: &WeiduMod) -> Vec<u8> {
@@ -147,8 +157,8 @@ pub struct WeiduComponent {
     pub group: Vec<String>,
 }
 
-pub fn run_weidu_list_components(tp2: &str, lang_id: u32, config: &Config) -> Result<Vec<WeiduComponent>> {
-    let mut command = Command::new(weidu_command(config, false)?);
+pub fn run_weidu_list_components(tp2: &str, lang_id: u32, weidu_context: &WeiduContext) -> Result<Vec<WeiduComponent>> {
+    let mut command = Command::new(weidu_command(weidu_context)?);
     let args = vec![
         "--list-components-json".to_owned(),
         tp2.to_owned(),
@@ -172,8 +182,8 @@ lazy_static! {
     static ref LANGUAGE_REGEX: Regex = Regex::new("^([0-9]*):(.*)$").unwrap();
 }
 
-pub fn list_available_languages(tp2: &str, mod_name: &LwcString, config: &Config) -> Result<Vec<LanguageOption>> {
-    let mut command = Command::new(weidu_command(config, false)?);
+pub fn list_available_languages(tp2: &str, mod_name: &LwcString, weidu_context: &WeiduContext) -> Result<Vec<LanguageOption>> {
+    let mut command = Command::new(weidu_command(weidu_context)?);
     let args = vec![
         "--no-exit-pause".to_owned(),
         "--list-languages".to_owned(),
@@ -214,8 +224,8 @@ pub fn list_available_languages(tp2: &str, mod_name: &LwcString, config: &Config
     Ok(entries.into_iter().map(|(index, name)| LanguageOption { index, name }).collect())
 }
 
-pub fn check_weidu_exe(config: &Config) -> Result<()> {
-    let mut command = Command::new(weidu_command(config, false)?);
+pub fn check_weidu_exe(weidu_context: &WeiduContext) -> Result<()> {
+    let mut command = Command::new(weidu_command(weidu_context)?);
     command.arg("--help");
     command
         .stdout(Stdio::null())
@@ -226,25 +236,53 @@ pub fn check_weidu_exe(config: &Config) -> Result<()> {
     }
 }
 
-fn weidu_command(config: &Config, check_exist: bool) -> Result<String> {
-    use crate::progname::PROGNAME;
-
-    match &config.weidu_path {
+fn weidu_command(weidu_context: &WeiduContext) -> Result<String> {
+    match &weidu_context.config.weidu_path {
         Some(path) => {
-            let expanded = shellexpand::tilde(path).to_string();
-            if check_exist && !PathBuf::from(&expanded).exists() {
-                bail!("file at '{}' doesn't exist. This is the weidu_path config in ${PROGNAME} settings file (${PROGNAME}.yaml)", path)
-            }
+            let expanded = match shellexpand::full(path) {
+                Err(error) => bail!("Weidu path expansion failed\n  {error}"),
+                Ok(expanded) => expanded.to_string(),
+            };
             Ok(expanded)
         }
-        None => Ok("weidu".to_string()),
+        None => if weidu_context.config.ignore_current_dir_weidu.unwrap_or(false) {
+            Ok(WEIDU_BIN.to_string())
+        } else {
+            match fallback_weidu(weidu_context.current_dir) {
+                Some(value) => Ok(value),
+                None => Ok(WEIDU_BIN.to_string(),)
+            }
+        }
     }
 }
 
-pub fn run_weidu_uninstall(tp2: &str, module: &BareMod, config: &Config, opts: &Reset) -> Result<()> {
+fn fallback_weidu(game_loc: &CanonPath) -> Option<String> {
+    match game_loc.join(WEIDU_BIN) {
+        Ok(checked_bin) => {
+            let checked_bin = checked_bin.to_path_buf();
+            if checked_bin.exists() {
+                match checked_bin.as_os_str().to_str() {
+                    Some(weidu_path) => {
+                        info!("Will use weidu binary in the game directory");
+                        Some(weidu_path.to_string())
+                    }
+                    None => None
+                }
+            } else {
+                None
+            }
+        }
+        Err(error) => {
+            warn!("Could not build path to local (game location) weidu binary\n  {error}");
+            None
+        }
+    }
+}
+
+pub fn run_weidu_uninstall(tp2: &str, module: &BareMod, opts: &Reset, weidu_context: &WeiduContext) -> Result<()> {
     let now = Utc::now().naive_local().format("%Y-%m-%d_%H:%M:%S");
 
-    let mut command = Command::new(weidu_command(config, false)?);
+    let mut command = Command::new(weidu_command(weidu_context)?);
     let mut args = vec![
         tp2.to_owned(),
         "--no-exit-pause".to_owned(),
@@ -270,5 +308,213 @@ pub fn run_weidu_uninstall(tp2: &str, module: &BareMod, config: &Config, opts: &
     } else {
         command.output()?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::modda_context::WeiduContext;
+    use crate::run_weidu::weidu_command;
+    use crate::settings::Config;
+    use super::WEIDU_BIN;
+
+    #[test]
+    fn weidu_command_bin_present_in_current_dir_ignore_not_set() {
+        // prepare game dir with weidu "binary" inside
+        let (temp_dir, test_game_dir) = setup_test_game_dir();
+        std::fs::OpenOptions::new().write(true).create_new(true)
+            .open(test_game_dir.join(WEIDU_BIN).unwrap())
+            .expect("Could not create test structure");
+
+        let config = Config {
+            weidu_path: None,
+            ignore_current_dir_weidu: None,
+            ..Default::default()
+        };
+        let weidu_context = WeiduContext {
+            config: &config,
+            current_dir: &test_game_dir,
+        };
+
+        let temp_dir_path = temp_dir.as_ref();
+        let game_dir_path = temp_dir_path.join("game");
+        let expected_path_buf = game_dir_path.join(WEIDU_BIN);
+        let expected = expected_path_buf.as_os_str().to_str().expect("could not build expected result path");
+        assert_eq!(
+            weidu_command(&weidu_context).expect("Expected success but got an error"),
+            expected
+        )
+    }
+
+    #[test]
+    fn weidu_command_bin_present_in_current_dir_ignore_false() {
+        // prepare game dir with weidu "binary" inside
+        let (temp_dir, test_game_dir) = setup_test_game_dir();
+        std::fs::OpenOptions::new().write(true).create_new(true)
+            .open(test_game_dir.join(WEIDU_BIN).unwrap())
+            .expect("Could not create test structure");
+
+        let config = Config {
+            weidu_path: None,
+            ignore_current_dir_weidu: Some(false),
+            ..Default::default()
+        };
+        let weidu_context = WeiduContext {
+            config: &config,
+            current_dir: &test_game_dir,
+        };
+
+        let temp_dir_path = temp_dir.as_ref();
+        let game_dir_path = temp_dir_path.join("game");
+        let expected_path_buf = game_dir_path.join(WEIDU_BIN);
+        let expected = expected_path_buf.as_os_str().to_str().expect("could not build expected result path");
+        assert_eq!(
+            weidu_command(&weidu_context).expect("Expected success but got an error"),
+            expected
+        )
+    }
+
+    #[test]
+    fn weidu_command_bin_present_in_current_dir_ignore_true() {
+        // prepare game dir with weidu "binary" inside
+        let (_temp_dir, test_game_dir) = setup_test_game_dir();
+        std::fs::OpenOptions::new().write(true).create_new(true)
+            .open(test_game_dir.join(WEIDU_BIN).unwrap())
+            .expect("Could not create test structure");
+
+        let config = Config {
+            weidu_path: None,
+            ignore_current_dir_weidu: Some(true),
+            ..Default::default()
+        };
+        let weidu_context = WeiduContext {
+            config: &config,
+            current_dir: &test_game_dir,
+        };
+
+        assert_eq!(
+            weidu_command(&weidu_context).expect("Expected success but got an error"),
+            WEIDU_BIN
+        )
+    }
+
+    #[test]
+    fn weidu_command_bin_not_present_in_current_dir_ignore_false() {
+        // prepare game dir with weidu "binary" inside
+        let (_temp_dir, test_game_dir) = setup_test_game_dir();
+
+        let config = Config {
+            ignore_current_dir_weidu: Some(false),
+            ..Default::default()
+        };
+        let weidu_context = WeiduContext {
+            config: &config,
+            current_dir: &test_game_dir,
+        };
+
+        assert_eq!(
+            weidu_command(&weidu_context).expect("Expected success but got an error"),
+            WEIDU_BIN
+        )
+    }
+
+    #[test]
+    fn weidu_command_bin_not_present_in_current_dir_ignore_true() {
+        // prepare game dir with weidu "binary" inside
+        let (_temp_dir, test_game_dir) = setup_test_game_dir();
+
+        let config = Config {
+            weidu_path: None,
+            ignore_current_dir_weidu: Some(true),
+            ..Default::default()
+        };
+        let weidu_context = WeiduContext {
+            config: &config,
+            current_dir: &test_game_dir,
+        };
+
+        assert_eq!(
+            weidu_command(&weidu_context).expect("Expected success but got an error"),
+            WEIDU_BIN
+        )
+    }
+
+    #[test]
+    fn weidu_command_weidu_path_set_in_config_bin_not_in_game_loc() {
+        // prepare game dir with weidu "binary" inside
+        let (_temp_dir, test_game_dir) = setup_test_game_dir();
+
+        let config_value = "a/b/c";
+        let config = Config {
+            weidu_path: Some(config_value.to_string()),
+            ..Default::default()
+        };
+        let weidu_context = WeiduContext {
+            config: &config,
+            current_dir: &test_game_dir,
+        };
+
+        assert_eq!(
+            weidu_command(&weidu_context).expect("Expected success but got an error"),
+            config_value
+        )
+    }
+
+    #[test]
+    fn weidu_command_weidu_path_set_in_config_bin_present_in_game_loc() {
+        // prepare game dir with weidu "binary" inside
+        let (_temp_dir, test_game_dir) = setup_test_game_dir();
+        std::fs::OpenOptions::new().write(true).create_new(true)
+            .open(test_game_dir.join(WEIDU_BIN).unwrap())
+            .expect("Could not create test structure");
+
+        let config_value = "a/b/c";
+        let config = Config {
+            weidu_path: Some(config_value.to_string()),
+            ..Default::default()
+        };
+        let weidu_context = WeiduContext {
+            config: &config,
+            current_dir: &test_game_dir,
+        };
+
+        assert_eq!(
+            weidu_command(&weidu_context).expect("Expected success but got an error"),
+            config_value
+        )
+    }
+
+    #[test]
+    fn weidu_command_weidu_path_set_in_config_with_tilda_expansion() {
+        // prepare game dir with weidu "binary" inside
+        let (_temp_dir, test_game_dir) = setup_test_game_dir();
+
+        let config_value = "~/a/b/c";
+        let config = Config {
+            weidu_path: Some(config_value.to_string()),
+            ..Default::default()
+        };
+        let weidu_context = WeiduContext {
+            config: &config,
+            current_dir: &test_game_dir,
+        };
+
+        let user_dirs = directories::UserDirs::new().unwrap();
+        let home_dir = user_dirs.home_dir();
+        let expected = home_dir.join("a/b/c");
+        assert_eq!(
+            weidu_command(&weidu_context).expect("Expected success but got an error"),
+            expected.as_os_str().to_str().unwrap()
+        )
+    }
+
+    fn setup_test_game_dir() -> (tempfile::TempDir, crate::canon_path::CanonPath) {
+        let tempdir = tempfile::tempdir().unwrap();
+        let test_game_dir = tempdir.path().join("game");
+        std::fs::create_dir_all(&test_game_dir).unwrap();
+        std::fs::OpenOptions::new().write(true).create_new(true)
+            .open(test_game_dir.join("chitin.key"))
+            .expect("Could not create test structure");
+        (tempdir, crate::canon_path::CanonPath::new(test_game_dir).unwrap())
     }
 }

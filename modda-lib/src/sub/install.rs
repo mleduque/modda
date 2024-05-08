@@ -27,7 +27,7 @@ use crate::settings::Config;
 use crate::timeline::InstallTimeline;
 use crate::unique_component::UniqueComponent;
 use crate::weidu_conf::check_weidu_conf_lang;
-use crate::weidu_context::WeiduContext;
+use crate::modda_context::ModdaContext;
 
 use super::extract_manifest::extract_unique_components;
 
@@ -61,7 +61,7 @@ pub fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &
                                                                         &downloader, &game_dir, cache);
     let file_installer = FileInstaller::new(&manifest.global, &opts, &game_dir);
 
-    let weidu_context = WeiduContext { current: game_dir, settings: &settings, opts: &opts,
+    let modda_context = ModdaContext { current_dir: game_dir, config: &settings, opts: &opts,
                                                     module_downloader: &module_downloader, file_installer: &file_installer,
                                                     log: RefCell::from(log) };
 
@@ -85,14 +85,14 @@ pub fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &
 
         let process_result = match module {
             Module::Mod { weidu_mod } => {
-                let result = process_weidu_mod(weidu_mod, &weidu_context, &manifest, real_index, settings)?;
+                let result = process_weidu_mod(weidu_mod, &modda_context, &manifest, real_index, settings)?;
                 if let (true, Some(output_path)) = (module.get_components().is_ask(), &opts.record) {
                     let manifest_path = PathBuf::from(&opts.manifest_path);
                     record_selection(index, weidu_mod, &output_path, &manifest_path, opts)?;
                 }
                 result
             }
-            Module::Generated { gen } => process_generated_mod(gen, &weidu_context, &manifest, real_index, settings)?,
+            Module::Generated { gen } => process_generated_mod(gen, &modda_context, &manifest, real_index, settings)?,
         };
 
         let ProcessResult { stop: finished, timeline } = process_result;

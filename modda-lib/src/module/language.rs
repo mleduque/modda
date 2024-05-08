@@ -3,9 +3,9 @@ use anyhow::bail;
 use anyhow::Result;
 
 use crate::lowercase::LwcString;
+use crate::modda_context::WeiduContext;
 use crate::module::weidu_mod::WeiduMod;
 use crate::run_weidu::list_available_languages;
-use crate::settings::Config;
 
 #[derive(Clone, Debug)]
 pub struct LanguageOption {
@@ -20,19 +20,21 @@ pub enum LanguageSelection {
     NoMatch(Vec<LanguageOption>),
 }
 
-pub fn select_language(tp2:&str, module: &WeiduMod, lang_preferences: &Option<Vec<String>>, config: &Config) -> Result<LanguageSelection> {
+pub fn select_language(tp2:&str, module: &WeiduMod, lang_preferences: &Option<Vec<String>>,
+                        weidu_context: &WeiduContext) -> Result<LanguageSelection> {
     use LanguageSelection::*;
 
     if let Some(idx) = module.language {
         Ok(Selected(idx))
     } else {
-        select_language_pref(tp2, &module.name, lang_preferences, config)
+        select_language_pref(tp2, &module.name, lang_preferences, weidu_context)
     }
 }
 
-pub fn select_language_pref(tp2:&str, mod_name: &LwcString, lang_preferences: &Option<Vec<String>>, config: &Config) -> Result<LanguageSelection> {
+pub fn select_language_pref(tp2:&str, mod_name: &LwcString, lang_preferences: &Option<Vec<String>>,
+                            weidu_context: &WeiduContext) -> Result<LanguageSelection> {
     use LanguageSelection::*;
-    let available = match list_available_languages(tp2, mod_name, config) {
+    let available = match list_available_languages(tp2, mod_name, weidu_context) {
         Ok(result) => result,
         Err(error) =>  bail!("Couldn't get list of available language for module {} - {:?}", mod_name, error)
     };

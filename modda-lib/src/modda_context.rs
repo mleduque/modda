@@ -13,16 +13,16 @@ use crate::get_module::ModuleDownload;
 use crate::settings::Config;
 
 
-pub struct WeiduContext<'a> {
-    pub current: &'a CanonPath,
-    pub settings: &'a Config,
+pub struct ModdaContext<'a> {
+    pub current_dir: &'a CanonPath,
+    pub config: &'a Config,
     pub opts: &'a Install,
     pub module_downloader: &'a ModuleDownload<'a>,
     pub file_installer: &'a FileInstaller<'a>,
     pub log: RefCell<Option<BufWriter<File>>>
 }
 
-impl <'a> WeiduContext<'a> {
+impl <'a> ModdaContext<'a> {
     pub fn log(&self, message: &str) -> Result<()> {
         let mut log = self.log.borrow_mut();
         if let Some(ref mut file) = *log {
@@ -41,4 +41,16 @@ impl <'a> WeiduContext<'a> {
         }
         Ok(())
     }
+
+    pub fn as_weidu_context(&'a self) -> WeiduContext<'a> {
+        WeiduContext {
+            current_dir: self.current_dir,
+            config: self.config,
+        }
+    }
+}
+
+pub struct WeiduContext<'a> {
+    pub current_dir: &'a CanonPath,
+    pub config: &'a Config,
 }

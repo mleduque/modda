@@ -6,17 +6,17 @@ use anyhow::{bail, Result};
 use log::{debug, info};
 
 use crate::args::Discover;
-use crate::canon_path::CanonPath;
+use crate::modda_context::WeiduContext;
 use crate::module::components::Components;
 use crate::module::module::Module;
 use crate::module::weidu_mod::WeiduMod;
-use crate::settings::Config;
 use crate::tp2::find_game_tp2;
 
 use super::extract_manifest::generate_manifest;
 
 
-pub fn discover(params: &Discover, game_dir: &CanonPath, config: &Config) -> Result<()> {
+pub fn discover(params: &Discover, weidu_context: &WeiduContext) -> Result<()> {
+    let game_dir = weidu_context.current_dir;
     info!("Discovering mods in {:?}", game_dir);
     let mods = match find_game_tp2(game_dir) {
         Err(error) => bail!("Failed to detect mods in game dir {:?}\n  {:?}", game_dir, error),
