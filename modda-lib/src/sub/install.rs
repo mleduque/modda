@@ -85,14 +85,14 @@ pub fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &
 
         let process_result = match module {
             Module::Mod { weidu_mod } => {
-                let result = process_weidu_mod(weidu_mod, &modda_context, &manifest, real_index, settings)?;
+                let result = process_weidu_mod(weidu_mod, &modda_context, &manifest, real_index)?;
                 if let (true, Some(output_path)) = (module.get_components().is_ask(), &opts.record) {
                     let manifest_path = PathBuf::from(&opts.manifest_path);
                     record_selection(index, weidu_mod, &output_path, &manifest_path, opts)?;
                 }
                 result
             }
-            Module::Generated { gen } => process_generated_mod(gen, &modda_context, &manifest, real_index, settings)?,
+            Module::Generated { gen } => process_generated_mod(gen, &modda_context, &manifest, real_index)?,
         };
 
         let ProcessResult { stop: finished, timeline } = process_result;

@@ -18,7 +18,6 @@ use crate::module::gen_mod::GeneratedMod;
 use crate::module::module_conf::ModuleContent;
 use crate::module::weidu_mod::WeiduMod;
 use crate::run_weidu::format_install_result;
-use crate::settings::Config;
 use crate::tp2::find_tp2;
 use crate::tp2_template::create_tp2;
 use crate::run_weidu::run_weidu_install;
@@ -30,7 +29,7 @@ pub struct ProcessResult {
 }
 
 pub fn process_weidu_mod(weidu_mod: &WeiduMod, modda_context: &ModdaContext, manifest: &Manifest,
-                            real_index: usize, config: &Config) -> Result<ProcessResult, anyhow::Error> {
+                            real_index: usize) -> Result<ProcessResult, anyhow::Error> {
 
     let mod_count = manifest.modules.len();
     let ModdaContext { current_dir: current, opts, module_downloader, ..} = modda_context;
@@ -133,7 +132,7 @@ pub fn process_weidu_mod(weidu_mod: &WeiduMod, modda_context: &ModdaContext, man
 }
 
 pub fn process_generated_mod(gen_mod: &GeneratedMod, modda_context: &ModdaContext,
-                                manifest: &Manifest, real_index: usize, config: &Config) -> Result<ProcessResult, anyhow::Error> {
+                                manifest: &Manifest, real_index: usize) -> Result<ProcessResult, anyhow::Error> {
     let ModdaContext { current_dir: current, file_installer, ..} = modda_context;
 
     if  find_tp2(current, &gen_mod.gen_mod).is_err() {
@@ -156,7 +155,7 @@ pub fn process_generated_mod(gen_mod: &GeneratedMod, modda_context: &ModdaContex
         info!("Skip generated mod creation (already present)");
     }
     let weidu_mod = gen_mod.as_weidu();
-    process_weidu_mod(&weidu_mod, modda_context, manifest, real_index, config)
+    process_weidu_mod(&weidu_mod, modda_context, manifest, real_index)
 }
 
 
