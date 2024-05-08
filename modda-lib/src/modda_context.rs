@@ -41,4 +41,16 @@ impl <'a> ModdaContext<'a> {
         }
         Ok(())
     }
+
+    pub fn as_weidu_context(&'a self) -> WeiduContext<'a> {
+        WeiduContext {
+            current_dir: self.current_dir,
+            config: self.config,
+        }
+    }
+}
+
+pub struct WeiduContext<'a> {
+    pub current_dir: &'a CanonPath,
+    pub config: &'a Config,
 }

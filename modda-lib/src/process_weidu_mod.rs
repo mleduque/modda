@@ -82,7 +82,7 @@ pub fn process_weidu_mod(weidu_mod: &WeiduMod, modda_context: &ModdaContext, man
     };
 
     install_timeline.start_install = Some(Local::now());
-    let single_result = run_weidu_install(&tp2_string, weidu_mod, &opts, &manifest.global, config, &modda_context.current_dir)?;
+    let single_result = run_weidu_install(&tp2_string, weidu_mod, &opts, &manifest.global, &modda_context.as_weidu_context())?;
     install_timeline.installed = Some(Local::now());
 
     let run_result = format_install_result(&single_result, weidu_mod);

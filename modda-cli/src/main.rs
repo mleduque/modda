@@ -9,6 +9,7 @@ use modda_lib::args::{ Cli, Commands };
 use modda_lib::cache::Cache;
 use modda_lib::canon_path::CanonPath;
 use modda_lib::chitin::ensure_chitin_key;
+use modda_lib::modda_context::WeiduContext;
 use modda_lib::run_weidu::check_weidu_exe;
 use modda_lib::settings::read_settings;
 use modda_lib::sub::append_mod::append_mod;
@@ -37,19 +38,20 @@ fn main() -> Result<()> {
     } else {
         debug!("chitin.key found");
     }
-    let settings = read_settings()?;
-    check_weidu_exe(&settings, &current_dir)?;
-    let cache = Cache::ensure_from_config(&settings).unwrap();
+    let config = read_settings()?;
+    let weidu_context = WeiduContext{ config: &config, current_dir: &current_dir };
+    check_weidu_exe(&weidu_context)?;
+    let cache = Cache::ensure_from_config(&config).unwrap();
 
     match cli.command {
-        Commands::Install(ref install_opts) => install(install_opts, &settings, &current_dir, &cache),
+        Commands::Install(ref install_opts) => install(install_opts, &config, &current_dir, &cache),
         Commands::Search(ref search_opts) => search(search_opts),
-        Commands::ListComponents(ref params) => sub_list_components(params, &current_dir, &settings),
+        Commands::ListComponents(ref params) => sub_list_components(params, &weidu_context),
         Commands::Invalidate(ref params) => invalidate(params, &cache),
         Commands::Reverse(ref params) => extract_manifest(params, &current_dir),
-        Commands::AppendMod(ref params) => append_mod(params, &current_dir, &settings),
-        Commands::Reset(ref reset_args) => reset(reset_args, &current_dir, &settings),
-        Commands::Discover(ref params) => discover(params, &current_dir, &settings),
+        Commands::AppendMod(ref params) => append_mod(params, &weidu_context),
+        Commands::Reset(ref reset_args) => reset(reset_args, &weidu_context),
+        Commands::Discover(ref params) => discover(params, &weidu_context),
     }
 }
 

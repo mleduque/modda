@@ -4,17 +4,16 @@ use itertools::Itertools;
 use log::info;
 
 use crate::args::Reset;
-use crate::canon_path::CanonPath;
+use crate::modda_context::WeiduContext;
 use crate::module::components::Components;
 use crate::module::manifest::Manifest;
 use crate::module::module::Module;
 use crate::run_weidu::run_weidu_uninstall;
-use crate::settings::Config;
 use crate::sub::extract_manifest::extract_bare_mods;
 use crate::tp2::find_tp2_str;
 
 
-pub fn reset(args: &Reset, game_dir: &CanonPath, config: &Config) -> Result<()> {
+pub fn reset(args: &Reset, weidu_context: &WeiduContext) -> Result<()> {
     let installed = extract_bare_mods()?;
     let manifest = Manifest::read_path(&args.manifest_path,)?;
 
@@ -56,8 +55,8 @@ pub fn reset(args: &Reset, game_dir: &CanonPath, config: &Config) -> Result<()> 
     let prompt = format!("Will uninstall these (in reverse order)\n  {}\nProceed? ", removed.iter().map(|item| item.short()).join("\n  "));
     if dialoguer::Confirm::new().with_prompt(prompt).interact()? {
         for fragment in removed.iter().rev() {
-            let tp2 = find_tp2_str(game_dir, &fragment.name)?;
-            run_weidu_uninstall(&tp2, fragment, config, args, game_dir)?;
+            let tp2 = find_tp2_str(weidu_context.current_dir, &fragment.name)?;
+            run_weidu_uninstall(&tp2, fragment, args, weidu_context)?;
         }
         Ok(())
     } else {

@@ -7,7 +7,7 @@ use anyhow::{bail, Result};
 use log::debug;
 
 use crate::args::AppendMod;
-use crate::canon_path::CanonPath;
+use crate::modda_context::WeiduContext;
 use crate::module::components::{Components, Component, FullComponent};
 use crate::module::language::{select_language_pref, LanguageSelection};
 use crate::list_components::list_components;
@@ -17,12 +17,11 @@ use crate::module::module::Module;
 use crate::module::weidu_mod::WeiduMod;
 use crate::utils::pathext::append_extension;
 use crate::run_weidu::WeiduComponent;
-use crate::settings::Config;
 use crate::sub::extract_manifest::generate_manifest;
 use crate::tp2::find_tp2_str;
 
 
-pub fn append_mod(params: &AppendMod, game_dir: &CanonPath, config: &Config) -> Result<()> {
+pub fn append_mod(params: &AppendMod, weidu_context: &WeiduContext) -> Result<()> {
     let mod_name = &params.r#mod;
     let existing: Result<Option<Manifest>> = match OpenOptions::new().read(true).open(&params.output) {
         Err(err)if err.kind() == ErrorKind::NotFound => Ok(None),
@@ -31,7 +30,7 @@ pub fn append_mod(params: &AppendMod, game_dir: &CanonPath, config: &Config) -> 
     };
     let existing = existing?;
 
-    let tp2 = match find_tp2_str(game_dir, mod_name) {
+    let tp2 = match find_tp2_str(weidu_context.current_dir, mod_name) {
         Ok(tp2) => tp2,
         Err(_) => bail!(""),
     };
@@ -39,11 +38,11 @@ pub fn append_mod(params: &AppendMod, game_dir: &CanonPath, config: &Config) -> 
         None => None,
         Some(ref manifest) => manifest.global.lang_preferences.clone(),
     };
-    let selected_lang = match select_language_pref(&tp2, mod_name, &lang_preferences, config, game_dir) {
+    let selected_lang = match select_language_pref(&tp2, mod_name, &lang_preferences, weidu_context) {
         Ok(LanguageSelection::Selected(selected)) => selected,
         _ => 0,
     };
-    let components = match list_components(game_dir, mod_name, selected_lang, config) {
+    let components = match list_components(mod_name, selected_lang,weidu_context) {
         Err(error) => bail!("Could not obtain component list for mod {}\n  {}",params.r#mod, error),
         Ok(value) => value,
     };
@@ -52,7 +51,7 @@ pub fn append_mod(params: &AppendMod, game_dir: &CanonPath, config: &Config) -> 
         _ => false,
     };
     let modified = match existing {
-        None => generate_manifest(game_dir, vec![generate_mod(mod_name, components, generate_comment)]),
+        None => generate_manifest(weidu_context.current_dir, vec![generate_mod(mod_name, components, generate_comment)]),
         Some(ref manifest) => Ok(append_to_manifest(&manifest, mod_name, components, generate_comment)),
     };
     let modified = modified?;
