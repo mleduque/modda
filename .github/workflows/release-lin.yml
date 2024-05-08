@@ -16,9 +16,11 @@ jobs:
             archive: tar.gz
             package: modda-cli
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v4
       - name: Compile and release
-        uses: rust-build/rust-build.action@v1.4.4
+        uses: rust-build/rust-build.action@v1.4.5
+        # set up rust cache
+      - uses: Swatinem/rust-cache@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
