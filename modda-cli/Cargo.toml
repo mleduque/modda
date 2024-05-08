@@ -9,8 +9,8 @@ edition = "2021"
 
 [dependencies]
 ansi_term = "0.12.1"
-anyhow = "1.0.79"
-clap = "4.4.12"
-env_logger = "0.11.1"
-log = "0.4.20"
+anyhow = "1.0.83"
+clap = "~4.4.18" # https://github.com/rust-build/rust-build.action/issues/88
+env_logger = "0.11.3"
+log = "0.4.21"
 modda-lib = { path = "../modda-lib" }
