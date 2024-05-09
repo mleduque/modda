@@ -165,7 +165,7 @@ To obtain a tag
 
 ## Limitations
 
-- At this point, was only tested on linux and (a little less) windows.
+- At this point, was mostly tested on linux. Tests on Windows and MacOS are rather limited (Does it run? Does it allow simple installations? are the only tests done).
 - Mods that use `ACTION_READLN` are not handled well (installation is interrupted until the user makes some choice, and reproducibility is not guaranteed).To work around this, I usually `patch` those commands out.
 
 ## Modifying mode
@@ -220,7 +220,7 @@ With my_mod-remove-action_readln.diff
 - in the same directory as the YAML manifest file if `global.local_patches` is not defined
 - in `${manifest_directory}/${local_patches}` if `local_patches` is defined
 
-### Regex replace
+### String replace / Regex replace
 
 instead of the `patch` property of `location`, this uses a ` replace` property which is _a list_  of "replace operations"
 
@@ -229,18 +229,24 @@ instead of the `patch` property of `location`, this uses a ` replace` property w
       http: https://somewhere.under/the-rainbow.zip
       replace:
         # this timer is far too long!
-        - file_globs: ["the-rainbow/dialogue/who_s_this.d"]
+        - file_globs: ["dialogue/who_s_this.d"]
           replace: 'RealSetGlobalTimer("MyLongTimer","GLOBAL",7200)'
           with: 'RealSetGlobalTimer("MyLongTimer","GLOBAL",3600)'
-        - file_globs: ["the-rainbow/scripts/script.baf", "the-rainbow/scripts/script2.baf"]
+        - file_globs: ["scripts/script.baf", "scripts/script2.baf"]
           replace: "something else"
           with: "something better"
+        - file_globs: ["scripts/*.baf"]
+          regex: true #optional, defaults to _false_
+          replace: "something (.*) else"
+          with: "something $1 better"
 ```
 
-- `file_globs` is a list of "globs" (the best description I could find is the one in the 
-- [gitignore documentaition](https://git-scm.com/docs/gitignore#_pattern_format))
-- `replace` is a regexp in the [Rust regex crate format](https://docs.rs/regex/latest/regex/#syntax) (**Not the Weidu regex format**), which tells _what_ will be replaced
+- `file_globs` is a list of "globs" (the best description I could find is the one in the
+  [gitignore documentaition](https://git-scm.com/docs/gitignore#_pattern_format))
+- `regex` if true, `replace` is a regex, else it's a string (if absent, it's the same as |false`)
+- `replace` is either a string or a regexp in the [Rust regex crate format](https://docs.rs/regex/latest/regex/#syntax) (**Not the Weidu regex format**), which tells _what_ will be replaced
 - `with` is a replacement string which tell _with what_ it will be replaced (maybe including capture groups).
+- `max_depth` (optional) limit the depth of the search for files to be processed. By default, there is no limit.
 
 ## Adding a single file
 Use the mod `add_conf` property to add a single file in the mod directory.
@@ -315,9 +321,15 @@ Properties:
 All properties are optional.
 
 ```yaml
-# can be an absolute path, or can use ~ exapansion on UNIX-like OSes
+# can be an absolute path, or can use ~ expansion on UNIX-like OSes
 archive_cache: ~/path/to/my/cache
+weidu_path: ~/bin/weidu
+extractors:
+    7z: # those are rather rare for mods :D
+        command: 7z
+        args: [ "x", "${input}", "-o${target}" ]
 ```
+
 ## Authenticated github downloads
 
 It is possible to download from a private repository.
@@ -328,7 +340,7 @@ It is possible to download from a private repository.
 ```yaml
 github:
     personal_tokens:
-        my_repositories: XXXXX # copied from github
+        my_repositories: XXXXX # copied from github, usually something like github_pat_YYYY
 ```
 
 Then the `location` property of the mod needs to tell which token must be used.
@@ -388,7 +400,7 @@ extractors:
         args: [ "x", "${input}", "${target}" ] # ${input} is replace by the actual archive name, ${target} is the destination directory
 ```
 
-Tested on windows with
+Tested on windows with (7z supports enough of the RAR format for the handful of `.rar` files I had to use)
 
 ```yaml
 extractors:
@@ -400,4 +412,51 @@ extractors:
 Obviously "rar" can be replaced by some other extension (7z, bz2, xz) but those are rare as weidu mods (I think?).
 
 ## Building
-TODO Describe installing rustup, installing the compiler components and running cargo build
+
+I can't really describe the process to have a rust toolchain ready to compile modda for people who are
+not already familiar with rust.
+
+With a rather large quantity of hand-waving, this can be summarized as
+
+- have `rustup` installed
+- use it to install a `stable` toolchain
+  at this exact moment, it's `1.77.1` (the macos version on the CI is 1.73... for reasons)
+- use it to install the target you want to compile for
+- install any needed compiler or SDK: gcc, mingw, msvc, apple SDK, cross compiler etc. This
+  really depends on the chosen *target*
+
+I am not aware of any specific compile dependencies
+
+I know the following builds work.
+
+### Linux
+
+- I use `x86_64-unknown-linux-gnu`
+- The linux version on the CI (which produces the release binaries) uses`x86_64-unknown-linux-musl`
+
+### Macos
+
+The macos version on the CI uses `x86_64-apple-darwin` with a `1.73.0` toolchain</br>
+and is cross-compiled on linux.
+
+Because one dependency _action_ uses an old version of the macos SDK, it's not (yet) possible to
+use stable.<br>
+With a newer SDK it should be possible to use a stable rust compiler.
+
+Untested: it may or may not work with `aarch64-apple-darwin`
+
+### Windows
+
+The windows version on the CI (which produces the release binaries) uses`x86_64-pc-windows-gnu`
+and is cross-compiled on linux.
+
+I have not tried to build with MSVC.
+
+### CI/Github actions
+
+The CI build (which produces the releases) may help find a working build environment, at least
+for cross-compilation (on linux).
+
+It relies on this github action: [https://github.com/rust-build/rust-build.action].
+
+Most of the relevant part in in the (Dockerfile)[https://github.com/rust-build/rust-build.action/blob/master/Dockerfile].
