@@ -23,7 +23,7 @@ use crate::post_install::PostInstallOutcome;
 use crate::log_parser::{check_install_complete, parse_weidu_log, LogRow};
 use crate::module::manifest::Manifest;
 use crate::process_weidu_mod::{process_generated_mod, process_weidu_mod, ProcessResult};
-use crate::settings::Config;
+use crate::config::Config;
 use crate::timeline::InstallTimeline;
 use crate::unique_component::UniqueComponent;
 use crate::weidu_conf::check_weidu_conf_lang;

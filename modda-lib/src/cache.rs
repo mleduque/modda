@@ -3,7 +3,7 @@ use std::path::{PathBuf, Path};
 
 use anyhow::{bail, Result};
 
-use crate::settings::Config;
+use crate::config::Config;
 
 
 

@@ -24,7 +24,7 @@ pub mod progname;
 pub mod replace;
 pub mod run_result;
 pub mod run_weidu;
-pub mod settings;
+pub mod config;
 pub mod sub;
 pub mod timeline;
 pub mod tp2;

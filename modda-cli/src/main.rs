@@ -11,7 +11,7 @@ use modda_lib::canon_path::CanonPath;
 use modda_lib::chitin::ensure_chitin_key;
 use modda_lib::modda_context::WeiduContext;
 use modda_lib::run_weidu::check_weidu_exe;
-use modda_lib::settings::read_settings;
+use modda_lib::config::read_settings;
 use modda_lib::sub::append_mod::append_mod;
 use modda_lib::sub::discover::discover;
 use modda_lib::sub::extract_manifest::extract_manifest;

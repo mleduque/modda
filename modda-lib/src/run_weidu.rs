@@ -315,7 +315,7 @@ pub fn run_weidu_uninstall(tp2: &str, module: &BareMod, opts: &Reset, weidu_cont
 mod tests {
     use crate::modda_context::WeiduContext;
     use crate::run_weidu::weidu_command;
-    use crate::settings::Config;
+    use crate::config::Config;
     use super::WEIDU_BIN;
 
     #[test]

@@ -16,7 +16,7 @@ use crate::canon_path::CanonPath;
 use crate::module::location::ConcreteLocation;
 use crate::lowercase::{LwcString, lwc};
 use crate::module::pre_copy_command::PrecopyCommand;
-use crate::settings::{Config, ExtractorCommand};
+use crate::config::{Config, ExtractorCommand};
 
 
 #[cfg_attr(test, faux::create)]

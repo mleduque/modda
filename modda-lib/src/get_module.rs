@@ -19,7 +19,7 @@ use crate::module::location::{ConcreteLocation, Location};
 use crate::lowercase::LwcString;
 use crate::module::weidu_mod::WeiduMod;
 use crate::replace::ReplaceSpec;
-use crate::settings::Config;
+use crate::config::Config;
 
 pub struct ModuleDownload<'a> {
     pub global: &'a Global,
@@ -155,7 +155,7 @@ mod test_retrieve_location {
     use crate::module::location::{ConcreteLocation, Location};
     use crate::module::location::source::Source;
     use crate::module::weidu_mod::WeiduMod;
-    use crate:: settings::Config;
+    use crate:: config::Config;
     use crate::canon_path::CanonPath;
     use crate::cache::Cache;
 
