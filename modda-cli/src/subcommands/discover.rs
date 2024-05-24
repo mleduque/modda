@@ -5,15 +5,13 @@ use std::io::BufWriter;
 use anyhow::{bail, Result};
 use log::{debug, info};
 
-use crate::args::Discover;
-use crate::modda_context::WeiduContext;
-use crate::module::components::Components;
-use crate::module::module::Module;
-use crate::module::weidu_mod::WeiduMod;
-use crate::tp2::find_game_tp2;
-
-use super::extract_manifest::generate_manifest;
-
+use modda_lib::args::Discover;
+use modda_lib::modda_context::WeiduContext;
+use modda_lib::module::components::Components;
+use modda_lib::module::module::Module;
+use modda_lib::module::weidu_mod::WeiduMod;
+use modda_lib::sub::extract_manifest::generate_manifest;
+use modda_lib::tp2::find_game_tp2;
 
 pub fn discover(params: &Discover, weidu_context: &WeiduContext) -> Result<()> {
     let game_dir = weidu_context.current_dir;

@@ -2,9 +2,9 @@
 use anyhow::{bail, Result};
 use itertools::Itertools;
 
-use crate::args::ListComponents;
-use crate::list_components::list_components;
-use crate::modda_context::WeiduContext;
+use modda_lib::args::ListComponents;
+use modda_lib::list_components::list_components;
+use modda_lib::modda_context::WeiduContext;
 
 pub fn sub_list_components(param: &ListComponents, weidu_context: &WeiduContext) -> Result<()> {
     match list_components(&param.module_name, param.lang, weidu_context) {

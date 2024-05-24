@@ -26,7 +26,7 @@ handlebars = "5.1.2"
 humantime = "2.1.0"
 indicatif = "0.17.8"
 indoc ="2.0.5"
-itertools = "0.12.1"
+itertools = "0.13.0"
 lazy_static = "1.4.0"
 log = "0.4.21"
 patch = { path = "../patch-rs" }

@@ -1,9 +1,9 @@
 
 
-use anyhow::{Result};
+use anyhow::Result;
 
-use crate::args::Search;
-use crate::module::manifest::Manifest;
+use modda_lib::args::Search;
+use modda_lib::module::manifest::Manifest;
 
 
 pub fn search(opts: &Search) -> Result<()> {

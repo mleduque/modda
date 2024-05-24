@@ -11,6 +11,11 @@ edition = "2021"
 ansi_term = "0.12.1"
 anyhow = "1.0.83"
 clap = "~4.4.18" # https://github.com/rust-build/rust-build.action/issues/88
+dialoguer = "0.11.0"
 env_logger = "0.11.3"
+handlebars = "5.1.2"
+itertools = "0.13.0"
 log = "0.4.21"
 modda-lib = { path = "../modda-lib" }
+serde_json = "1.0.117"
+serde_yaml = "0.9.34-deprecated"

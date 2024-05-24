@@ -3,14 +3,14 @@ use anyhow::{Result, bail};
 use itertools::Itertools;
 use log::info;
 
-use crate::args::Reset;
-use crate::modda_context::WeiduContext;
-use crate::module::components::Components;
-use crate::module::manifest::Manifest;
-use crate::module::module::Module;
-use crate::run_weidu::run_weidu_uninstall;
-use crate::sub::extract_manifest::extract_bare_mods;
-use crate::tp2::find_tp2_str;
+use modda_lib::args::Reset;
+use modda_lib::modda_context::WeiduContext;
+use modda_lib::module::components::Components;
+use modda_lib::module::manifest::Manifest;
+use modda_lib::module::module::Module;
+use modda_lib::run_weidu::run_weidu_uninstall;
+use modda_lib::sub::extract_manifest::extract_bare_mods;
+use modda_lib::tp2::find_tp2_str;
 
 
 pub fn reset(args: &Reset, weidu_context: &WeiduContext) -> Result<()> {

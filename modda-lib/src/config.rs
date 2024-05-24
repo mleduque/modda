@@ -1,17 +1,25 @@
 
 
 use std::collections::HashMap;
+use std::hash::Hash;
 use std::io::BufReader;
 use std::fs::File;
+use std::path::{Path, PathBuf};
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Ok, Result};
 use log::debug;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
+use crate::canon_path::CanonPath;
 use crate::lowercase::LwcString;
 use crate::progname::PROGNAME;
 
-#[derive(Deserialize, Debug, Default)]
+pub const ARCHIVE_CACHE_ENV_VAR: &'static str = "MODDA_ARCHIVE_CACHE";
+pub const EXTRACT_LOCATION_ENV_VAR: &'static str = "MODDA_EXTRACT_LOCATION";
+pub const WEIDU_PATH_ENV_VAR: &'static str = "MODDA_WEIDU_PATH";
+pub const IGNORE_CURRENT_DIR_WEIDU_ENV_VAR: &'static str = "MODDA_IGNORE_CURRENT_DIR_WEIDU";
+
+#[derive(Deserialize, Serialize, Debug, Default, Clone)]
 pub struct Config {
 
     /// The location where the archives (zip, iemod) are downloaded to.
@@ -63,44 +71,186 @@ pub struct Config {
     pub extractors: HashMap<LwcString, ExtractorCommand>,
 }
 
-#[derive(Deserialize, Debug, Default)]
+#[derive(Deserialize, Serialize, Debug, Default, Clone)]
 pub struct ExtractorCommand {
     pub command: String,
     pub args: Vec<String>,
 }
 
-pub fn read_settings() -> Result<Config> {
-    let yaml_name = format!("{prog_name}.yml", prog_name = PROGNAME);
-    let file = match File::open(&yaml_name) {
-        Ok(file) => Some(file),
-        Err(_error) => {
-            if let Some(proj_dir) = directories::ProjectDirs::from("", "", PROGNAME) {
-                let conf_dir = proj_dir.config_dir();
-                let conf_path = conf_dir.join(&yaml_name);
-                debug!("Checking settings file at {:?}", conf_path);
-                match File::open(conf_path) {
-                    Ok(file) => {
-                        debug!("found settings file");
-                        Some(file)
-                    },
-                    Err(_error) => None,
-                }
-            } else {
-                None
+pub fn global_conf_dir() -> Option<PathBuf> {
+    if let Some(proj_dir) = directories::ProjectDirs::from("", "", PROGNAME) {
+        Some(proj_dir.config_dir().to_path_buf())
+    } else {
+        None
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct Settings {
+    pub global: Option<ConfigSource>,
+    pub local: Option<ConfigSource>,
+    pub env_config: ConfigSource,
+    pub combined: Config,
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct ConfigSource {
+    pub id: String,
+    pub config: Option<Config>,
+}
+
+impl Settings {
+    pub fn read_settings(game_dir: &CanonPath) -> Result<Settings> {
+        let global = match global_conf_dir() {
+            Some(path_buf) => match Self::read_config_in_dir(&path_buf) {
+                Result::Ok(None) => None,
+                Result::Ok(Some(config_source)) => Some(config_source),
+                Err(error) => bail!("Error reading app global config\n  {error}"),
+            }
+            None => None,
+        };
+        let local = match Self::read_config_in_dir(&game_dir.to_path_buf()) {
+            Result::Ok(None) => None,
+            Result::Ok(Some(config_source)) => Some(config_source),
+            Err(error) => bail!("Error reading app local config\n  {error}"),
+        };
+        let env_config = Self::read_env_config()?;
+
+        Ok(Settings {
+            global: global.clone(),
+            local: local.clone(),
+            env_config: env_config.clone(),
+            combined: combine(
+                match global {
+                    None => None,
+                    Some(ConfigSource { config: None, .. }) => None,
+                    Some(ConfigSource { config: Some(config), ..}) => Some(config),
+                },
+                match local {
+                    None => None,
+                    Some(ConfigSource { config: None, .. }) => None,
+                    Some(ConfigSource { config:Some(config), ..}) => Some(config),
+                },
+                match env_config {
+                    ConfigSource { config: None, .. } => None,
+                    ConfigSource { config:Some(config), ..} => Some(config),
+                },
+            ),
+        })
+    }
+
+    pub fn read_config_in_dir(dir: &Path) -> Result<Option<ConfigSource>> {
+        let yml_name = format!("{prog_name}.yml", prog_name = PROGNAME);
+        let yaml_name = format!("{prog_name}.yaml", prog_name = PROGNAME);
+        let yml_path = dir.join(yml_name.to_string());
+        let yaml_path = dir.join(yaml_name.to_string());
+        let yml_file = File::open(yml_path.to_owned()).ok();
+        let yaml_file = File::open(yaml_path.to_owned()).ok();
+        let candidate = match (yml_file, yaml_file) {
+            (None, None) => None,
+            (Some(file), None) => Some((yml_path, file)),
+            (None, Some(file)) => Some((yaml_path, file)),
+            (Some(_), Some(_)) =>
+                bail!("Both {yml_name} and {yaml_name} files are present in {dir:?} and I can't choose.\nPlease delete one of those.")
+        };
+        match candidate {
+            None => Ok(None),
+            Some((path, file)) => {
+                let path_as_str = path.as_os_str().to_string_lossy().to_string();
+                debug!("found config file at {path_as_str}");
+
+                let reader = BufReader::new(file);
+                let config = match serde_yaml::from_reader(reader) {
+                    std::result::Result::Ok(config) => Some(config),
+                    std::result::Result::Err(_) => None,
+                };
+                debug!("Config read at {path_as_str}: {config:?}");
+                Ok(Some(ConfigSource {
+                    id: path_as_str,
+                    config
+                }))
             }
         }
-    };
+    }
 
-    match file {
-        None => Ok(Config::default()),
-        Some(file) => {
-            let reader = BufReader::new(file);
-            let config: Config = match serde_yaml::from_reader(reader) {
-                Err(error) => bail!("Invalid settings file\n {error}"),
-                Ok(config) => config,
-            };
-            debug!("Settings: {:?}", config);
-            Ok(config)
-        }
+    fn read_env_config() -> Result<ConfigSource> {
+        let ignore_current_dir_weidu = match std::env::var(IGNORE_CURRENT_DIR_WEIDU_ENV_VAR) {
+            Err(_) => None,
+            Result::Ok(s) if s == "true" => Some(true),
+            Result::Ok(s) if s == "false" => Some(false),
+            _ => bail!("Incorrect value for {IGNORE_CURRENT_DIR_WEIDU_ENV_VAR} env var")
+        };
+        Ok(ConfigSource {
+            id: "environment".to_string(),
+            config: Some(Config {
+                archive_cache: std::env::var(ARCHIVE_CACHE_ENV_VAR).ok(),
+                extract_location: std::env::var(EXTRACT_LOCATION_ENV_VAR).ok(),
+                weidu_path: std::env::var(WEIDU_PATH_ENV_VAR).ok(),
+                ignore_current_dir_weidu,
+                // Setting extractor not supported for now
+                extractors: HashMap::new(),
+            })
+        })
+    }
+
+}
+
+fn combine(global: Option<Config>, local: Option<Config>, env_config: Option<Config>) -> Config {
+    let global = global.unwrap_or_else(|| Config::default());
+    let local = local.unwrap_or_else(|| Config::default());
+    let env_config = env_config.unwrap_or_else(|| Config::default());
+    Config {
+        archive_cache: env_config.archive_cache.or(local.archive_cache).or(global.archive_cache),
+        extract_location: env_config.extract_location.or(local.extract_location).or(global.extract_location),
+        weidu_path: env_config.weidu_path.or(local.weidu_path).or(global.weidu_path),
+        ignore_current_dir_weidu: env_config.ignore_current_dir_weidu.or(local.ignore_current_dir_weidu).or(global.ignore_current_dir_weidu),
+        extractors: merge_maps(&global.extractors, &local.extractors, &env_config.extractors),
+    }
+}
+
+fn merge_maps<K, V>(bottom: &HashMap<K, V>, middle: &HashMap<K, V>, top: &HashMap<K, V>) -> HashMap<K, V>
+        where K: Eq + Hash + Clone, V: Clone {
+    bottom.into_iter().chain(middle).chain(top).map(|(k, v)| (k.clone(), v.clone())).collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use crate::config::merge_maps;
+
+    #[test]
+    fn test_merger_maps() {
+        let bottom = HashMap::from([
+            ("a", "1"),
+            ("b", "1"),
+            ("c", "1"),
+        ]);
+        let middle = HashMap::from([
+            ("a", "2"),
+            ("b", "2"),
+            ("d", "2"),
+            ("e", "2"),
+        ]);
+        let top = HashMap::from([
+            ("a", "3"),
+            ("b", "3"),
+            ("d", "3"),
+            ("f", "3"),
+        ]);
+
+        let expected = HashMap::from([
+            ("a", "3"),
+            ("b", "3"),
+            ("c", "1"),
+            ("d", "3"),
+            ("e", "2"),
+            ("f", "3"),
+        ]);
+
+        assert_eq!(
+            merge_maps(&bottom, &middle, &top),
+            expected
+        )
     }
 }

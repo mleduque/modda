@@ -37,6 +37,8 @@ pub enum Commands {
     Reset(Reset),
     /// Discovers mods in the game directory and builds a manifest skeleton.
     Discover(Discover),
+    /// Show configuration/settings information.
+    Introspect(Introspect)
 }
 
 #[derive(Args, Debug, Default)]
@@ -192,4 +194,11 @@ pub struct Discover {
     /// Name of the file that will be generated.
     #[arg(long, short)]
     pub output: String,
+}
+
+#[derive(Args, Debug)]
+pub struct Introspect {
+    /// Name of the file that will be generated.
+    #[arg(long, short)]
+    pub show_config: bool,
 }
