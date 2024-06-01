@@ -38,7 +38,11 @@ pub enum Commands {
     /// Discovers mods in the game directory and builds a manifest skeleton.
     Discover(Discover),
     /// Show configuration/settings information.
-    Introspect(Introspect)
+    Introspect(Introspect),
+
+    /// Works with the global configuration
+    #[clap(subcommand)]
+    GlobalConfig(ConfigArgs)
 }
 
 #[derive(Args, Debug, Default)]
@@ -202,3 +206,18 @@ pub struct Introspect {
     #[arg(long, short)]
     pub show_config: bool,
 }
+
+#[derive(Debug, Subcommand)]
+pub enum ConfigArgs {
+    /// Show the global configuration (opens the directory that contains the global configuration file)
+    Show(ConfigShow),
+    /// Open the global configuration file.<br>
+    /// If it doesn't exist yet, it will create an default configuration file.
+    Edit(ConfigEdit),
+}
+
+#[derive(Args, Debug)]
+pub struct ConfigShow {}
+
+#[derive(Args, Debug)]
+pub struct ConfigEdit {}

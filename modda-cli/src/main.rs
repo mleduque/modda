@@ -8,7 +8,7 @@ use env_logger::{Env, Target};
 use log::debug;
 
 use log_settings::LogSettings;
-use modda_lib::args::{ Cli, Commands };
+use modda_lib::args::{ Cli, Commands, ConfigArgs };
 use modda_lib::cache::Cache;
 use modda_lib::canon_path::CanonPath;
 use modda_lib::chitin::ensure_chitin_key;
@@ -19,6 +19,8 @@ use modda_lib::sub::append_mod::append_mod;
 use modda_lib::sub::extract_manifest::extract_manifest;
 use modda_lib::sub::install::install;
 use modda_lib::sub::invalidate::invalidate;
+use subcommands::config_show::open_global_config_dir;
+use subcommands::config_edit::edit_global_config_dir;
 use subcommands::discover::discover;
 use subcommands::introspect::introspect;
 use subcommands::list_components::sub_list_components;
@@ -66,5 +68,9 @@ fn main() -> Result<()> {
         Commands::Introspect(ref params) => introspect(params, &settings, &current_dir,
                                                                     &global_conf_dir(),
                                                                     &log_settings),
+        Commands::GlobalConfig(sub) => match sub {
+            ConfigArgs::Show(_) => open_global_config_dir(),
+            ConfigArgs::Edit(_) => edit_global_config_dir(&config),
+        }
     }
 }

@@ -31,7 +31,7 @@ max level: {{max_level}}
 {{log_style_name}}="{{log_style_value}}"
 "#;
 
-pub fn introspect(params:&Introspect, settings: &Settings, game_dir: &CanonPath,
+pub fn introspect(params: &Introspect, settings: &Settings, game_dir: &CanonPath,
                     global_conf_dir: &Option<PathBuf>, log_settings: &LogSettings) -> Result<()> {
     let registry = Handlebars::new();
 

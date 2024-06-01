@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 use std::hash::Hash;
-use std::io::BufReader;
+use std::io::{BufReader, Result as IoResult};
 use std::fs::File;
 use std::path::{Path, PathBuf};
 
@@ -18,6 +18,7 @@ pub const ARCHIVE_CACHE_ENV_VAR: &'static str = "MODDA_ARCHIVE_CACHE";
 pub const EXTRACT_LOCATION_ENV_VAR: &'static str = "MODDA_EXTRACT_LOCATION";
 pub const WEIDU_PATH_ENV_VAR: &'static str = "MODDA_WEIDU_PATH";
 pub const IGNORE_CURRENT_DIR_WEIDU_ENV_VAR: &'static str = "MODDA_IGNORE_CURRENT_DIR_WEIDU";
+pub const CODE_EDITOR_ENV_VAR: &'static str = "MODDA_CODE_EDITOR";
 
 #[derive(Deserialize, Serialize, Debug, Default, Clone)]
 pub struct Config {
@@ -69,6 +70,10 @@ pub struct Config {
     /// ```
     #[serde(default)]
     pub extractors: HashMap<LwcString, ExtractorCommand>,
+
+    /// Path to the code editor program.<br>
+    /// Used with the `config edit` subcommands.
+    pub code_editor: Option<String>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Default, Clone)]
@@ -139,23 +144,31 @@ impl Settings {
         })
     }
 
-    pub fn read_config_in_dir(dir: &Path) -> Result<Option<ConfigSource>> {
+    pub fn find_config_in_dir(dir: &Path) -> Result<Option<PathBuf>> {
         let yml_name = format!("{prog_name}.yml", prog_name = PROGNAME);
         let yaml_name = format!("{prog_name}.yaml", prog_name = PROGNAME);
         let yml_path = dir.join(yml_name.to_string());
         let yaml_path = dir.join(yaml_name.to_string());
-        let yml_file = File::open(yml_path.to_owned()).ok();
-        let yaml_file = File::open(yaml_path.to_owned()).ok();
-        let candidate = match (yml_file, yaml_file) {
-            (None, None) => None,
-            (Some(file), None) => Some((yml_path, file)),
-            (None, Some(file)) => Some((yaml_path, file)),
-            (Some(_), Some(_)) =>
+        let yml_file_exists = yml_path.exists();
+        let yaml_file_exists = yaml_path.exists();
+        match (yml_file_exists, yaml_file_exists) {
+            (false, false) => Ok(None),
+            (true, false) => Ok(Some(yml_path)),
+            (false, true) => Ok(Some(yaml_path)),
+            (true, true) =>
                 bail!("Both {yml_name} and {yaml_name} files are present in {dir:?} and I can't choose.\nPlease delete one of those.")
-        };
+        }
+    }
+
+    pub fn read_config_in_dir(dir: &Path) -> Result<Option<ConfigSource>> {
+        let candidate = Settings::find_config_in_dir(dir)?;
         match candidate {
             None => Ok(None),
-            Some((path, file)) => {
+            Some(path) => {
+                let file = match File::open(&path) {
+                    IoResult::Ok(file) => file,
+                    Err(error) => bail!("Could not open config file at {:?}\n  {error}", path),
+                };
                 let path_as_str = path.as_os_str().to_string_lossy().to_string();
                 debug!("found config file at {path_as_str}");
 
@@ -189,6 +202,7 @@ impl Settings {
                 ignore_current_dir_weidu,
                 // Setting extractor not supported for now
                 extractors: HashMap::new(),
+                code_editor: std::env::var(CODE_EDITOR_ENV_VAR).ok(),
             })
         })
     }
@@ -205,6 +219,7 @@ fn combine(global: Option<Config>, local: Option<Config>, env_config: Option<Con
         weidu_path: env_config.weidu_path.or(local.weidu_path).or(global.weidu_path),
         ignore_current_dir_weidu: env_config.ignore_current_dir_weidu.or(local.ignore_current_dir_weidu).or(global.ignore_current_dir_weidu),
         extractors: merge_maps(&global.extractors, &local.extractors, &env_config.extractors),
+        code_editor: env_config.code_editor.or(local.code_editor).or(global.code_editor),
     }
 }
 

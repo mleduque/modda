@@ -189,6 +189,7 @@ mod test_retrieve_location {
             weidu_path: None,
             ignore_current_dir_weidu: None,
             extractors: HashMap::new(),
+            code_editor: None,
         };
 
         let expected_dest = PathBuf::from("/cache_path/http/example.com");
@@ -329,6 +330,7 @@ mod test_retrieve_location {
             weidu_path: None,
             ignore_current_dir_weidu: None,
             extractors: HashMap::new(),
+            code_editor: None,
         };
 
 
@@ -378,6 +380,7 @@ mod test_retrieve_location {
             weidu_path: None,
             ignore_current_dir_weidu: None,
             extractors: HashMap::new(),
+            code_editor: None,
         };
 
 

@@ -1,0 +1,37 @@
+
+# Modda config file
+# All options are optional
+
+#### Path to the location were the archive cache is.
+#### After an archive is downloaded it will be stored in the cache.
+#### Before trying to download an archive, the program will check in the archive
+#### if it's already there (except if told otherwise).
+#archive_cache: ~
+
+#### Temporary location where the archive are extracted before being copied to the game
+#### directory (and then installed).
+#### That's kind of an expert (perf optimization) that most people will not need to care about.
+#extract_location: ~
+
+#### Enter the path to your weidu executable (`weidu` on linux or macos, `weidu.exe` on windows)
+#### If this is not set, it will use either a weidu executable in the game directory (if any) or
+#### try to use it from the path
+#weidu_path: ~
+
+#### If this is set, a weidu executable in the game directory will be _ignored_ and only
+#### one defined in `weidu_path` or on the path will be used
+#ignore_current_dir_weidu: ~
+
+#### Configuration for external programs used for uncommon archive types (RAR, 7Z etc.)
+#extractors:
+#    rar:
+#        command: unrar-nonfree
+#        args: [ "x", "${input}", "${target}" ]
+#    7z:
+#        command: 7z
+#        args: [ "x", "${input}", "-o${target}" ]
+
+#### Program used for code editing (for example vscode (`code`), notepad++ etc.)
+#### This is used when calling `modda config edit`
+#### If not set, this will let the OS decide what to open `yaml` files with.
+#code_editor: code
