@@ -4,7 +4,7 @@ use std::{fmt::Debug, path::{Path, PathBuf}, ffi::OsStr};
 use anyhow::Result;
 use path_absolutize::*;
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 pub struct CanonPath (PathBuf);
 impl CanonPath {
     pub fn new<P: AsRef<Path>>(path: P) -> Result<Self> { Ok(Self((path.as_ref().absolutize()?).into_owned())) }

@@ -1,0 +1,8 @@
+
+my_key_1   =  true
+my_key_2=false
+my_key_3 = true; I don't want this
+my_key_4 = false  ; but this one is ok
+my_key_5 = false ; this one is kept
+my_key_5 = true ; this one is ignored
+my_key_6 = invalid

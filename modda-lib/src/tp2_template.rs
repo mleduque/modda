@@ -90,6 +90,7 @@ mod tests {
             post_install: None,
             ignore_warnings: true,
             allow_overwrite: true,
+            disabled_if: None
         };
         let date_time = DateTime::from_naive_utc_and_offset(
             NaiveDateTime::new(
@@ -129,6 +130,7 @@ COPY ~ccc/data~ ~override~
             post_install: None,
             ignore_warnings: true,
             allow_overwrite: true,
+            disabled_if: None,
         };
         let date_time = DateTime::from_naive_utc_and_offset(
             NaiveDateTime::new(

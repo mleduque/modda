@@ -17,6 +17,7 @@ use crate::download::Downloader;
 use crate::file_installer::FileInstaller;
 use crate::get_module::ModuleDownload;
 use crate::lowercase::{lwc, LwcString};
+use crate::module::disable_condition::DisableOutCome;
 use crate::module::module::Module;
 use crate::module::weidu_mod::WeiduMod;
 use crate::post_install::PostInstallOutcome;
@@ -82,19 +83,33 @@ pub fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &
                 bail!("Aborting - proceeding with `install` is unsafe (could uninstall then install modules repeatedly)");
             }
         }
-
-        let process_result = match module {
-            Module::Mod { weidu_mod } => {
-                let result = process_weidu_mod(weidu_mod, &modda_context, &manifest, real_index)?;
-                if let (true, Some(output_path)) = (module.get_components().is_ask(), &opts.record) {
-                    let manifest_path = PathBuf::from(&opts.manifest_path);
-                    record_selection(index, weidu_mod, &output_path, &manifest_path, opts)?;
+        let process_result = match module.check_disabled(&opts.get_manifest_root(game_dir)) {
+            Ok(DisableOutCome::No(reason)) => {
+                if let Some(reason) = reason {
+                    info!("module {name} is not disabled - {reason}", name = module.get_name());
                 }
-                result
+                match module {
+                    Module::Mod { weidu_mod } =>
+                        install_weidu(weidu_mod, &modda_context, &manifest, opts, index, real_index)?,
+                    Module::Generated { gen } =>
+                        process_generated_mod(gen, &modda_context, &manifest, real_index)?,
+                }
             }
-            Module::Generated { gen } => process_generated_mod(gen, &modda_context, &manifest, real_index)?,
+            Ok(DisableOutCome::Yes(reason)) => {
+                info!("module {name} is disabled - {reason}", name = module.get_name());
+                ProcessResult {
+                    stop: false,
+                    timeline: InstallTimeline::new(lwc!(&format!("{} - disabled", module.get_name())), Local::now()),
+                }
+            }
+            Err(error) => {
+                info!("disabled check for module {name} failed\n  {error}", name = module.get_name());
+                ProcessResult {
+                    stop: true,
+                    timeline: InstallTimeline::new(lwc!(&format!("{} - disable check (failed)", module.get_name())), Local::now()),
+                }
+            }
         };
-
         let ProcessResult { stop: finished, timeline } = process_result;
         timelines.push(timeline);
 
@@ -102,7 +117,7 @@ pub fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &
             warn!("interrupted");
             timelines.push(InstallTimeline::new(lwc!("aborted"), Local::now()));
             handle_timeline(opts.timeline, &timelines);
-            bail!("Program interrupted on error on non-whitelisted warning");
+            bail!("Program interrupted on error or non-whitelisted warning");
         } else {
             match module.exec_post_install(&module.get_name()) {
                 PostInstallOutcome::Stop => {
@@ -114,6 +129,7 @@ pub fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &
             }
         }
         // Now check we actually installed all requested components
+        // if dry_run, nothing will have been installed at all so don't check
         if !opts.dry_run {
             check_install_complete(&module)?
         }
@@ -122,6 +138,18 @@ pub fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &
     timelines.push(InstallTimeline::new(lwc!("finished"), Local::now()));
     handle_timeline(opts.timeline, &timelines);
     Ok(())
+}
+
+fn install_weidu(weidu_mod: &WeiduMod, modda_context: &ModdaContext, manifest: &Manifest,
+                opts: &Install, index: usize, real_index: usize) -> Result<ProcessResult> {
+    let result = process_weidu_mod(weidu_mod, &modda_context, &manifest, real_index)?;
+    if weidu_mod.components.is_ask() {
+        if let Some(output_path) = &opts.record {
+            let manifest_path = PathBuf::from(&opts.manifest_path);
+            record_selection(index, weidu_mod, &output_path, &manifest_path, opts)?;
+        }
+    }
+    Ok(result)
 }
 
 fn  get_modules_range<'a>(modules: &'a[Module], opts: &Install) -> Result<&'a [Module]> {

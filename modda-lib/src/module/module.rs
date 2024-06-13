@@ -1,13 +1,16 @@
 use std::borrow::Cow;
 
+use anyhow::Result;
 use serde::de::IntoDeserializer;
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
 
+use crate::canon_path::CanonPath;
 use crate::module::components::{Components, Component};
 use crate::lowercase::LwcString;
 use crate::post_install::{PostInstallExec, PostInstallOutcome};
 
+use super::disable_condition::{DisableCheck, DisableOutCome};
 use super::gen_mod::GeneratedMod;
 use super::weidu_mod::WeiduMod;
 
@@ -51,6 +54,13 @@ impl Module {
         match self {
             Module::Mod { weidu_mod } => weidu_mod.post_install.exec(mod_name),
             Module::Generated { gen } => gen.post_install.exec(mod_name),
+        }
+    }
+
+    pub fn check_disabled(&self, manifest_root: &CanonPath) -> Result<DisableOutCome> {
+        match self {
+            Module::Mod { weidu_mod } => weidu_mod.disabled_if.check(manifest_root),
+            Module::Generated { gen } => gen.disabled_if.check(manifest_root),
         }
     }
 }

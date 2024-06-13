@@ -1,5 +1,6 @@
 
 pub mod components;
+pub mod disable_condition;
 pub mod file_mod;
 pub mod file_module_origin;
 pub mod gen_mod;
@@ -21,6 +22,7 @@ mod test_deserialize {
 
     use crate::lowercase::lwc;
     use crate::module::components::{Components, Component};
+    use crate::module::disable_condition::DisableCondition;
     use crate::module::file_mod::FileModule;
     use crate::module::file_module_origin::FileModuleOrigin;
     use crate::module::gen_mod::{GeneratedMod, GenModComponent};
@@ -412,6 +414,153 @@ mod test_deserialize {
                 component: GenModComponent { index: 0, name: None },
                 allow_overwrite: true,
                 ignore_warnings: true,
+                disabled_if: None,
+            }
+        );
+    }
+
+    #[test]
+    fn deserialize_mod_with_unconditional_disabling() {
+        let yaml = r#"
+        name: DlcMerger
+        components:
+            - 1
+        disabled_if:
+            because: This is bg2 not bg1
+        "#;
+        let module: WeiduMod = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(
+            module,
+            WeiduMod {
+                name: lwc!("DlcMerger"),
+                components: Components::List(vec! [ Component::Simple(1) ]),
+                disabled_if: Some(DisableCondition::Because { because: "This is bg2 not bg1".to_string() }),
+                ..WeiduMod::default()
+            }
+        );
+    }
+
+    #[test]
+    fn deserialize_mod_with_env_var_disabling() {
+        let yaml = r#"
+        name: DlcMerger
+        components:
+            - 1
+        disabled_if:
+            env_is_set: DISABLE_DLCMERGER
+        "#;
+        let module: WeiduMod = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(
+            module,
+            WeiduMod {
+                name: lwc!("DlcMerger"),
+                components: Components::List(vec! [ Component::Simple(1) ]),
+                disabled_if: Some(DisableCondition::EnvVar { env_is_set: "DISABLE_DLCMERGER".to_string() }),
+                ..WeiduMod::default()
+            }
+        );
+    }
+
+    #[test]
+    fn deserialize_mod_with_external_file() {
+        let yaml = r#"
+        name: DlcMerger
+        components:
+            - 1
+        disabled_if:
+            in_file: disabling.file
+            key: dlcmerger
+        "#;
+        let module: WeiduMod = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(
+            module,
+            WeiduMod {
+                name: lwc!("DlcMerger"),
+                components: Components::List(vec! [ Component::Simple(1) ]),
+                disabled_if: Some(DisableCondition::File { in_file: "disabling.file".to_string(), key: "dlcmerger".to_string() }),
+                ..WeiduMod::default()
+            }
+        );
+    }
+
+    #[test]
+    fn deserialize_mod_with_negation() {
+        let yaml = r#"
+        name: DlcMerger
+        components:
+            - 1
+        disabled_if:
+            not:
+                env_is_set: DONT_DISABLE_DLCMERGER
+        "#;
+        let module: WeiduMod = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(
+            module,
+            WeiduMod {
+                name: lwc!("DlcMerger"),
+                components: Components::List(vec! [ Component::Simple(1) ]),
+                disabled_if: Some(DisableCondition::Not {
+                    not: Box::new(DisableCondition::EnvVar { env_is_set: "DONT_DISABLE_DLCMERGER".to_string() }),
+                }),
+                ..WeiduMod::default()
+            }
+        );
+    }
+
+    #[test]
+    fn deserialize_mod_with_disabling_condition_with_any() {
+        let yaml = r#"
+        name: DlcMerger
+        components:
+            - 1
+        disabled_if:
+            any:
+                - env_is_set: DISABLE_DLCMERGER
+                - in_file: disabling.file
+                  key: dlcmerger
+        "#;
+        let module: WeiduMod = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(
+            module,
+            WeiduMod {
+                name: lwc!("DlcMerger"),
+                components: Components::List(vec! [ Component::Simple(1) ]),
+                disabled_if: Some(DisableCondition::Any {
+                    any: vec![
+                        DisableCondition::EnvVar { env_is_set: "DISABLE_DLCMERGER".to_string() },
+                        DisableCondition::File { in_file: "disabling.file".to_string(), key: "dlcmerger".to_string() },
+                    ],
+                }),
+                ..WeiduMod::default()
+            }
+        );
+    }
+
+    #[test]
+    fn deserialize_mod_with_disabling_condition_with_all() {
+        let yaml = r#"
+        name: DlcMerger
+        components:
+            - 1
+        disabled_if:
+            all:
+                - env_is_set: DISABLE_DLCMERGER
+                - in_file: disabling.file
+                  key: dlcmerger
+        "#;
+        let module: WeiduMod = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(
+            module,
+            WeiduMod {
+                name: lwc!("DlcMerger"),
+                components: Components::List(vec! [ Component::Simple(1) ]),
+                disabled_if: Some(DisableCondition::All {
+                    all: vec![
+                        DisableCondition::EnvVar { env_is_set: "DISABLE_DLCMERGER".to_string() },
+                        DisableCondition::File { in_file: "disabling.file".to_string(), key: "dlcmerger".to_string() },
+                    ],
+                }),
+                ..WeiduMod::default()
             }
         );
     }

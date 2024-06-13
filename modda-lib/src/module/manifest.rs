@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 use anyhow::{bail, Result, Ok, anyhow};
 use serde_yaml::Deserializer;
 
+use crate::canon_path::CanonPath;
 use crate::global::Global;
 use crate::lowercase::LwcString;
 use crate::module::module::Module;
@@ -44,7 +45,7 @@ pub struct Manifest {
 }
 
 impl Manifest {
-    pub fn assemble_from_path(path: &str, manifest_root: &PathBuf) -> Result<Self> {
+    pub fn assemble_from_path(path: &str, manifest_root: &CanonPath) -> Result<Self> {
         let mut base = Self::read_path(path)?;
         if !base.locations.external.is_empty() {
             let init: HashMap<LwcString, ConcreteLocation> = HashMap::new();
@@ -175,10 +176,10 @@ fn try_replace_component_comment<'a>(re: &Regex, haystack: &'a str) -> Result<St
     Ok(new)
 }
 
-fn read_external_registry(registry: &LocationRegistry, manifest_root: &PathBuf) -> Result<HashMap<LwcString, ConcreteLocation>> {
+fn read_external_registry(registry: &LocationRegistry, manifest_root: &CanonPath) -> Result<HashMap<LwcString, ConcreteLocation>> {
     let path = match registry {
         LocationRegistry::Absolute { path } => PathBuf::from(path),
-        LocationRegistry::Local { local } => manifest_root.join(local),
+        LocationRegistry::Local { local } => manifest_root.join(local)?.to_path_buf(),
     };
     let file = std::fs::File::open(&path)
             .map_err(|error| anyhow!("Could not open location registry file {:?} - {:?}", path, error))?;
@@ -244,6 +245,7 @@ mod test_deserialize {
     use std::io::BufReader;
     use std::path::PathBuf;
 
+    use crate::canon_path::CanonPath;
     use crate::module::components::{Component, Components, FullComponent};
     use crate::lowercase::lwc;
     use crate::module::file_module_origin::FileModuleOrigin;
@@ -337,6 +339,7 @@ mod test_deserialize {
                             post_install: Some(PostInstall::WaitSeconds { wait_seconds:10 }),
                             ignore_warnings: true,
                             allow_overwrite: true,
+                            disabled_if: None,
                         },
                     },
                     Module::Generated {
@@ -350,6 +353,7 @@ mod test_deserialize {
                             component: GenModComponent { index: 10, name: Some("Do whatever".to_string()) },
                             ignore_warnings: true,
                             allow_overwrite: true,
+                            disabled_if: None,
                         },
                     },
                 ],
@@ -396,6 +400,7 @@ mod test_deserialize {
                         component: GenModComponent { index: 0, name: None },
                         ignore_warnings: false,
                         allow_overwrite: false,
+                        disabled_if: None,
                     },
                 },
                 Module::Generated {
@@ -409,6 +414,7 @@ mod test_deserialize {
                         component: GenModComponent { index: 10, name: Some("Do whatever".to_string()) },
                         ignore_warnings: true,
                         allow_overwrite: true,
+                        disabled_if: None,
                     },
                 },
             ],
@@ -478,7 +484,7 @@ mod test_deserialize {
         use crate::module::location::github::Github;
         let manifest_root = format!("{}/{}", env!("CARGO_MANIFEST_DIR"), "resources/test");
         let manifest_path = format!("{}/{}", manifest_root, "manifest_with_real_ext_locations.yml");
-        let manifest = Manifest::assemble_from_path(&manifest_path, &PathBuf::from(&manifest_root)).unwrap();
+        let manifest = Manifest::assemble_from_path(&manifest_path, &&CanonPath::new(&manifest_root).unwrap()).unwrap();
         assert_eq!(
             manifest,
             super::Manifest {

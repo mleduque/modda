@@ -109,7 +109,7 @@ impl <'a> ModuleDownload<'a> {
     }
 
     fn get_local_mod_path(&self, local_mod_name: &String) -> Result<PathBuf, anyhow::Error> {
-        let manifest_path = self.opts.get_manifest_root(self.game_dir).clean();
+        let manifest_path = self.opts.get_manifest_root(self.game_dir);
         let local_mods = match &self.global.local_mods {
             None => PathBuf::new(),
             Some(path) => PathBuf::from(path).clean(),
@@ -121,7 +121,7 @@ impl <'a> ModuleDownload<'a> {
         if mod_name.is_absolute() || local_mods.starts_with("..") {
             bail!("Invalid local value");
         }
-        Ok(manifest_path.join(local_mods).join(mod_name))
+        Ok(manifest_path.join(local_mods)?.join(mod_name)?.to_path_buf())
     }
 }
 
@@ -149,8 +149,6 @@ mod test_retrieve_location {
     use crate::get_module::ModuleDownload;
     use crate::lowercase::lwc;
     use crate::module::global_locations::GlobalLocations;
-    use crate::module::location::github::Github;
-    use crate::module::location::github::GithubDescriptor::Release;
     use crate::module::location::http::Http;
     use crate::module::location::{ConcreteLocation, Location};
     use crate::module::location::source::Source;

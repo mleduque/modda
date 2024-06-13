@@ -6,6 +6,7 @@ use crate::module::components::{Component, Components};
 use crate::lowercase::LwcString;
 use crate::post_install::PostInstall;
 
+use super::disable_condition::DisableCondition;
 use super::file_module_origin::FileModuleOrigin;
 use super::weidu_mod::WeiduMod;
 
@@ -25,6 +26,8 @@ pub struct GeneratedMod {
     pub ignore_warnings: bool,
     #[serde(default)]
     pub allow_overwrite: bool,
+    /// Condition that disables the mod installation (if absent, not disabled)
+    pub disabled_if: Option<DisableCondition>,
 }
 
 impl GeneratedMod {

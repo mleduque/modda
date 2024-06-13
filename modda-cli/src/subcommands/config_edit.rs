@@ -1,7 +1,7 @@
 
 use std::fs::OpenOptions;
 use std::path::PathBuf;
-use std::io::{BufWriter, Result as IoResult, Write};
+use std::io::{Result as IoResult, Write};
 
 use anyhow::{bail, Result};
 use handlebars::Handlebars;

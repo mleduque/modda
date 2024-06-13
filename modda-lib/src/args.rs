@@ -98,11 +98,11 @@ pub struct Install {
 }
 
 impl Install {
-    pub fn get_manifest_root(&self, game_dir: &CanonPath) -> PathBuf {
+    pub fn get_manifest_root(&self, game_dir: &CanonPath) -> CanonPath {
         let manifest = PathBuf::from(&self.manifest_path);
         match manifest.parent() {
-            None => PathBuf::from(game_dir),
-            Some(path) => PathBuf::from(path),
+            None => game_dir.to_owned(),
+            Some(path) => CanonPath::new(path).unwrap_or_else(|_| game_dir.to_owned()),
         }
     }
 }

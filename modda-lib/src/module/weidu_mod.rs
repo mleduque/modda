@@ -7,6 +7,7 @@ use crate::module::components::{Components, Component, FullComponent};
 use crate::lowercase::LwcString;
 use crate::post_install::PostInstall;
 
+use super::disable_condition::DisableCondition;
 use super::install_comment::InstallationComments;
 use super::location::Location;
 use super::module_conf::ModuleConf;
@@ -61,6 +62,8 @@ pub struct WeiduMod {
     pub original_thread: Option<String>,
     pub original_dl: Option<String>,
     pub installation: Option<InstallationComments>,
+    /// Condition that disables the mod installation (if absent, not disabled)
+    pub disabled_if: Option<DisableCondition>,
 }
 
 fn is_false(value: &bool) -> bool { !value }
