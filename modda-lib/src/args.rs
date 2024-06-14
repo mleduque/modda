@@ -45,6 +45,26 @@ pub enum Commands {
     GlobalConfig(ConfigArgs)
 }
 
+impl Commands {
+    pub fn wants_chitin_key(&self) -> bool {
+        match self {
+            Commands::Install(..) => true,
+            Commands:: Search(..) => false,
+            Commands::ListComponents(..) => true,
+            Commands::Invalidate(..) => false,
+            Commands::Reverse(..) => true,
+            Commands::AppendMod(..) => true,
+            Commands::Reset(..) => true,
+            Commands::Discover(..) => true,
+            Commands::Introspect(..) => true,
+            Commands::GlobalConfig(variant) => match variant {
+                ConfigArgs::Edit(..) => false,
+                ConfigArgs::Show(..) => false,
+            }
+        }
+    }
+}
+
 #[derive(Args, Debug, Default)]
 pub struct Install {
 

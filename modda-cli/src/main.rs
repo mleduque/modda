@@ -45,10 +45,12 @@ fn main() -> Result<()> {
     let current_dir = std::env::current_dir()?;
     let current_dir = CanonPath::new(current_dir)?;
 
-    if ensure_chitin_key().is_err() {
-        bail!("Must be run from the game directory (where chitin.key is)");
-    } else {
-        debug!("chitin.key found");
+    if cli.command.wants_chitin_key() {
+        if ensure_chitin_key().is_err() {
+            bail!("Must be run from the game directory (where chitin.key is)");
+        } else {
+            debug!("chitin.key found");
+        }
     }
     let settings = Settings::read_settings(&current_dir)?;
     let config = &settings.combined;
