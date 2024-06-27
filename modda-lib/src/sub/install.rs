@@ -83,7 +83,7 @@ pub fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &
                 bail!("Aborting - proceeding with `install` is unsafe (could uninstall then install modules repeatedly)");
             }
         }
-        let process_result = match module.check_disabled(&opts.get_manifest_root(game_dir)) {
+        let process_result = match module.check_disabled(&opts.get_manifest_root(game_dir), &manifest.manifest_conditions) {
             Ok(DisableOutCome::No(reason)) => {
                 if let Some(reason) = reason {
                     info!("module {name} is not disabled - {reason}", name = module.get_name());

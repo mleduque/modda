@@ -11,6 +11,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::canon_path::CanonPath;
 
+use super::manifest_conditions::ManifestConditions;
+
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
 #[serde(untagged)]
@@ -40,14 +42,16 @@ pub enum DisableCondition {
     All { all: Vec<DisableCondition> },
     /// Disables the module iff the condition inside evaluates to "not disabled".
     Not { not: Box<DisableCondition> },
+    /// Disables the module on a condition defined in the manifest
+    ManifestCondition { manifest_condition: String },
 }
 
 pub trait DisableCheck {
-    fn check(&self, manifest_root: &CanonPath) -> Result<DisableOutCome>;
+    fn check(&self, manifest_root: &CanonPath, manifest_conditions: &ManifestConditions) -> Result<DisableOutCome>;
 }
 
 impl DisableCheck for DisableCondition {
-    fn check(&self, manifest_root: &CanonPath) -> Result<DisableOutCome> {
+    fn check(&self, manifest_root: &CanonPath, manifest_conditions: &ManifestConditions) -> Result<DisableOutCome> {
         match self {
             Self::Because { ref because } => Ok(DisableOutCome::Yes(because.to_string())),
             Self::EnvVar { env_is_set: if_env_set } => {
@@ -62,11 +66,11 @@ impl DisableCheck for DisableCondition {
                 }
             }
             Self::File { in_file, key } => evaluate_file(in_file, key, manifest_root),
-            Self::Any { any } => evaluate_any(any, manifest_root),
-            Self::All { all } => evaluate_all(all, manifest_root),
+            Self::Any { any } => evaluate_any(any, manifest_root, manifest_conditions),
+            Self::All { all } => evaluate_all(all, manifest_root, manifest_conditions),
             Self::Not { not } => {
                 use DisableOutCome::{Yes, No};
-                match not.check(manifest_root) {
+                match not.check(manifest_root, manifest_conditions) {
                     Err(error) => Err(error),
                     Ok(No(None)) => Ok(Yes("Negation of 'not disabled'".to_string())),
                     Ok(No(Some(reason))) =>
@@ -75,15 +79,19 @@ impl DisableCheck for DisableCondition {
                         Ok(No(Some(format!("Negation of condition:\n  disabled because '{reason}'")))),
                 }
             }
+            Self::ManifestCondition { manifest_condition } => match manifest_conditions.get(&manifest_condition) {
+                None => Ok(DisableOutCome::No(Some(format!("manifest global condition {} is not present", manifest_condition)))),
+                Some(condition) => condition.check(manifest_root, manifest_conditions)
+            }
         }
     }
 }
 
 impl DisableCheck for Option<DisableCondition> {
-    fn check(&self, manifest_root: &CanonPath) -> Result<DisableOutCome> {
+    fn check(&self, manifest_root: &CanonPath, manifest_conditions: &ManifestConditions) -> Result<DisableOutCome> {
         match self {
             None => Ok(DisableOutCome::No(None)),
-            Some(condition) => condition.check(manifest_root)
+            Some(condition) => condition.check(manifest_root, manifest_conditions)
         }
     }
 }
@@ -142,11 +150,11 @@ fn file_outcome(captures: Captures, disabled: bool, file_name: &str) -> DisableO
     }
 }
 
-fn evaluate_all(conditions: &[DisableCondition], manifest_root: &CanonPath) -> Result<DisableOutCome> {
+fn evaluate_all(conditions: &[DisableCondition], manifest_root: &CanonPath, manifest_conditions: &ManifestConditions) -> Result<DisableOutCome> {
     conditions.iter().fold_while(
         Ok(DisableOutCome::Yes("all conditions filled".to_string())),
         |acc, condition| {
-            match condition.check(manifest_root) {
+            match condition.check(manifest_root, manifest_conditions) {
                 Err(error) => FoldWhile::Done(Err(error)),
                 Ok(DisableOutCome::Yes(_yes)) => FoldWhile::Continue(acc),
                 Ok(no) => FoldWhile::Done(Ok(no)),
@@ -155,11 +163,11 @@ fn evaluate_all(conditions: &[DisableCondition], manifest_root: &CanonPath) -> R
     ).into_inner()
 }
 
-fn evaluate_any(conditions: &[DisableCondition], manifest_root: &CanonPath) -> Result<DisableOutCome> {
+fn evaluate_any(conditions: &[DisableCondition], manifest_root: &CanonPath, manifest_conditions: &ManifestConditions) -> Result<DisableOutCome> {
     conditions.iter().fold_while(
         Ok(DisableOutCome::No(None)),
         |acc, condition| {
-            match condition.check(manifest_root) {
+            match condition.check(manifest_root, manifest_conditions) {
                 Err(error) => FoldWhile::Done(Err(error)),
                 Ok(DisableOutCome::No(_)) => FoldWhile::Continue(acc),
                 Ok(yes) => FoldWhile::Done(Ok(yes)),
@@ -193,16 +201,19 @@ impl DisableOutCome {
 #[cfg(test)]
 mod test {
 
+    use std::collections::HashMap;
     use std::path::Path;
 
     use crate::canon_path::CanonPath;
     use crate::module::disable_condition::{DisableCheck, DisableCondition, DisableOutCome};
+    use crate::module::manifest_conditions::ManifestConditions;
 
     #[test]
     fn evaluate_unconditional_disable() {
         let because = "I'm testing things".to_string();
         assert_eq!(
-            DisableCondition::Because { because: because.clone() }.check(&CanonPath::new("").unwrap()).unwrap(),
+            DisableCondition::Because { because: because.clone() }
+                .check(&CanonPath::new("").unwrap(), &ManifestConditions::default()).unwrap(),
             DisableOutCome::Yes(because),
         )
     }
@@ -214,7 +225,7 @@ mod test {
         temp_env::with_var(env_var, Some(&value), || {
             assert_eq!(
                 DisableCondition::EnvVar { env_is_set: "MY_ENV_VAR".to_string() }
-                    .check(&CanonPath::new("").unwrap()).unwrap(),
+                    .check(&CanonPath::new("").unwrap(), &ManifestConditions::default()).unwrap(),
                 DisableOutCome::Yes(format!("Environment variable '{}' is set to '{}'", env_var, value)),
             )
         })
@@ -226,7 +237,7 @@ mod test {
         temp_env::with_var(env_var, Some(""), || {
             assert_eq!(
                 DisableCondition::EnvVar { env_is_set: "MY_ENV_VAR".to_string() }
-                    .check(&CanonPath::new("").unwrap()).unwrap(),
+                    .check(&CanonPath::new("").unwrap(), &ManifestConditions::default()).unwrap(),
                 DisableOutCome::No(Some(format!("Environment variable '{}' is empty", env_var))),
             )
         })
@@ -237,7 +248,8 @@ mod test {
         let env_var = "MY_ENV_VAR";
         temp_env::with_var(env_var, None::<String>, || {
             assert_eq!(
-                DisableCondition::EnvVar { env_is_set: "MY_ENV_VAR".to_string() }.check(&CanonPath::new("").unwrap()).unwrap(),
+                DisableCondition::EnvVar { env_is_set: "MY_ENV_VAR".to_string() }
+                    .check(&CanonPath::new("").unwrap(), &ManifestConditions::default()).unwrap(),
                 DisableOutCome::No(Some(format!("Environment variable '{}' is not set", env_var))),
             )
         })
@@ -249,7 +261,7 @@ mod test {
             .join("resources/test/disable");
         assert_eq!(
             DisableCondition::File { in_file: "missing".to_string(), key: "my_key".to_string() }
-                .check(&CanonPath::new(base_path).unwrap()).unwrap(),
+                .check(&CanonPath::new(base_path).unwrap(), &ManifestConditions::default()).unwrap(),
             DisableOutCome::No(Some(format!("File '{}' does not exist", "missing"))),
         )
     }
@@ -262,7 +274,7 @@ mod test {
         let file_name = "example".to_string();
         assert_eq!(
             DisableCondition::File { in_file: file_name.clone(), key: key.clone() }
-                .check(&CanonPath::new(base_path).unwrap()).unwrap(),
+                .check(&CanonPath::new(base_path).unwrap(), &ManifestConditions::default()).unwrap(),
             DisableOutCome::No(Some(format!("Key '{}' not present in file '{}'", key, file_name))),
         )
     }
@@ -275,7 +287,7 @@ mod test {
         let file_name = "example".to_string();
         assert_eq!(
             DisableCondition::File { in_file: file_name.clone(), key: key.clone() }
-                .check(&CanonPath::new(base_path).unwrap()).unwrap(),
+                .check(&CanonPath::new(base_path).unwrap(), &ManifestConditions::default()).unwrap(),
             DisableOutCome::Yes(format!("disabled in file '{file_name}'")),
         )
     }
@@ -288,7 +300,7 @@ mod test {
         let file_name = "example".to_string();
         assert_eq!(
             DisableCondition::File { in_file: file_name.clone(), key: key.clone() }
-                .check(&CanonPath::new(base_path).unwrap()).unwrap(),
+                .check(&CanonPath::new(base_path).unwrap(), &ManifestConditions::default()).unwrap(),
             DisableOutCome::No(Some(format!("not disabled in file '{file_name}'"))),
         )
     }
@@ -301,7 +313,7 @@ mod test {
         let file_name = "example".to_string();
         assert_eq!(
             DisableCondition::File { in_file: file_name.clone(), key: key.clone() }
-                .check(&CanonPath::new(base_path).unwrap()).unwrap(),
+                .check(&CanonPath::new(base_path).unwrap(), &ManifestConditions::default()).unwrap(),
             DisableOutCome::Yes(format!("I don't want this")),
         )
     }
@@ -314,7 +326,7 @@ mod test {
         let file_name = "example".to_string();
         assert_eq!(
             DisableCondition::File { in_file: file_name.clone(), key: key.clone() }
-                .check(&CanonPath::new(base_path).unwrap()).unwrap(),
+                .check(&CanonPath::new(base_path).unwrap(), &ManifestConditions::default()).unwrap(),
             DisableOutCome::No(Some(format!("but this one is ok"))),
         )
     }
@@ -327,7 +339,7 @@ mod test {
         let file_name = "example".to_string();
         assert_eq!(
             DisableCondition::File { in_file: file_name.clone(), key: key.clone() }
-                .check(&CanonPath::new(base_path).unwrap()).unwrap(),
+                .check(&CanonPath::new(base_path).unwrap(), &ManifestConditions::default()).unwrap(),
             DisableOutCome::No(Some(format!("this one is kept"))),
         )
     }
@@ -340,7 +352,8 @@ mod test {
         let file_name = "example".to_string();
         assert!(
             DisableCondition::File { in_file: file_name.clone(), key: key.clone() }
-                .check(&CanonPath::new(base_path).unwrap()).is_err()
+                .check(&CanonPath::new(base_path).unwrap(), &ManifestConditions::default())
+                .is_err()
         )
     }
 
@@ -352,7 +365,7 @@ mod test {
         let file_name = "subdir/example2".to_string();
         assert_eq!(
             DisableCondition::File { in_file: file_name.clone(), key: key.clone() }
-                .check(&CanonPath::new(base_path).unwrap()).unwrap(),
+                .check(&CanonPath::new(base_path).unwrap(), &ManifestConditions::default()).unwrap(),
             DisableOutCome::Yes(format!("disabled in file '{file_name}'")),
         )
     }
@@ -365,7 +378,7 @@ mod test {
         let file_name = "../example".to_string();
         assert!(
             DisableCondition::File { in_file: file_name.clone(), key: key.clone() }
-                .check(&CanonPath::new(base_path).unwrap()).is_err()
+                .check(&CanonPath::new(base_path).unwrap(), &ManifestConditions::default()).is_err()
         )
     }
 
@@ -373,7 +386,7 @@ mod test {
     fn evaluate_any_condition_zero_sub_conditions() {
         assert_eq!(
             DisableCondition::Any { any: vec![]}
-                .check(&CanonPath::new("").unwrap()).unwrap(),
+                .check(&CanonPath::new("").unwrap(), &ManifestConditions::default()).unwrap(),
             DisableOutCome::No(None),
         )
     }
@@ -383,7 +396,7 @@ mod test {
         assert_eq!(
             DisableCondition::Any { any: vec![
                 DisableCondition::Because { because: "no reason".to_string() },
-            ]}.check(&CanonPath::new("").unwrap()).unwrap(),
+            ]}.check(&CanonPath::new("").unwrap(), &ManifestConditions::default()).unwrap(),
             DisableOutCome::Yes("no reason".to_string()),
         )
     }
@@ -396,7 +409,7 @@ mod test {
         assert_eq!(
             DisableCondition::Any { any: vec![
                 DisableCondition::File { in_file: "missing".to_string(), key: "my_key".to_string() },
-            ]}.check(&CanonPath::new(base_path).unwrap()).unwrap(),
+            ]}.check(&CanonPath::new(base_path).unwrap(), &ManifestConditions::default()).unwrap(),
             DisableOutCome::No(None),
         )
     }
@@ -410,7 +423,7 @@ mod test {
             DisableCondition::Any { any: vec![
                 DisableCondition::Because { because: "no reason".to_string() },
                 DisableCondition::File { in_file: "missing".to_string(), key: "my_key".to_string() },
-            ]}.check(&CanonPath::new(base_path).unwrap()).unwrap(),
+            ]}.check(&CanonPath::new(base_path).unwrap(), &ManifestConditions::default()).unwrap(),
             DisableOutCome::Yes("no reason".to_string()),
         )
     }
@@ -424,7 +437,7 @@ mod test {
             DisableCondition::Any { any: vec![
                 DisableCondition::File { in_file: "missing".to_string(), key: "my_key".to_string() },
                 DisableCondition::Because { because: "no reason".to_string() },
-            ]}.check(&CanonPath::new(base_path).unwrap()).unwrap(),
+            ]}.check(&CanonPath::new(base_path).unwrap(), &ManifestConditions::default()).unwrap(),
             DisableOutCome::Yes("no reason".to_string()),
         )
     }
@@ -433,8 +446,8 @@ mod test {
     fn evaluate_all_condition_zero_sub_conditions() {
             assert!(
                 DisableCondition::All { all: vec![] }
-                .check(&CanonPath::new("").unwrap()).unwrap()
-                .is_yes()
+                    .check(&CanonPath::new("").unwrap(), &ManifestConditions::default()).unwrap()
+                    .is_yes()
             )
     }
 
@@ -443,7 +456,7 @@ mod test {
         assert_eq!(
             DisableCondition::All { all: vec![
                 DisableCondition::Because { because: "no reason".to_string() },
-            ]}.check(&CanonPath::new("").unwrap()).unwrap(),
+            ]}.check(&CanonPath::new("").unwrap(), &ManifestConditions::default()).unwrap(),
             DisableOutCome::Yes("all conditions filled".to_string()),
         )
     }
@@ -456,7 +469,7 @@ mod test {
         assert_eq!(
             DisableCondition::All { all: vec![
                 DisableCondition::File { in_file: "missing".to_string(), key: "my_key".to_string() },
-            ]}.check(&CanonPath::new(base_path).unwrap()).unwrap(),
+            ]}.check(&CanonPath::new(base_path).unwrap(), &ManifestConditions::default()).unwrap(),
             DisableOutCome::No(Some("File 'missing' does not exist".to_string())),
         )
     }
@@ -470,7 +483,7 @@ mod test {
             DisableCondition::All { all: vec![
                 DisableCondition::File { in_file: "missing".to_string(), key: "my_key".to_string() },
                 DisableCondition::Because { because: "no reason".to_string() },
-            ]}.check(&CanonPath::new(base_path).unwrap()).unwrap(),
+            ]}.check(&CanonPath::new(base_path).unwrap(), &ManifestConditions::default()).unwrap(),
             DisableOutCome::No(Some("File 'missing' does not exist".to_string())),
         )
     }
@@ -484,7 +497,7 @@ mod test {
             DisableCondition::All { all: vec![
                 DisableCondition::Because { because: "no reason".to_string() },
                 DisableCondition::File { in_file: "missing".to_string(), key: "my_key".to_string() },
-            ]}.check(&CanonPath::new(base_path).unwrap()).unwrap(),
+            ]}.check(&CanonPath::new(base_path).unwrap(), &ManifestConditions::default()).unwrap(),
             DisableOutCome::No(Some("File 'missing' does not exist".to_string())),
         )
     }
@@ -495,7 +508,7 @@ mod test {
             not: Box::new(DisableCondition::Because { because: "no reason".to_string() })
         };
         assert!(
-            not_condition.check(&CanonPath::new("").unwrap()).unwrap()
+            not_condition.check(&CanonPath::new("").unwrap(), &ManifestConditions::default()).unwrap()
                         .is_no()
         )
     }
@@ -510,8 +523,47 @@ mod test {
         };
 
         assert!(
-            not_condition.check(&CanonPath::new(base_path).unwrap()).unwrap()
+            not_condition.check(&CanonPath::new(base_path).unwrap(), &ManifestConditions::default()).unwrap()
                 .is_yes()
+        )
+    }
+
+    #[test]
+    fn evaluate_global_condition_disabled() {
+        let condition = DisableCondition::ManifestCondition { manifest_condition: "my_global_var".to_string() };
+        let manifest_conditions = ManifestConditions::new(HashMap::from([
+            ("my_global_var".to_string(), DisableCondition::Because { because: "it doesn't suit me".to_string() }),
+        ]));
+        assert_eq!(
+            condition.check(&CanonPath::new("").unwrap(), &manifest_conditions).unwrap(),
+            DisableOutCome::Yes("it doesn't suit me".to_string()),
+        )
+    }
+
+    #[test]
+    fn evaluate_global_condition_enabled() {
+        let condition = DisableCondition::ManifestCondition { manifest_condition: "my_global_var".to_string() };
+        let manifest_conditions = ManifestConditions::new(HashMap::from([
+            (
+                "my_global_var".to_string(),
+                DisableCondition::Not { not: Box::new(DisableCondition::Because { because: "it doesn't suit me".to_string() }) },
+            ),
+        ]));
+        assert_eq!(
+            condition.check(&CanonPath::new("").unwrap(), &manifest_conditions).unwrap(),
+            DisableOutCome::No(Some("Negation of condition:\n  disabled because 'it doesn't suit me'".to_string())),
+        )
+    }
+
+    #[test]
+    fn evaluate_global_condition_absent() {
+        let condition = DisableCondition::ManifestCondition { manifest_condition: "my_global_var".to_string() };
+        let manifest_conditions = ManifestConditions::new(HashMap::from([
+            ("some_other_var".to_string(), DisableCondition::Because { because: "it doesn't suit me".to_string() }),
+        ]));
+        assert_eq!(
+            condition.check(&CanonPath::new("").unwrap(), &manifest_conditions).unwrap(),
+            DisableOutCome::No(Some("manifest global condition my_global_var is not present".to_string())),
         )
     }
 }

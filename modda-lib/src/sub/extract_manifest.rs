@@ -13,6 +13,7 @@ use crate::log_parser::{parse_weidu_log, LogRow};
 use crate::lowercase::lwc;
 use crate::module::global_locations::GlobalLocations;
 use crate::module::manifest::Manifest;
+use crate::module::manifest_conditions::ManifestConditions;
 use crate::module::module::Module;
 use crate::module::weidu_mod::BareMod;
 use crate::unique_component::UniqueComponent;
@@ -63,6 +64,7 @@ pub fn generate_manifest(game_dir: &CanonPath, modules: Vec<Module>) -> Result<M
     Ok(Manifest {
         version: "1".to_string(),
         locations : GlobalLocations::default(),
+        manifest_conditions: ManifestConditions::default(),
         global: Global {
             game_language: lang_dir.clone(),
             lang_preferences: default_lang_pref(&lang_dir),

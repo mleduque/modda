@@ -21,6 +21,7 @@ use crate::utils::pathext;
 
 use super::global_locations::{GlobalLocations, LocationRegistry};
 use super::location::ConcreteLocation;
+use super::manifest_conditions::ManifestConditions;
 
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -38,6 +39,10 @@ pub struct Manifest {
     #[serde(default)]
     #[serde(skip_serializing_if = "GlobalLocations::is_empty")]
     pub locations: GlobalLocations,
+    /// List of global conditions
+    #[serde(default)]
+    #[serde(skip_serializing_if = "ManifestConditions::is_empty")]
+    pub manifest_conditions: ManifestConditions,
     /// List of modules
     #[serde(default)]
     #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -242,12 +247,14 @@ fn try_replace_component(re: &Regex, haystack: &str) -> Result<String> {
 #[cfg(test)]
 mod test_deserialize {
 
+    use std::collections::HashMap;
     use std::io::BufReader;
     use std::path::PathBuf;
 
     use crate::canon_path::CanonPath;
     use crate::module::components::{Component, Components, FullComponent};
     use crate::lowercase::lwc;
+    use crate::module::disable_condition::DisableCondition;
     use crate::module::file_module_origin::FileModuleOrigin;
     use crate::module::gen_mod::{GeneratedMod, GenModComponent};
     use crate::module::global_locations::{GlobalLocations, LocationRegistry};
@@ -255,6 +262,7 @@ mod test_deserialize {
     use crate::module::location::http::Http;
     use crate::module::location::{ConcreteLocation, Location};
     use crate::module::location::source::Source;
+    use crate::module::manifest_conditions::ManifestConditions;
     use crate::module::module::Module;
     use crate::module::weidu_mod::WeiduMod;
     use crate::post_install::PostInstall;
@@ -277,6 +285,7 @@ mod test_deserialize {
                     local_files: None,
                 },
                 locations : GlobalLocations::default(),
+                manifest_conditions: ManifestConditions::default(),
                 modules : vec![],
             }
         )
@@ -298,6 +307,7 @@ mod test_deserialize {
                     local_files: None,
                 },
                 locations : GlobalLocations::default(),
+                manifest_conditions: ManifestConditions::default(),
                 modules : vec![
                     Module::Mod {
                         weidu_mod: WeiduMod {
@@ -374,6 +384,7 @@ mod test_deserialize {
                 local_files: None,
             },
             locations : GlobalLocations::default(),
+            manifest_conditions: ManifestConditions::default(),
             modules : vec![
                 Module::Mod {
                     weidu_mod: WeiduMod {
@@ -453,6 +464,7 @@ mod test_deserialize {
                         ..Default::default()
                     }), ..Default::default() })
                 ]).with_external(LocationRegistry::Absolute { path: "/directory/locations.yml".to_owned() }),
+                manifest_conditions: ManifestConditions::default(),
                 modules : vec![],
             }
         )
@@ -474,6 +486,7 @@ mod test_deserialize {
                     local_files: None,
                 },
                 locations : GlobalLocations::from([]),
+                manifest_conditions: ManifestConditions::default(),
                 modules : vec![],
             }
         )
@@ -505,6 +518,7 @@ mod test_deserialize {
                         ..Default::default()
                     }), ..Default::default() })
                 ]).with_external(LocationRegistry::Local { local: "registries/external-locations.yml".to_owned() }),
+                manifest_conditions: ManifestConditions::default(),
                 modules : vec![],
             }
         )
@@ -546,6 +560,7 @@ mod test_deserialize {
                     },
                 ],
                 locations: GlobalLocations::default(),
+                manifest_conditions: ManifestConditions::default(),
             }
         );
     }
@@ -586,6 +601,7 @@ mod test_deserialize {
                 },
             ],
             locations: GlobalLocations::default(),
+            manifest_conditions: ManifestConditions::default(),
         };
         manifest.write(&output_path, true).unwrap();
 
@@ -596,5 +612,42 @@ mod test_deserialize {
 
         assert!(content.contains("- 1 # yaml comment 123"));
         assert!(content.contains("- 2 # comment as field 789"));
+    }
+
+    #[test]
+    fn read_manifest_with_global_condition() {
+        let manifest_root = format!("{}/{}", env!("CARGO_MANIFEST_DIR"), "resources/test");
+        let manifest_path = format!("{}/{}", manifest_root, "manifest_with_global_conditions.yml");
+        let manifest = Manifest::read_path_convert_comments(&PathBuf::from(manifest_path)).unwrap();
+        assert_eq!(
+            manifest,
+            super::Manifest {
+                version : "1".to_string(),
+                global : super::Global {
+                    game_language: "fr_FR".to_string(),
+                    lang_preferences: Some(vec!["french".to_string()]),
+                    ..Default::default()
+                },
+                locations: GlobalLocations::default(),
+                manifest_conditions: ManifestConditions::new(HashMap::from([
+                    ("a".to_string(), DisableCondition::Because { because: "this is really not good".to_string() }),
+                    ("b".to_string(), DisableCondition::Not {
+                        not: Box::new(DisableCondition::Because { because: "it really works!".to_string() }),
+                    }),
+                    ("c".to_string(), DisableCondition::All {
+                        all: vec![
+                            DisableCondition::EnvVar { env_is_set: "my_env_var".to_string() },
+                            DisableCondition::File { in_file: "my_file.txt".to_string(), key: "my_key".to_string() },
+                        ],
+                    }),
+                    ("d".to_string(), DisableCondition::Any {
+                        any: vec![
+                            DisableCondition::ManifestCondition { manifest_condition: "a".to_string() },
+                        ],
+                    }),
+                ])),
+                modules: vec! [],
+            }
+        );
     }
 }

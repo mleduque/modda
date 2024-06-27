@@ -9,6 +9,7 @@ pub mod install_comment;
 pub mod language;
 pub mod location;
 pub mod manifest;
+pub mod manifest_conditions;
 pub mod module;
 pub mod module_conf;
 pub mod pre_copy_command;

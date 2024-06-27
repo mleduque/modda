@@ -12,6 +12,7 @@ use crate::post_install::{PostInstallExec, PostInstallOutcome};
 
 use super::disable_condition::{DisableCheck, DisableOutCome};
 use super::gen_mod::GeneratedMod;
+use super::manifest_conditions::ManifestConditions;
 use super::weidu_mod::WeiduMod;
 
 
@@ -57,10 +58,10 @@ impl Module {
         }
     }
 
-    pub fn check_disabled(&self, manifest_root: &CanonPath) -> Result<DisableOutCome> {
+    pub fn check_disabled(&self, manifest_root: &CanonPath, manifest_conditions: &ManifestConditions) -> Result<DisableOutCome> {
         match self {
-            Module::Mod { weidu_mod } => weidu_mod.disabled_if.check(manifest_root),
-            Module::Generated { gen } => gen.disabled_if.check(manifest_root),
+            Module::Mod { weidu_mod } => weidu_mod.disabled_if.check(manifest_root, manifest_conditions),
+            Module::Generated { gen } => gen.disabled_if.check(manifest_root, manifest_conditions),
         }
     }
 }

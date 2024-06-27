@@ -1,0 +1,21 @@
+version: "1"
+global:
+  lang_dir: "fr_FR"
+  lang_preferences:
+    - french
+manifest_conditions:
+  a:
+    because: this is really not good
+  b:
+    not:
+      because: it really works!
+  c:
+    all:
+      - env_is_set: my_env_var
+      - file:
+        in_file: my_file.txt
+        key: my_key
+  d:
+    any:
+      - manifest_condition: a
+
