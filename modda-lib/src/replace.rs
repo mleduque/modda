@@ -15,12 +15,16 @@ pub struct ReplaceSpec {
     /// List of 'globs' that describe files to process _inside the mod root directory_.
     /// https://git-scm.com/docs/gitignore#_pattern_format
     pub file_globs: Vec<String>,
-    /// A regexp (syntax: https://docs.rs/regex/latest/regex/#syntax)
+    /// A regexp or plain string to search and replace.
     /// Assumes UTF-8 content.
     pub replace: String,
     /// the replacement string (may use capture group as positional/integer or named capture group)
     pub with: String,
+    /// If set, put a limit of the depth (from mod root) where the file to modify are found.
     pub max_depth: Option<usize>,
+    /// If true, The ` replace` property is a regular expression<br>
+    /// Syntax: <https://docs.rs/regex/latest/regex/#syntax><br>
+    /// <https://regex101.com/> has a `rust` flavour.
     #[serde(default)]
     pub regex: bool,
 }
