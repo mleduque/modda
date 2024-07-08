@@ -3,6 +3,7 @@ use std::path::PathBuf;
 
 use anyhow::{bail, Result};
 use chrono::Local;
+use log::info;
 use path_clean::PathClean;
 
 use crate::apply_patch::patch_module;
@@ -90,10 +91,24 @@ impl <'a> ModuleDownload<'a> {
         let dest = CanonPath::new(dest)?;
         self.extractor.extract_files(&archive, &mod_name , location)?;
         let copied = Some(Local::now());
-        patch_module(&dest, &mod_name , &location.patch, &self.opts).await?;
+
+        // modifications : patch then patches (in order) the replace
+        if let Some(patch) = &location.patch {
+            patch_module(&dest, &mod_name , &patch, &self.opts).await?;
+            info!("Single patch applied (`patch` property)")
+        }
+        if location.patches.is_empty() {
+            info!("No `patches` property (or empty).")
+        } else {
+            for patch in &location.patches {
+                patch_module(&dest, &mod_name , &patch, &self.opts).await?;
+            }
+            info!("Patches applied (`patches` property)")
+        }
         let patched = Some(Local::now());
         replace_module(&dest, &mod_name , &location.replace)?;
         let replaced = Some(Local::now());
+
         Ok(SetupTimeline { start, downloaded, copied, patched, replaced, configured: None })
     }
 

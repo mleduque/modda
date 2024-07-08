@@ -236,6 +236,93 @@ mod test_deserialize {
     }
 
     #[test]
+    fn deserialize_mod_with_relative_file_patch() {
+        let yaml = r#"
+        name: DlcMerger
+        location:
+            http: https://module.location
+            patch:
+                relative: patches/my_patch.diff
+        components:
+            - 1
+        "#;
+        let module: WeiduMod = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(
+            module,
+            WeiduMod {
+                name: lwc!("DlcMerger"),
+                components: Components::List(vec! [ Component::Simple(1) ]),
+                location: Some(Location::Concrete {
+                    concrete: ConcreteLocation {
+                        source: Source::Http(Http {
+                            http: "https://module.location".to_owned(),
+                            rename: None,
+                            ..Default::default()
+                        }),
+                        layout: Layout::default(),
+                        patch: Some(PatchDesc {
+                            patch_source: PatchSource::Relative {
+                                relative: "patches/my_patch.diff".to_owned(),
+                            },
+                            encoding: PatchEncoding::UTF8,
+                        }),
+                        ..ConcreteLocation::default()
+                    }
+                }),
+                ..WeiduMod::default()
+            }
+        );
+    }
+
+    #[test]
+    fn deserialize_mod_with_relative_file_patch_list() {
+        let yaml = r#"
+        name: DlcMerger
+        location:
+            http: https://module.location
+            patches:
+                - relative: patches/my_patch1.diff
+                - relative: patches/my_patch2.diff
+        components:
+            - 1
+        "#;
+        let module: WeiduMod = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(
+            module,
+            WeiduMod {
+                name: lwc!("DlcMerger"),
+                components: Components::List(vec! [ Component::Simple(1) ]),
+                location: Some(Location::Concrete {
+                    concrete: ConcreteLocation {
+                        source: Source::Http(Http {
+                            http: "https://module.location".to_owned(),
+                            rename: None,
+                            ..Default::default()
+                        }),
+                        layout: Layout::default(),
+                        patches: vec![
+                            PatchDesc {
+                                patch_source: PatchSource::Relative {
+                                    relative: "patches/my_patch1.diff".to_owned(),
+                                },
+                                encoding: PatchEncoding::UTF8,
+                            },
+                            PatchDesc {
+                                patch_source: PatchSource::Relative {
+                                    relative: "patches/my_patch2.diff".to_owned(),
+                                },
+                                encoding: PatchEncoding::UTF8,
+                            },
+                        ],
+                        ..ConcreteLocation::default()
+                    }
+                }),
+                ..WeiduMod::default()
+            }
+        );
+    }
+
+    #[test]
     fn deserialize_mod_with_inline_patch() {
         let yaml = include_str!("../../resources/test/read_inline_patch/module_with_inline_patch.yaml");
         let module: WeiduMod = serde_yaml::from_str(yaml).unwrap();

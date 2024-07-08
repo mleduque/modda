@@ -11,26 +11,21 @@ use crate::canon_path::CanonPath;
 use crate::lowercase::LwcString;
 use crate::patch_source::{PatchDesc, PatchEncoding, PatchSource};
 
-pub async fn patch_module(game_dir: &CanonPath, module_name: &LwcString, patch_loc: &Option<PatchDesc>, opts: &Install) -> Result<()> {
-    match patch_loc {
-        None => Ok(()),
-        Some(patch) => {
-            info!("mod {} needs patching", module_name);
-            let patch_content = match &patch.patch_source {
-                PatchSource::Http { http: _http } => { bail!("not implemented yet - patch from source {:?}", patch); }
-                PatchSource::Relative { relative } => {
-                    let diff = match read_patch_relative(relative, game_dir, opts, patch.encoding) {
-                        Ok(diff) => diff,
-                        Err(error) => bail!("Error reading relative patch at {} for {}\n -> {:?}",
-                                                relative, module_name, error),
-                    };
-                    Cow::Owned(diff)
-                }
-                PatchSource::Inline { inline } => Cow::Borrowed(inline),
+pub async fn patch_module(game_dir: &CanonPath, module_name: &LwcString, patch: &PatchDesc, opts: &Install) -> Result<()> {
+    info!("mod {} needs patching", module_name);
+    let patch_content = match &patch.patch_source {
+        PatchSource::Http { http: _http } => { bail!("not implemented yet - patch from source {:?}", patch); }
+        PatchSource::Relative { relative } => {
+            let diff = match read_patch_relative(relative, game_dir, opts, patch.encoding) {
+                Ok(diff) => diff,
+                Err(error) => bail!("Error reading relative patch at {} for {}\n -> {:?}",
+                                        relative, module_name, error),
             };
-            patch_module_with_content(game_dir, module_name, &*patch_content, patch.encoding)
+            Cow::Owned(diff)
         }
-    }
+        PatchSource::Inline { inline } => Cow::Borrowed(inline),
+    };
+    patch_module_with_content(game_dir, module_name, &*patch_content, patch.encoding)
 }
 
 fn patch_module_with_content(game_dir: &CanonPath, module_name: &LwcString, patch: &str, encoding: PatchEncoding) -> Result<()> {
