@@ -13,8 +13,8 @@ use zip::ZipArchive;
 use zip::result::{ZipResult, ZipError};
 
 use crate::canon_path::CanonPath;
-use crate::module::location::ConcreteLocation;
 use crate::lowercase::{LwcString, lwc};
+use crate::module::location::location::ConcreteLocation;
 use crate::module::pre_copy_command::PrecopyCommand;
 use crate::config::{Config, ExtractorCommand};
 

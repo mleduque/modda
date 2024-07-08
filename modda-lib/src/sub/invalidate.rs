@@ -1,8 +1,8 @@
 
 use crate::args::Invalidate;
 use crate::cache::Cache;
-use crate::module::location::{ConcreteLocation, Location};
 use crate::lowercase::lwc;
+use crate::module::location::location::{ConcreteLocation, Location};
 use crate::module::location::source::Source;
 use crate::module::manifest::Manifest;
 use crate::module::module::Module;

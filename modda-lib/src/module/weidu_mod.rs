@@ -9,7 +9,7 @@ use crate::post_install::PostInstall;
 
 use super::disable_condition::DisableCondition;
 use super::install_comment::InstallationComments;
-use super::location::Location;
+use super::location::location::Location;
 use super::module_conf::ModuleConf;
 
 /** Definition of a mod. */

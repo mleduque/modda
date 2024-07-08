@@ -20,7 +20,7 @@ use crate::module::module::Module;
 use crate::utils::pathext;
 
 use super::global_locations::{GlobalLocations, LocationRegistry};
-use super::location::ConcreteLocation;
+use super::location::location::ConcreteLocation;
 use super::manifest_conditions::ManifestConditions;
 
 
@@ -260,7 +260,7 @@ mod test_deserialize {
     use crate::module::global_locations::{GlobalLocations, LocationRegistry};
     use crate::module::location::github::GithubDescriptor;
     use crate::module::location::http::Http;
-    use crate::module::location::{ConcreteLocation, Location};
+    use crate::module::location::location::{ConcreteLocation, Location};
     use crate::module::location::source::Source;
     use crate::module::manifest_conditions::ManifestConditions;
     use crate::module::module::Module;

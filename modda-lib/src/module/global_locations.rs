@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::lowercase::LwcString;
 
-use super::location::ConcreteLocation;
+use super::location::location::ConcreteLocation;
 
 ///
 /// Global locations, used when a mod is not present in game directory and has no location defined in-site.

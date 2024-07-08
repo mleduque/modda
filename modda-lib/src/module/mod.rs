@@ -29,7 +29,7 @@ mod test_deserialize {
     use crate::module::gen_mod::{GeneratedMod, GenModComponent};
     use crate::module::location::github::{Github, GithubDescriptor};
     use crate::module::location::http::Http;
-    use crate::module::location::{ConcreteLocation, Location};
+    use crate::module::location::location::{ConcreteLocation, Location};
     use crate::module::location::source::Source;
     use crate::module::module_conf::{ModuleConf, ModuleContent};
     use crate::module::weidu_mod::WeiduMod;
