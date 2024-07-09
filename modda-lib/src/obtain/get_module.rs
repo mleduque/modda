@@ -15,12 +15,14 @@ use crate::download::Downloader;
 use crate::global::Global;
 use crate::module::global_locations::GlobalLocations;
 use crate::module::location::location::{ConcreteLocation, Location};
+use crate::module::location::replace::ReplaceSpec;
 use crate::module::location::source::Source;
 use crate::timeline::SetupTimeline;
 use crate::lowercase::LwcString;
 use crate::module::weidu_mod::WeiduMod;
-use crate::replace::ReplaceSpec;
 use crate::config::Config;
+
+use super::get_options::GetOptions;
 
 pub struct ModuleDownload<'a> {
     pub global: &'a Global,
@@ -51,9 +53,9 @@ impl <'a> ModuleDownload<'a> {
     // at some point, I'd like to have a pool of downloads with installations done
     // concurrently as soon as modules are there
     #[tokio::main]
-    pub async fn get_module(&self, module: &WeiduMod) -> Result<SetupTimeline> {
+    pub async fn get_module(&self, module: &WeiduMod, get_options: &GetOptions) -> Result<SetupTimeline> {
         let concrete_location = self.get_module_location(module)?;
-        self.get_mod_from_concrete_location(concrete_location, &module.name).await
+        self.get_mod_from_concrete_location(concrete_location, &module.name, get_options).await
     }
 
     pub fn get_module_location(&'a self, module: &'a WeiduMod) -> Result<&'a ConcreteLocation> {
@@ -79,7 +81,8 @@ impl <'a> ModuleDownload<'a> {
     /// 4. move content (whole or part, according to `layout`) to the game directory -> the mod content is in the game directory
     /// 5. apply `patch` in-place (on mod data in game directory)
     /// 5. apply `replace` in-place (on mod data in game directory)
-    async fn get_mod_from_concrete_location(&self, location: &ConcreteLocation, mod_name: &LwcString) -> Result<SetupTimeline> {
+    async fn get_mod_from_concrete_location(&self, location: &ConcreteLocation,
+                                            mod_name: &LwcString, get_options: &GetOptions) -> Result<SetupTimeline> {
         let start = Local::now();
         let archive = match self.retrieve_location(&location, &mod_name).await {
             Ok(archive) => archive,
@@ -106,7 +109,7 @@ impl <'a> ModuleDownload<'a> {
             info!("Patches applied (`patches` property)")
         }
         let patched = Some(Local::now());
-        replace_module(&dest, &mod_name , &location.replace)?;
+        replace_module(&dest, &mod_name , &location.replace, get_options)?;
         let replaced = Some(Local::now());
 
         Ok(SetupTimeline { start, downloaded, copied, patched, replaced, configured: None })
@@ -141,11 +144,11 @@ impl <'a> ModuleDownload<'a> {
 }
 
 
-fn replace_module(game_dir: &CanonPath, module_name: &LwcString, replace: &Option<Vec<ReplaceSpec>>) -> Result<()> {
+fn replace_module(game_dir: &CanonPath, module_name: &LwcString, replace: &Option<Vec<ReplaceSpec>>, get_options: &GetOptions) -> Result<()> {
     if let Some(specs) = replace {
         for spec in specs {
             let mod_path = game_dir.join_path(module_name.as_ref());
-            spec.exec(&mod_path)?;
+            spec.exec(&mod_path, get_options)?;
         }
     }
     Ok(())
@@ -154,14 +157,12 @@ fn replace_module(game_dir: &CanonPath, module_name: &LwcString, replace: &Optio
 #[cfg(test)]
 mod test_retrieve_location {
 
-
     use std::collections::HashMap;
     use std::path::PathBuf;
 
     use crate::global::Global;
     use crate::download::Downloader;
     use crate::args::Install;
-    use crate::get_module::ModuleDownload;
     use crate::lowercase::lwc;
     use crate::module::global_locations::GlobalLocations;
     use crate::module::location::http::Http;
@@ -171,6 +172,7 @@ mod test_retrieve_location {
     use crate:: config::Config;
     use crate::canon_path::CanonPath;
     use crate::cache::Cache;
+    use crate::obtain::get_module::ModuleDownload;
 
     use anyhow::bail;
     use faux::when;
@@ -181,7 +183,6 @@ mod test_retrieve_location {
     * */
     #[tokio::test]
     async fn retrieve_http_location() {
-
         let location = ConcreteLocation {
             source: Source::Http(Http {
                 http: "http://example.com/some_mod.zip".to_string(),

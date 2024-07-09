@@ -5,6 +5,7 @@ use clap_derive::{Parser, Subcommand, Args};
 
 use crate::canon_path::CanonPath;
 use crate::lowercase::LwcString;
+use crate::obtain::get_options::StrictReplaceAction;
 use crate::progname::PROGNAME;
 
 
@@ -115,6 +116,10 @@ pub struct Install {
     /// If set along with `--record`, will not ask for confirmation before recording.
     #[arg(long, requires = "record")]
     pub record_with_comment_as_field: bool,
+
+    /// Decides what to do if a replace action has a `strict` property that is not obeyed.<br>
+    #[arg(long)]
+    pub check_replace: StrictReplaceAction,
 }
 
 impl Install {

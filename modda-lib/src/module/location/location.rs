@@ -11,8 +11,9 @@ use void::Void;
 
 use crate::lowercase::{LwcString, lwc};
 use crate::module::pre_copy_command::PrecopyCommand;
-use crate::{archive_layout::Layout, patch_source::PatchDesc, replace::ReplaceSpec};
+use crate::{archive_layout::Layout, patch_source::PatchDesc};
 
+use super::replace::ReplaceSpec;
 use super::source::Source;
 
 
@@ -101,12 +102,15 @@ pub fn location_deser<'de, D>(deserializer: D) -> Result<Location, D::Error>
 
 #[cfg(test)]
 mod test_deserialize {
+    use std::num::NonZeroU32;
+
     use crate::lowercase::lwc;
     use crate::module::location::github::{GitBranch, Github, GithubDescriptor};
     use crate::module::location::location::{ConcreteLocation, Location};
+    use crate::module::location::replace::ReplaceSpec;
     use crate::module::location::source::Source;
+    use crate::module::location::strict_replace::CheckReplace;
     use crate::module::weidu_mod::WeiduMod;
-    use crate::replace::ReplaceSpec;
     use crate::module::refresh::RefreshCondition::Never;
 
     #[test]
@@ -213,7 +217,7 @@ mod test_deserialize {
     }
 
     #[test]
-    fn deserialize_location_with_replace_property() {
+    fn deserialize_location_with_replace_property_without_strict() {
         let yaml = r#"
             github_user: "pseudo"
             repository: my-big-project
@@ -238,12 +242,311 @@ mod test_deserialize {
                         file_globs: vec!["README.md".to_string()],
                         replace: "typpo".to_string(),
                         with: "typo".to_string(),
-                        ..Default::default()
+                        check: CheckReplace::BoolValue(false),
+                        max_depth: None,
+                        regex: false,
                     }
                 ]),
                 ..Default::default()
             }
         )
+    }
+
+    #[test]
+    fn deserialize_location_with_replace_property_with_strict_false() {
+        let yaml = r#"
+            github_user: "pseudo"
+            repository: my-big-project
+            tag: v1
+            replace:
+                - file_globs: [README.md]
+                  replace: typpo
+                  with: typo
+                  check: false
+        "#;
+        let location : ConcreteLocation = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(
+            location,
+            ConcreteLocation {
+                source: Source::Github(Github {
+                    github_user: "pseudo".to_string(),
+                    repository: "my-big-project".to_string(),
+                    descriptor: GithubDescriptor::Tag { tag: "v1".to_string() },
+                    ..Default::default()
+                }),
+                replace: Some(vec![
+                    ReplaceSpec {
+                        file_globs: vec!["README.md".to_string()],
+                        replace: "typpo".to_string(),
+                        with: "typo".to_string(),
+                        max_depth: None,
+                        regex: false,
+                        check: CheckReplace::BoolValue(false),
+                    }
+                ]),
+                ..Default::default()
+            }
+        )
+    }
+
+    #[test]
+    fn deserialize_location_with_replace_property_with_strict_true() {
+        let yaml = r#"
+            github_user: "pseudo"
+            repository: my-big-project
+            tag: v1
+            replace:
+                - file_globs: [README.md]
+                  replace: typpo
+                  with: typo
+                  check: true
+        "#;
+        let location : ConcreteLocation = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(
+            location,
+            ConcreteLocation {
+                source: Source::Github(Github {
+                    github_user: "pseudo".to_string(),
+                    repository: "my-big-project".to_string(),
+                    descriptor: GithubDescriptor::Tag { tag: "v1".to_string() },
+                    ..Default::default()
+                }),
+                replace: Some(vec![
+                    ReplaceSpec {
+                        file_globs: vec!["README.md".to_string()],
+                        replace: "typpo".to_string(),
+                        with: "typo".to_string(),
+                        max_depth: None,
+                        regex: false,
+                        check: CheckReplace::BoolValue(true),
+                    }
+                ]),
+                ..Default::default()
+            }
+        )
+    }
+
+    #[test]
+    fn deserialize_location_with_replace_property_with_correct_exact_strict_property() {
+        let yaml = r#"
+            github_user: "pseudo"
+            repository: my-big-project
+            tag: v1
+            replace:
+                - file_globs: [README.md]
+                  replace: typpo
+                  with: typo
+                  check: 123
+        "#;
+        let location : ConcreteLocation = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(
+            location,
+            ConcreteLocation {
+                source: Source::Github(Github {
+                    github_user: "pseudo".to_string(),
+                    repository: "my-big-project".to_string(),
+                    descriptor: GithubDescriptor::Tag { tag: "v1".to_string() },
+                    ..Default::default()
+                }),
+                replace: Some(vec![
+                    ReplaceSpec {
+                        file_globs: vec!["README.md".to_string()],
+                        replace: "typpo".to_string(),
+                        with: "typo".to_string(),
+                        max_depth: None,
+                        regex: false,
+                        check: CheckReplace::Exact(NonZeroU32::new(123).unwrap()),
+                    }
+                ]),
+                ..Default::default()
+            }
+        )
+    }
+
+    #[test]
+    fn deserialize_location_with_replace_property_with_negative_exact_strict_property() {
+        let yaml = r#"
+            github_user: "pseudo"
+            repository: my-big-project
+            tag: v1
+            replace:
+                - file_globs: [README.md]
+                  replace: typpo
+                  with: typo
+                  check: -123
+        "#;
+        serde_yaml::from_str::<ConcreteLocation>(yaml).unwrap_err();
+    }
+
+    #[test]
+    fn deserialize_location_with_replace_property_with_zero_exact_strict_property() {
+        let yaml = r#"
+            github_user: "pseudo"
+            repository: my-big-project
+            tag: v1
+            replace:
+                - file_globs: [README.md]
+                  replace: typpo
+                  with: typo
+                  check: 0
+        "#;
+        serde_yaml::from_str::<ConcreteLocation>(yaml).unwrap_err();
+    }
+
+    #[test]
+    fn deserialize_location_with_replace_property_with_correct_more_than_strict_property() {
+        let yaml = r#"
+            github_user: "pseudo"
+            repository: my-big-project
+            tag: v1
+            replace:
+                - file_globs: [README.md]
+                  replace: typpo
+                  with: typo
+                  check: ">123"
+        "#;
+        let location : ConcreteLocation = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(
+            location,
+            ConcreteLocation {
+                source: Source::Github(Github {
+                    github_user: "pseudo".to_string(),
+                    repository: "my-big-project".to_string(),
+                    descriptor: GithubDescriptor::Tag { tag: "v1".to_string() },
+                    ..Default::default()
+                }),
+                replace: Some(vec![
+                    ReplaceSpec {
+                        file_globs: vec!["README.md".to_string()],
+                        replace: "typpo".to_string(),
+                        with: "typo".to_string(),
+                        max_depth: None,
+                        regex: false,
+                        check: CheckReplace::MoreThan(NonZeroU32::new(123).unwrap()),
+                    }
+                ]),
+                ..Default::default()
+            }
+        )
+    }
+
+    #[test]
+    fn deserialize_location_with_replace_property_with_correct_more_than_strict_property_with_spaces() {
+        let yaml = r#"
+            github_user: "pseudo"
+            repository: my-big-project
+            tag: v1
+            replace:
+                - file_globs: [README.md]
+                  replace: typpo
+                  with: typo
+                  check: " >   123"
+        "#;
+        let location : ConcreteLocation = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(
+            location,
+            ConcreteLocation {
+                source: Source::Github(Github {
+                    github_user: "pseudo".to_string(),
+                    repository: "my-big-project".to_string(),
+                    descriptor: GithubDescriptor::Tag { tag: "v1".to_string() },
+                    ..Default::default()
+                }),
+                replace: Some(vec![
+                    ReplaceSpec {
+                        file_globs: vec!["README.md".to_string()],
+                        replace: "typpo".to_string(),
+                        with: "typo".to_string(),
+                        max_depth: None,
+                        regex: false,
+                        check: CheckReplace::MoreThan(NonZeroU32::new(123).unwrap()),
+                    }
+                ]),
+                ..Default::default()
+            }
+        )
+    }
+
+    #[test]
+    fn deserialize_location_with_replace_property_with_zero_more_than_strict_property() {
+        let yaml = r#"
+            github_user: "pseudo"
+            repository: my-big-project
+            tag: v1
+            replace:
+                - file_globs: [README.md]
+                  replace: typpo
+                  with: typo
+                  check: ">0"
+        "#;
+        let location : ConcreteLocation = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(
+            location,
+            ConcreteLocation {
+                source: Source::Github(Github {
+                    github_user: "pseudo".to_string(),
+                    repository: "my-big-project".to_string(),
+                    descriptor: GithubDescriptor::Tag { tag: "v1".to_string() },
+                    ..Default::default()
+                }),
+                replace: Some(vec![
+                    ReplaceSpec {
+                        file_globs: vec!["README.md".to_string()],
+                        replace: "typpo".to_string(),
+                        with: "typo".to_string(),
+                        max_depth: None,
+                        regex: false,
+                        check: CheckReplace::BoolValue(true),
+                    }
+                ]),
+                ..Default::default()
+            }
+        )
+    }
+
+    #[test]
+    fn deserialize_location_with_replace_property_with_negative_more_than_strict_property() {
+        let yaml = r#"
+            github_user: "pseudo"
+            repository: my-big-project
+            tag: v1
+            replace:
+                - file_globs: [README.md]
+                  replace: typpo
+                  with: typo
+                  check: >-123
+        "#;
+        serde_yaml::from_str::<ConcreteLocation>(yaml).unwrap_err();
+    }
+
+    #[test]
+    fn deserialize_location_with_replace_property_with_invalid_more_than_strict_property() {
+        let yaml = r#"
+            github_user: "pseudo"
+            repository: my-big-project
+            tag: v1
+            replace:
+                - file_globs: [README.md]
+                  replace: typpo
+                  with: typo
+                  check: >12z
+        "#;
+        serde_yaml::from_str::<ConcreteLocation>(yaml).unwrap_err();
+    }
+
+    #[test]
+    fn deserialize_location_with_replace_property_with_invalid_strict_property() {
+        let yaml = r#"
+            github_user: "pseudo"
+            repository: my-big-project
+            tag: v1
+            replace:
+                - file_globs: [README.md]
+                  replace: typpo
+                  with: typo
+                  check: abcde
+        "#;
+        serde_yaml::from_str::<ConcreteLocation>(yaml).unwrap_err();
     }
 
     #[test]

@@ -9,8 +9,8 @@ use anyhow::Result;
 use crate::args::Install;
 use crate::canon_path::CanonPath;
 use crate::file_installer::FileInstaller;
-use crate::get_module::ModuleDownload;
 use crate::config::Config;
+use crate::obtain::get_module::ModuleDownload;
 
 
 pub struct ModdaContext<'a> {
