@@ -3,7 +3,7 @@ use std::cell::RefCell;
 use std::io::BufWriter;
 use std::path::{PathBuf, Path};
 
-use ansi_term::Colour::{Blue, Green, Red};
+use nu_ansi_term::Color::{Blue, Green, Red};
 use anyhow::{Result, anyhow, bail};
 use chrono::Local;
 use itertools::Itertools;

@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use ansi_term::Colour::Green;
+use nu_ansi_term::Color::Green;
 use log::info;
 use serde::{Deserialize, Serialize};
 

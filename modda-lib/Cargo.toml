@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ansi_term = "0.12.1"
+nu-ansi-term = "0.50.1"
 anyhow = "1.0.83"
 bytes = "1.6.0"
 clap = "~4.4.18" # locked because 4.5+ has msrv 1.74 with rust-build-action failing on https://github.com/rust-build/rust-build.action/issues/88

@@ -4,7 +4,8 @@ use std::io::Write;
 use std::path::Path;
 
 
-use ansi_term::{Colour, Colour::{Green, Red, Yellow}};
+use nu_ansi_term::Color;
+use nu_ansi_term::Color::{Green, Red, Yellow};
 use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::bail;
@@ -161,13 +162,13 @@ pub fn process_generated_mod(gen_mod: &GeneratedMod, modda_context: &ModdaContex
 }
 
 
-fn ignore_warnings(module: &WeiduMod, index: usize, total: usize) -> (String, Colour) {
+fn ignore_warnings(module: &WeiduMod, index: usize, total: usize) -> (String, Color) {
     let message = format!("module {modname} (index={idx}/{total}) finished with warning (status=3), ignoring as requested",
                                 modname =  module.name, idx = index, total = total);
     (message, Yellow)
 }
 
-fn fail_warnings(module: &WeiduMod, index: usize, total: usize) -> (String, Colour) {
+fn fail_warnings(module: &WeiduMod, index: usize, total: usize) -> (String, Color) {
     let message = format!("module {modname} (index={idx}/{total}) finished with warning (status=3), stopping as requested",
                                 modname =  module.name, idx = index, total = total);
     (message, Red)
