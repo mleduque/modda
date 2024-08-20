@@ -8,15 +8,17 @@ use patch::{Patch, Line};
 
 use crate::args::Install;
 use crate::canon_path::CanonPath;
+use crate::global::Global;
 use crate::lowercase::LwcString;
 use crate::patch_source::{PatchDesc, PatchEncoding, PatchSource};
 
-pub async fn patch_module(game_dir: &CanonPath, module_name: &LwcString, patch: &PatchDesc, opts: &Install) -> Result<()> {
+pub async fn patch_module(game_dir: &CanonPath, module_name: &LwcString, patch: &PatchDesc,
+                            opts: &Install, global: &Global) -> Result<()> {
     info!("mod {} needs patching", module_name);
     let patch_content = match &patch.patch_source {
         PatchSource::Http { http: _http } => { bail!("not implemented yet - patch from source {:?}", patch); }
         PatchSource::Relative { relative } => {
-            let diff = match read_patch_relative(relative, game_dir, opts, patch.encoding) {
+            let diff = match read_patch_relative(relative, game_dir, opts, global, patch.encoding) {
                 Ok(diff) => diff,
                 Err(error) => bail!("Error reading relative patch at {} for {}\n -> {:?}",
                                         relative, module_name, error),
@@ -156,26 +158,33 @@ fn apply_patch<'a>(old_lines: &'a[String], diff: &'a Patch) -> Result<Vec<&'a st
 }
 
 
-fn read_patch_relative(relative: &str, game_dir: &CanonPath, opts: &Install, encoding: PatchEncoding) -> Result<String> {
+fn read_patch_relative(relative: &str, game_dir: &CanonPath, opts: &Install,
+                        global: &Global, encoding: PatchEncoding) -> Result<String> {
     let relative_path = PathBuf::from(relative);
     if !relative_path.is_relative() {
         bail!("path is not relative: {:?}", relative);
     }
-    match PathBuf::from(&opts.manifest_path).parent() {
-        None => info!("Couldn't get manifest file parent - continue search with other locations"),
-        Some(parent) => {
-            let parent = match CanonPath::new(parent) {
+    let manifest_loc = match PathBuf::from(&opts.manifest_path).parent() {
+        Some(path) => match CanonPath::new(path) {
                 Ok(parent) => parent,
                 Err(error) => bail!("failed to canonalize manifest parent\n -> {:?}", error),
-            };
-            if let Ok(diff) = read_patch_from(relative_path.as_path(), &parent, encoding) {
-                return Ok(diff);
-            }
-        }
+            },
+        None => game_dir.to_owned(),
+    };
+    let local_patches_loc = match &global.local_patches {
+        Some(path) => match manifest_loc.join(path) {
+            Err(err) => bail!("Could not canonicalize local patches path\n{err}"),
+            Ok(path) => path
+        },
+        None => manifest_loc
+    };
+    if !local_patches_loc.path().exists() {
+        bail!("Local patches path {local_patches_loc:?} doesn't exist");
     }
-    match read_patch_from(&relative_path, game_dir, encoding) {
+
+    match read_patch_from(relative_path.as_path(), &local_patches_loc, encoding) {
         Ok(diff) => Ok(diff),
-        Err(_error) => bail!("Couldn't find relative patch file {}", relative),
+        Err(error) => bail!("Couldn't find relative patch file {}\n{error}", relative),
     }
 }
 

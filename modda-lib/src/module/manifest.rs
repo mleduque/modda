@@ -280,7 +280,7 @@ mod test_deserialize {
                 global : super::Global {
                     game_language: "fr_FR".to_string(),
                     lang_preferences: Some(vec!["french".to_string()]),
-                    patch_path: None,
+                    local_patches: None,
                     local_mods: None,
                     local_files: None,
                 },
@@ -302,7 +302,7 @@ mod test_deserialize {
                 global : super::Global {
                     game_language: "fr_FR".to_string(),
                     lang_preferences: Some(vec!["french".to_string()]),
-                    patch_path: None,
+                    local_patches: None,
                     local_mods: Some("mods".to_string()),
                     local_files: None,
                 },
@@ -379,7 +379,7 @@ mod test_deserialize {
             global : super::Global {
                 game_language: "fr_FR".to_string(),
                 lang_preferences: Some(vec!["french".to_string()]),
-                patch_path: None,
+                local_patches: None,
                 local_mods: Some("mods".to_string()),
                 local_files: None,
             },
@@ -451,7 +451,7 @@ mod test_deserialize {
                 global : super::Global {
                     game_language: "fr_FR".to_string(),
                     lang_preferences: Some(vec!["french".to_string()]),
-                    patch_path: None,
+                    local_patches: None,
                     local_mods: Some("mods".to_string()),
                     local_files: None,
                 },
@@ -481,7 +481,7 @@ mod test_deserialize {
                 global : super::Global {
                     game_language: "fr_FR".to_string(),
                     lang_preferences: Some(vec!["french".to_string()]),
-                    patch_path: None,
+                    local_patches: None,
                     local_mods: Some("mods".to_string()),
                     local_files: None,
                 },
@@ -505,7 +505,7 @@ mod test_deserialize {
                 global : super::Global {
                     game_language: "fr_FR".to_string(),
                     lang_preferences: Some(vec!["french".to_string()]),
-                    patch_path: None,
+                    local_patches: None,
                     local_mods: Some("mods".to_string()),
                     local_files: None,
                 },

@@ -18,7 +18,7 @@ pub struct Global {
     ///   syntax here https://docs.rs/regex/1.5.4/regex/#syntax
     ///   ex. `["#rx#^fran[cç]ais", french, english]`
     pub lang_preferences: Option<Vec<String>>,
-    pub patch_path: Option<String>,
+    pub local_patches: Option<String>,
     /// Path from manifest root (yml file location directory) where "local" mods can be found.
     pub local_mods: Option<String>,
     pub local_files: Option<String>,

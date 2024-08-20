@@ -97,14 +97,14 @@ impl <'a> ModuleDownload<'a> {
 
         // modifications : patch then patches (in order) the replace
         if let Some(patch) = &location.patch {
-            patch_module(&dest, &mod_name , &patch, &self.opts).await?;
+            patch_module(&dest, &mod_name , &patch, &self.opts, &self.global).await?;
             info!("Single patch applied (`patch` property)")
         }
         if location.patches.is_empty() {
             info!("No `patches` property (or empty).")
         } else {
             for patch in &location.patches {
-                patch_module(&dest, &mod_name , &patch, &self.opts).await?;
+                patch_module(&dest, &mod_name , &patch, &self.opts,&self.global).await?;
             }
             info!("Patches applied (`patches` property)")
         }
