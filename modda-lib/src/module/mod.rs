@@ -300,7 +300,7 @@ mod test_deserialize {
                             ..Default::default()
                         }),
                         layout: Layout::default(),
-                        patches: vec![
+                        patches: Some(vec![
                             PatchDesc {
                                 patch_source: PatchSource::Relative {
                                     relative: "patches/my_patch1.diff".to_owned(),
@@ -313,7 +313,7 @@ mod test_deserialize {
                                 },
                                 encoding: PatchEncoding::UTF8,
                             },
-                        ],
+                        ]),
                         ..ConcreteLocation::default()
                     }
                 }),

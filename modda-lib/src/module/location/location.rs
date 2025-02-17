@@ -60,7 +60,7 @@ pub struct ConcreteLocation {
     pub layout: Layout,
     pub patch: Option<PatchDesc>,
     #[serde(default)]
-    pub patches: Vec<PatchDesc>,
+    pub patches: Option<Vec<PatchDesc>>,
     /// regex-based search and replace, runs after patch.
     pub replace: Option<Vec<ReplaceSpec>>,
     pub precopy: Option<PrecopyCommand>,

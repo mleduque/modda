@@ -100,13 +100,15 @@ impl <'a> ModuleDownload<'a> {
             patch_module(&dest, &mod_name , &patch, &self.opts, &self.global).await?;
             info!("Single patch applied (`patch` property)")
         }
-        if location.patches.is_empty() {
-            info!("No `patches` property (or empty).")
-        } else {
-            for patch in &location.patches {
+        match &location.patches {
+            None => info!("No `patches` property."),
+            Some(patches) if patches.is_empty() => info!("`patches` property is empty."),
+            Some(patches) => {
+            for patch in patches {
                 patch_module(&dest, &mod_name , &patch, &self.opts,&self.global).await?;
             }
             info!("Patches applied (`patches` property)")
+        }
         }
         let patched = Some(Local::now());
         replace_module(&dest, &mod_name , &location.replace, get_options)?;
