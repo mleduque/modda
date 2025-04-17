@@ -77,8 +77,13 @@ impl <'a> Extractor<'a> {
     /// Extracts (if needed) the archive to a temporary location.
     /// Returns the path to the extracted content.
     fn extract_files_to_temp(&self, archive: &Path, module_name: &LwcString, location: &ConcreteLocation) -> Result<ExtractLocation> {
+        debug!("extracting (?) file archive {:?} to temporary location.", archive);
+        if !archive.exists() {
+            bail!("archive for '{module_name}' was not found ({:?}", archive);
+        }
         if archive.is_dir() {
             if location.precopy.is_some() {
+                info!("archive is a directory so this is a simple copy (required because precopy is defined)");
                 // precopy could modify the content so make a temp copy to preserve original
                 let temp_dir_attempt = self.create_temp_dir();
                 let temp_dir = match temp_dir_attempt {
@@ -89,6 +94,7 @@ impl <'a> Extractor<'a> {
                 debug!("Directory content was copied to {:?} for precopy command", temp_dir);
                 Ok(ExtractLocation::Temp(temp_dir))
             } else {
+                debug!("... actually no, this is a directory and there is no precopy so not needed");
                 // will not change the source directory, no need to create a temporary copy
                 Ok(ExtractLocation::Regular(archive.to_owned()))
             }

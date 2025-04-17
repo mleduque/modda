@@ -152,6 +152,8 @@ fn replace_module(game_dir: &CanonPath, module_name: &LwcString, replace: &Optio
             let mod_path = game_dir.join_path(module_name.as_ref());
             spec.exec(&mod_path, get_options)?;
         }
+    } else {
+        info!("No `replace` property");
     }
     Ok(())
 }

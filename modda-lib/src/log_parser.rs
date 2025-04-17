@@ -115,7 +115,7 @@ fn check_installed_components(module: &WeiduMod) -> Result<Vec<u32>> {
                 Err(err) => bail!("Could not check installed components\n -> {:?}", err),
             };
             let installed = log_rows.iter().map(|row| row.component_index).collect::<HashSet<_>>();
-            info!("installed={:?}", installed);
+            info!("installed component indexes={:?}", installed);
 
             let missing = components.iter().filter(|component|
                 !installed.contains(&component.index())

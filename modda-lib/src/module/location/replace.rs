@@ -4,7 +4,7 @@ use std::{borrow::Cow, fs::{copy, rename, File, OpenOptions}, io::{Read, Write},
 use anyhow::{Result, bail};
 
 use globwalk::{GlobWalker, GlobWalkerBuilder};
-use indoc::indoc;
+use indoc::formatdoc;
 use log::{debug, error, info, warn};
 use regex::{Regex, Replacer};
 use serde::{Deserialize, Serialize};
@@ -134,10 +134,10 @@ impl ReplaceSpec {
             (_, Ignore) => Ok(()),
             (false, Fail) => bail!("strict `replace` condition {:?} was not upheld (actual replacements: {replace_count}", self.check),
             (false, Ask) => {
-                let prompt = indoc!(r#"
-                Replace action has condition {req:?} that was broken (actual count {count}
+                let prompt = formatdoc!(r#"
+                Replace action has condition {:?} that was broken (actual count {}
                 Do you which to ignore the issue and continue the installation?
-                "#);
+                "#, self.check, replace_count);
                 match dialoguer::Confirm::new().with_prompt(prompt).interact()? {
                     true => Ok(()),
                     false => bail!("User interrupted installation (reason: condition {:?} was not upheld (actual replacements: {replace_count}", self.check),
