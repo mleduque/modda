@@ -108,7 +108,8 @@ fn get_old_content(old: &CanonPath, encoding: PatchEncoding) -> Result<String> {
     } else {
         match decode_file(old, encoding) {
             Ok(lines) => Ok(lines),
-            Err(error) => bail!("Error decoding file {:?}\n -> {:?}", old, error),
+            Err(error) => bail!("Error decoding file {:?} with encoding {:?}\n -> {:?}",
+                                        old, encoding, error),
         }
     }
 }
