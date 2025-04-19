@@ -26,6 +26,7 @@ use crate::run_weidu::run_weidu_install;
 use crate::modda_context::ModdaContext;
 
 pub struct ProcessResult {
+    pub was_disabled: bool,
     pub stop: bool,
     pub timeline: InstallTimeline,
 }
@@ -131,7 +132,7 @@ pub fn process_weidu_mod(weidu_mod: &WeiduMod, modda_context: &ModdaContext, man
             true
         }
     };
-    Ok(ProcessResult { stop: must_stop, timeline: install_timeline })
+    Ok(ProcessResult { was_disabled: false, stop: must_stop, timeline: install_timeline })
 }
 
 pub fn process_generated_mod(gen_mod: &GeneratedMod, modda_context: &ModdaContext,

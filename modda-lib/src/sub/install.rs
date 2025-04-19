@@ -98,6 +98,7 @@ pub fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &
             Ok(DisableOutCome::Yes(reason)) => {
                 info!("module {name} is disabled - {reason}", name = module.get_name());
                 ProcessResult {
+                    was_disabled: true,
                     stop: false,
                     timeline: InstallTimeline::new(lwc!(&format!("{} - disabled", module.get_name())), Local::now()),
                 }
@@ -105,12 +106,13 @@ pub fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &
             Err(error) => {
                 info!("disabled check for module {name} failed\n  {error}", name = module.get_name());
                 ProcessResult {
+                    was_disabled: false,
                     stop: true,
                     timeline: InstallTimeline::new(lwc!(&format!("{} - disable check (failed)", module.get_name())), Local::now()),
                 }
             }
         };
-        let ProcessResult { stop: finished, timeline } = process_result;
+        let ProcessResult { was_disabled,stop: finished, timeline } = process_result;
         timelines.push(timeline);
 
         if finished {
@@ -130,7 +132,7 @@ pub fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &
         }
         // Now check we actually installed all requested components
         // if dry_run, nothing will have been installed at all so don't check
-        if !opts.dry_run {
+        if !opts.dry_run && !was_disabled {
             check_install_complete(&module)?
         }
     }
