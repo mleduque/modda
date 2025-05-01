@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::path::PathBuf;
 use std::process::{Stdio, Command};
 use std::{path::Path, collections::HashSet};
@@ -351,7 +352,7 @@ fn extract_zip_archive<P: AsRef<Path>>(zip_archive: &mut ZipArchive<BufReader<Fi
         let mut file = zip_archive.by_index(i)?;
         let filepath = file
             .enclosed_name()
-            .ok_or(ZipError::InvalidArchive("Invalid file path"))?;
+            .ok_or(ZipError::InvalidArchive(Cow::Owned("Invalid file path".to_string())))?;
 
         let outpath = directory.as_ref().join(filepath);
 
