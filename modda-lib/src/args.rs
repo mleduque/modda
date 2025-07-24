@@ -98,7 +98,7 @@ pub struct Install {
     pub output: Option<String>,
 
     /// If set to true, the mods will be downloaded and copied in the game directory, but not actually installed.
-    #[arg(long)]
+    #[arg(long, short = 'd')]
     pub dry_run: bool,
 
     /// If set, prints duration information.

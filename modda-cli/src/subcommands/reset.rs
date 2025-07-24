@@ -26,7 +26,7 @@ pub fn reset(args: &Reset, weidu_context: &WeiduContext) -> Result<()> {
     };
     let weidu_mod = match target_module {
         Module::Mod { weidu_mod } => weidu_mod.clone(),
-        Module::Generated { gen } => gen.as_weidu(),
+        Module::Generated { generated } => generated.as_weidu(),
     };
     let components = match weidu_mod.components {
         Components::None => bail!("Can't reset to a module fragment which doesn't install components (`components: none`)"),

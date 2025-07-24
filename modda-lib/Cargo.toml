@@ -1,7 +1,7 @@
 [package]
 name = "modda-lib"
 version = "1.9.0"
-edition = "2021"
+edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -24,7 +24,7 @@ getrandom = { version = "=0.2.10" } # until build action support macos sdk >= 10
 globwalk = "0.9.1"
 handlebars = "6.3.2"
 humantime = "2.1.0"
-indicatif = "0.17.8"
+indicatif = "0.18.0"
 indoc ="2.0.5"
 itertools = "0.14.0"
 lazy_static = "1.4.0"
@@ -45,7 +45,7 @@ tar = "0.4.40"
 tokio = { version = "1.44.2", features = ["full"] }
 tempfile = "3.10.1"
 url = "2.5.0"
-zip = "2.6.1"
+zip = "4.3.0"
 void = "1.0.2"
 
 [dev-dependencies]

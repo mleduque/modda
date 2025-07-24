@@ -3,7 +3,7 @@ name = "modda"
 version = "1.9.0"
 authors = ["Mickaël <mleduque@gmail.com>"]
 description = "Weidu install automation"
-edition = "2021"
+edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

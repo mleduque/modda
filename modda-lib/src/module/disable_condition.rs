@@ -53,7 +53,7 @@ pub trait DisableCheck {
 impl DisableCheck for DisableCondition {
     fn check(&self, manifest_root: &CanonPath, manifest_conditions: &ManifestConditions) -> Result<DisableOutCome> {
         match self {
-            Self::Because { ref because } => Ok(DisableOutCome::Yes(because.to_string())),
+            Self::Because { because } => Ok(DisableOutCome::Yes(because.to_string())),
             Self::EnvVar { env_is_set: if_env_set } => {
                 match std::env::var_os(if_env_set) {
                     Some(s) if s.is_empty() =>

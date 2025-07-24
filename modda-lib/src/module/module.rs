@@ -19,28 +19,28 @@ use super::weidu_mod::WeiduMod;
 #[derive(Debug, PartialEq, Clone)]
 pub enum Module {
     Mod { weidu_mod: WeiduMod },
-    Generated { gen: GeneratedMod }
+    Generated { generated: GeneratedMod }
 }
 
 impl Module {
     pub fn get_name(&self) -> &LwcString {
         match self {
             Module::Mod { weidu_mod } => &weidu_mod.name,
-            Module::Generated { gen } => &gen.gen_mod,
+            Module::Generated { generated } => &generated.gen_mod,
         }
     }
 
     pub fn get_description(&self) -> &Option<String> {
         match self {
             Module::Mod { weidu_mod } => &weidu_mod.description,
-            Module::Generated { gen } => &gen.description,
+            Module::Generated { generated } => &generated.description,
         }
     }
 
     pub fn get_components(&self) -> Components {
         match self {
             Module::Mod { weidu_mod } => weidu_mod.components.clone(),
-            Module::Generated { gen } => Components::List(vec![Component::Simple(gen.component.index)]),
+            Module::Generated { generated } => Components::List(vec![Component::Simple(generated.component.index)]),
         }
     }
 
@@ -54,14 +54,14 @@ impl Module {
     pub fn exec_post_install(&self, mod_name: &LwcString) -> PostInstallOutcome {
         match self {
             Module::Mod { weidu_mod } => weidu_mod.post_install.exec(mod_name),
-            Module::Generated { gen } => gen.post_install.exec(mod_name),
+            Module::Generated { generated } => generated.post_install.exec(mod_name),
         }
     }
 
     pub fn check_disabled(&self, manifest_root: &CanonPath, manifest_conditions: &ManifestConditions) -> Result<DisableOutCome> {
         match self {
             Module::Mod { weidu_mod } => weidu_mod.disabled_if.check(manifest_root, manifest_conditions),
-            Module::Generated { gen } => gen.disabled_if.check(manifest_root, manifest_conditions),
+            Module::Generated { generated } => generated.disabled_if.check(manifest_root, manifest_conditions),
         }
     }
 }
@@ -84,7 +84,7 @@ impl <'de> Deserialize<'de> for Module {
                     }
                     (false, true) => {
                         GeneratedMod::deserialize(helper.into_deserializer())
-                            .map(|gen| Module::Generated { gen })
+                            .map(|generated| Module::Generated { generated })
                             .map_err(serde::de::Error::custom)
                     }
                     _ => Err(serde::de::Error::custom("'modules' item must have only one of 'name' or 'gen_mod'")),
@@ -101,7 +101,7 @@ impl Serialize for Module {
             where S: serde::Serializer {
         match self {
             Module::Mod { weidu_mod } => weidu_mod.serialize(serializer),
-            Module::Generated { gen } => gen.serialize(serializer),
+            Module::Generated { generated } => generated.serialize(serializer),
         }
     }
 }

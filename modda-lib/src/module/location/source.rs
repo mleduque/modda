@@ -40,7 +40,7 @@ impl Source {
         use Source::*;
         use url::{Url, Host};
         match self {
-            Http(self::Http { ref http, .. }) => {
+            Http(self::Http { http, .. }) => {
                 let url = match Url::parse(http) {
                     Ok(url) => url,
                     Err(error) => bail!("Couldn't parse location url {}\n -> {:?}", http, error),
@@ -62,7 +62,7 @@ impl Source {
     pub fn save_name(&self, module_name: &LwcString) -> Result<PathBuf> {
         use Source::*;
         match self {
-            Http(super::http::Http { ref http, ref rename,.. }) => {
+            Http(super::http::Http { http, rename,.. }) => {
                 match rename {
                     Some(rename) => Ok(PathBuf::from(rename)),
                     None => {

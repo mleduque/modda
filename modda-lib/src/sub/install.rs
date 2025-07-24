@@ -91,8 +91,8 @@ pub fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &
                 match module {
                     Module::Mod { weidu_mod } =>
                         install_weidu(weidu_mod, &modda_context, &manifest, opts, index, real_index)?,
-                    Module::Generated { gen } =>
-                        process_generated_mod(gen, &modda_context, &manifest, real_index)?,
+                    Module::Generated { generated } =>
+                        process_generated_mod(generated, &modda_context, &manifest, real_index)?,
                 }
             }
             Ok(DisableOutCome::Yes(reason)) => {
