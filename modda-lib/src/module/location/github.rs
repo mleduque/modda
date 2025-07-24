@@ -70,7 +70,10 @@ fn decode_auth(spec: &str) -> Result<HeaderMap> {
                 }).flatten();
             let token = match token {
                 None => bail!("Github personal access token named `{}` was not found in credentials file", token_key),
-                Some(token) => token,
+                Some(token) => {
+                    info!("Using Github personal access token named `{}`", token_key);
+                    token
+                }
             };
 
             let mut result = HeaderMap::new();
