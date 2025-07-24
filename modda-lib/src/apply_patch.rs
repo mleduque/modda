@@ -14,7 +14,7 @@ use crate::patch_source::{PatchDesc, PatchEncoding, PatchSource};
 
 pub async fn patch_module(game_dir: &CanonPath, module_name: &LwcString, patch: &PatchDesc,
                             opts: &Install, global: &Global) -> Result<()> {
-    info!("mod {} needs patching", module_name);
+    info!("mod {} needs patching ({:?})", module_name, patch.patch_source);
     let patch_content = match &patch.patch_source {
         PatchSource::Http { http: _http } => { bail!("not implemented yet - patch from source {:?}", patch); }
         PatchSource::Relative { relative } => {
@@ -121,7 +121,11 @@ fn apply_patch<'a>(old_lines: &'a[String], diff: &'a Patch) -> Result<Vec<&'a st
         info!("apply hunk {} of {}", idx + 1, diff.hunks.len());
         debug!("hunk {}", hunk);
         while old_line + 1 < hunk.old_range.start {
-            new_lines.push(old_lines[old_line as usize].as_str());
+            let old_line_content = match old_lines.get(old_line as usize) {
+                None => bail!("Patch does not apply cleanly (no line {})", old_line),
+                Some(line) => line
+            };
+            new_lines.push(old_line_content.as_str());
             old_line += 1;
         }
         for line in &hunk.lines {
@@ -130,8 +134,8 @@ fn apply_patch<'a>(old_lines: &'a[String], diff: &'a Patch) -> Result<Vec<&'a st
                 Line::Context(s) => {
                     let context_line = &old_lines[old_line as usize];
                     if !str_equals_ignore_cr(context_line, s) {
-                        bail!("patch hunk doesn't apply (actual context line '{:?}'):\n{}",
-                                context_line.as_bytes(), hunk);
+                        bail!("patch hunk doesn't apply (actual context line '{:?}'):\n{}\n{}",
+                                context_line.as_bytes(), context_line, hunk);
                     }
                     new_lines.push(s);
                     old_line += 1;
