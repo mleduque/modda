@@ -7,6 +7,7 @@ use std::fs::File;
 use std::io::{BufReader, self};
 
 use globwalk::GlobWalkerBuilder;
+use itertools::Itertools;
 use log::{debug, info};
 use anyhow::{bail, Result, anyhow};
 use tempfile::TempDir;
@@ -78,7 +79,7 @@ impl <'a> Extractor<'a> {
     /// Extracts (if needed) the archive to a temporary location.
     /// Returns the path to the extracted content.
     fn extract_files_to_temp(&self, archive: &Path, module_name: &LwcString, location: &ConcreteLocation) -> Result<ExtractLocation> {
-        debug!("extracting (?) file archive {:?} to temporary location.", archive);
+        debug!("extracting (maybe?) file archive {:?} to temporary location.", archive);
         if !archive.exists() {
             bail!("archive for '{module_name}' was not found ({:?}", archive);
         }
@@ -236,7 +237,12 @@ impl <'a> Extractor<'a> {
 
     fn move_from_temp_dir(&self, temp_dir: &Path, module_name: &LwcString, location: &ConcreteLocation) -> Result<()> {
         let items = match self.files_to_move(temp_dir, module_name, location) {
-            Ok(items) => items,
+            Ok(items) => {
+                debug!("Moving files from temp dir:\n{}", items.iter().map(|pbuf|
+                    format!("- {}", pbuf.to_string_lossy().to_string())
+                ).join("\n"));
+                items
+            }
             Err(error) => bail!("Failed to prepare list of files to move\n -> {:?}", error),
         };
         let copy_options = fs_extra::dir::CopyOptions {
@@ -348,11 +354,14 @@ impl <'a> Extractor<'a> {
 fn extract_zip_archive<P: AsRef<Path>>(zip_archive: &mut ZipArchive<BufReader<File>>, directory: P) -> ZipResult<()> {
     use std::fs;
 
+    debug!("archive contains {} entries", zip_archive.len());
     for i in 0..zip_archive.len() {
         let mut file = zip_archive.by_index(i)?;
         let filepath = file
             .enclosed_name()
             .ok_or(ZipError::InvalidArchive(Cow::Owned("Invalid file path".to_string())))?;
+
+        debug!("extracting {filepath:?}");
 
         let outpath = directory.as_ref().join(filepath);
 
