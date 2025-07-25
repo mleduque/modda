@@ -9,7 +9,7 @@ use log::{debug, error, info, warn};
 use regex::{Regex, Replacer};
 use serde::{Deserialize, Serialize};
 
-use crate::{obtain::get_options::{GetOptions, StrictReplaceAction}, utils::pathext::append_extension};
+use crate::{apply_patch, obtain::get_options::{GetOptions, StrictReplaceAction}, patch_source::PatchEncoding, utils::pathext::append_extension};
 
 use super::strict_replace::CheckReplace;
 
@@ -37,6 +37,9 @@ pub struct ReplaceSpec {
     /// - if set to `>XXX` (for example `>123`) check there were more than XXX replacements done.
     #[serde(default)]
     pub check: CheckReplace,
+    /// Encoding of the file to modify
+    #[serde(default)]
+    pub encoding: PatchEncoding,
 }
 
 impl ReplaceSpec {
@@ -146,18 +149,9 @@ impl ReplaceSpec {
     }
 
     fn apply_replace(&self, file_path: &PathBuf, regex: &Regex) -> Result<ReplaceResult> {
-        let mut file = match File::open(file_path) {
-            Err(err) => bail!("apply_replace - fail to open old file {:?} - {}", file_path, err),
-            Ok(file) => file,
-        };
-        let mut buf = vec![];
-        if let Err(err) = file.read_to_end(&mut buf) {
-            bail!("apply_replace: could not read content of file {file_path:?}\n  {err}")
-        }
-
-        let content = match String::from_utf8(buf) {
-            Err(err)  => bail!("apply_replace: content of {file_path:?} does not appear to be UTF8\n  {err}"),
-            Ok(what) => what,
+        let content = match apply_patch::decode_file(&file_path, self.encoding) {
+            Ok(content) => content,
+            Err(err) => bail!("apply_replace: could not read content of file {file_path:?}\n  {err}")
         };
         self.apply_replace_content(regex, &content)
     }
@@ -198,6 +192,7 @@ mod replace_tests {
 
     use crate::module::location::replace::{ReplaceSpec, CheckReplace};
     use crate::obtain::get_options::{GetOptions, StrictReplaceAction};
+    use crate::patch_source::PatchEncoding;
     use crate::utils::read_all::read_all;
 
     #[test]
@@ -220,6 +215,7 @@ mod replace_tests {
             max_depth: Some(1),
             regex: true,
             check: CheckReplace::BoolValue(false),
+            encoding: PatchEncoding::UTF8,
         };
         let get_options = GetOptions { strict_replace: StrictReplaceAction::Fail };
         replace_spec.exec(&test_dir, &get_options).unwrap();
@@ -255,6 +251,7 @@ mod replace_tests {
             max_depth: Some(1),
             regex: true,
             check: CheckReplace::BoolValue(false),
+            encoding: PatchEncoding::UTF8,
         };
         let get_options = GetOptions { strict_replace: StrictReplaceAction::Fail };
         replace_spec.exec(&test_dir, &get_options).unwrap();
@@ -290,6 +287,7 @@ mod replace_tests {
             max_depth: Some(1),
             regex: false,
             check: CheckReplace::BoolValue(false),
+            encoding: PatchEncoding::UTF8,
         };
         let get_options = GetOptions { strict_replace: StrictReplaceAction::Fail };
         replace_spec.exec(&test_dir, &get_options).unwrap();
@@ -328,6 +326,7 @@ mod replace_tests {
             max_depth: Some(1),
             regex: false,
             check: CheckReplace::BoolValue(true),
+            encoding: PatchEncoding::UTF8,
         };
         let get_options = GetOptions { strict_replace: StrictReplaceAction::Fail };
         replace_spec.exec(&test_dir, &get_options).unwrap();
@@ -362,6 +361,7 @@ mod replace_tests {
             max_depth: Some(1),
             regex: false,
             check: CheckReplace::BoolValue(true),
+            encoding: PatchEncoding::UTF8,
         };
         let get_options = GetOptions { strict_replace: StrictReplaceAction::Fail };
         replace_spec.exec(&test_dir, &get_options).unwrap_err();
@@ -390,6 +390,7 @@ mod replace_tests {
             max_depth: Some(1),
             regex: false,
             check: CheckReplace::Exact(NonZeroU32::new(2u32).unwrap()),
+            encoding: PatchEncoding::UTF8,
         };
         let get_options = GetOptions { strict_replace: StrictReplaceAction::Fail };
         replace_spec.exec(&test_dir, &get_options).unwrap();
@@ -424,6 +425,7 @@ mod replace_tests {
             max_depth: Some(1),
             regex: false,
             check: CheckReplace::Exact(NonZeroU32::new(3u32).unwrap()),
+            encoding: PatchEncoding::UTF8,
         };
         let get_options = GetOptions { strict_replace: StrictReplaceAction::Fail };
         replace_spec.exec(&test_dir, &get_options).unwrap_err();
@@ -452,6 +454,7 @@ mod replace_tests {
             max_depth: Some(1),
             regex: false,
             check: CheckReplace::Exact(NonZeroU32::new(1u32).unwrap()),
+            encoding: PatchEncoding::UTF8,
         };
         let get_options = GetOptions { strict_replace: StrictReplaceAction::Fail };
         replace_spec.exec(&test_dir, &get_options).unwrap_err();
@@ -480,6 +483,7 @@ mod replace_tests {
             max_depth: Some(1),
             regex: false,
             check: CheckReplace::MoreThan(NonZeroU32::new(2u32).unwrap()),
+            encoding: PatchEncoding::UTF8,
         };
         let get_options = GetOptions { strict_replace: StrictReplaceAction::Fail };
         replace_spec.exec(&test_dir, &get_options).unwrap();
@@ -514,6 +518,7 @@ mod replace_tests {
             max_depth: Some(1),
             regex: false,
             check: CheckReplace::MoreThan(NonZeroU32::new(3u32).unwrap()),
+            encoding: PatchEncoding::UTF8,
         };
         let get_options = GetOptions { strict_replace: StrictReplaceAction::Fail };
         replace_spec.exec(&test_dir, &get_options).unwrap_err();

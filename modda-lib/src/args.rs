@@ -118,8 +118,8 @@ pub struct Install {
     pub record_with_comment_as_field: bool,
 
     /// Decides what to do if a replace action has a `strict` property that is not obeyed.<br>
-    #[arg(long, default_value = "ask")]
-    pub check_replace: StrictReplaceAction,
+    #[arg(long)]
+    pub check_replace: Option<StrictReplaceAction>,
 }
 
 impl Install {

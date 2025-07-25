@@ -173,7 +173,7 @@ mod test_retrieve_location {
     use crate::module::location::location::{ConcreteLocation, Location};
     use crate::module::location::source::Source;
     use crate::module::weidu_mod::WeiduMod;
-    use crate:: config::Config;
+    use crate:: config::{Config, DefaultOptions};
     use crate::canon_path::CanonPath;
     use crate::cache::Cache;
     use crate::obtain::get_module::ModuleDownload;
@@ -208,6 +208,7 @@ mod test_retrieve_location {
             ignore_current_dir_weidu: None,
             extractors: HashMap::new(),
             code_editor: None,
+            defaults: None,
         };
 
         let expected_dest = PathBuf::from("/cache_path/http/example.com");
@@ -349,6 +350,7 @@ mod test_retrieve_location {
             ignore_current_dir_weidu: None,
             extractors: HashMap::new(),
             code_editor: None,
+            defaults: None,
         };
 
 
@@ -399,6 +401,7 @@ mod test_retrieve_location {
             ignore_current_dir_weidu: None,
             extractors: HashMap::new(),
             code_editor: None,
+            defaults: None,
         };
 
 

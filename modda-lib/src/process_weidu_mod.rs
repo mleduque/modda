@@ -1,4 +1,5 @@
 
+use std::default;
 use std::io::BufWriter;
 use std::io::Write;
 use std::path::Path;
@@ -12,8 +13,10 @@ use anyhow::bail;
 use chrono::Local;
 use log::info;
 
+use crate::config::DefaultOptions;
 use crate::module::manifest::Manifest;
 use crate::obtain::get_options::GetOptions;
+use crate::obtain::get_options::StrictReplaceAction;
 use crate::timeline::InstallTimeline;
 use crate::timeline::SetupTimeline;
 use crate::module::gen_mod::GeneratedMod;
@@ -43,7 +46,15 @@ pub fn process_weidu_mod(weidu_mod: &WeiduMod, modda_context: &ModdaContext, man
         Ok(tp2) => tp2,
         Err(_) => {
             // if tp2 not found, mod must be fetched from location (if any)
-            let get_options = GetOptions { strict_replace: opts.check_replace };
+            let get_options = GetOptions {
+                strict_replace: opts.check_replace.unwrap_or(
+                    if let Some(DefaultOptions { check_replace: Some(value) }) = modda_context.config.defaults{
+                        value
+                    } else {
+                        StrictReplaceAction::default()
+                    }
+                )
+            };
             let setup_log = match module_downloader.get_module(&weidu_mod, &get_options) {
                 Err(error) => {
                     let message = format!("module {name} (index={idx}/{len}) download/installation failed, stopping.",

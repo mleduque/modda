@@ -112,6 +112,7 @@ mod test_deserialize {
     use crate::module::location::strict_replace::CheckReplace;
     use crate::module::weidu_mod::WeiduMod;
     use crate::module::refresh::RefreshCondition::Never;
+    use crate::patch_source::PatchEncoding;
 
     #[test]
     fn deserialize_source_github_branch() {
@@ -245,6 +246,45 @@ mod test_deserialize {
                         check: CheckReplace::BoolValue(false),
                         max_depth: None,
                         regex: false,
+                        encoding: PatchEncoding::UTF8,
+                    }
+                ]),
+                ..Default::default()
+            }
+        )
+    }
+
+    #[test]
+    fn deserialize_location_with_replace_property_encoding_specified() {
+        let yaml = r#"
+            github_user: "pseudo"
+            repository: my-big-project
+            tag: v1
+            replace:
+                - file_globs: [README.md]
+                  replace: typpo
+                  with: typo
+                  encoding: ISO8859_15
+        "#;
+        let location : ConcreteLocation = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(
+            location,
+            ConcreteLocation {
+                source: Source::Github(Github {
+                    github_user: "pseudo".to_string(),
+                    repository: "my-big-project".to_string(),
+                    descriptor: GithubDescriptor::Tag { tag: "v1".to_string() },
+                    ..Default::default()
+                }),
+                replace: Some(vec![
+                    ReplaceSpec {
+                        file_globs: vec!["README.md".to_string()],
+                        replace: "typpo".to_string(),
+                        with: "typo".to_string(),
+                        check: CheckReplace::BoolValue(false),
+                        max_depth: None,
+                        regex: false,
+                        encoding: PatchEncoding::ISO8859_15,
                     }
                 ]),
                 ..Default::default()
@@ -282,6 +322,7 @@ mod test_deserialize {
                         max_depth: None,
                         regex: false,
                         check: CheckReplace::BoolValue(false),
+                        encoding: PatchEncoding::UTF8,
                     }
                 ]),
                 ..Default::default()
@@ -319,6 +360,7 @@ mod test_deserialize {
                         max_depth: None,
                         regex: false,
                         check: CheckReplace::BoolValue(true),
+                        encoding: PatchEncoding::UTF8,
                     }
                 ]),
                 ..Default::default()
@@ -356,6 +398,7 @@ mod test_deserialize {
                         max_depth: None,
                         regex: false,
                         check: CheckReplace::Exact(NonZeroU32::new(123).unwrap()),
+                        encoding: PatchEncoding::UTF8,
                     }
                 ]),
                 ..Default::default()
@@ -423,6 +466,7 @@ mod test_deserialize {
                         max_depth: None,
                         regex: false,
                         check: CheckReplace::MoreThan(NonZeroU32::new(123).unwrap()),
+                        encoding: PatchEncoding::UTF8,
                     }
                 ]),
                 ..Default::default()
@@ -460,6 +504,7 @@ mod test_deserialize {
                         max_depth: None,
                         regex: false,
                         check: CheckReplace::MoreThan(NonZeroU32::new(123).unwrap()),
+                        encoding: PatchEncoding::UTF8,
                     }
                 ]),
                 ..Default::default()
@@ -497,6 +542,7 @@ mod test_deserialize {
                         max_depth: None,
                         regex: false,
                         check: CheckReplace::BoolValue(true),
+                        encoding: PatchEncoding::UTF8,
                     }
                 ]),
                 ..Default::default()

@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::canon_path::CanonPath;
 use crate::lowercase::LwcString;
+use crate::obtain::get_options::StrictReplaceAction;
 use crate::progname::PROGNAME;
 
 pub const ARCHIVE_CACHE_ENV_VAR: &'static str = "MODDA_ARCHIVE_CACHE";
@@ -74,6 +75,15 @@ pub struct Config {
     /// Path to the code editor program.<br>
     /// Used with the `config edit` subcommands.
     pub code_editor: Option<String>,
+
+    pub defaults: Option<DefaultOptions>,
+}
+
+#[derive(Deserialize, Serialize, Debug, Default, Clone)]
+pub struct DefaultOptions {
+    /// What reaction to have when a replace doesn't work expected
+    #[serde(default)]
+    pub check_replace: Option<StrictReplaceAction>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Default, Clone)]
@@ -203,6 +213,8 @@ impl Settings {
                 // Setting extractor not supported for now
                 extractors: HashMap::new(),
                 code_editor: std::env::var(CODE_EDITOR_ENV_VAR).ok(),
+                // Setting default not supporte for now
+                defaults: None,
             })
         })
     }
@@ -220,6 +232,16 @@ fn combine(global: Option<Config>, local: Option<Config>, env_config: Option<Con
         ignore_current_dir_weidu: env_config.ignore_current_dir_weidu.or(local.ignore_current_dir_weidu).or(global.ignore_current_dir_weidu),
         extractors: merge_maps(&global.extractors, &local.extractors, &env_config.extractors),
         code_editor: env_config.code_editor.or(local.code_editor).or(global.code_editor),
+        defaults: Some(combine_defaults(global.defaults, local.defaults, env_config.defaults)),
+    }
+}
+
+fn combine_defaults(global: Option<DefaultOptions>, local: Option<DefaultOptions>, env_config: Option<DefaultOptions>) -> DefaultOptions {
+    let global = global.unwrap_or_else(|| DefaultOptions::default());
+    let local = local.unwrap_or_else(|| DefaultOptions::default());
+    let env_config = env_config.unwrap_or_else(|| DefaultOptions::default());
+    DefaultOptions {
+        check_replace: env_config.check_replace.or(global.check_replace).or(local.check_replace),
     }
 }
 

@@ -65,15 +65,16 @@ fn check_path(base: &CanonPath, path: &CanonPath) -> Result<()> {
     Ok(())
 }
 
-fn decode_file(path:&CanonPath, encoding: PatchEncoding) -> Result<String> {
-    let bytes = match std::fs::read(&path) {
+// TODO should be moved
+pub fn  decode_file<T: AsRef<Path>>(path: &T, encoding: PatchEncoding) -> Result<String> {
+    let bytes = match std::fs::read(path) {
         Ok(content) => content,
-        Err(error) => bail!("Failed to read patch file {:?}\n -> {:?}", path, error),
+        Err(error) => bail!("Failed to read patch file {:?}\n -> {:?}", path.as_ref(), error),
     };
     let decoded = encoding.decode(&bytes);
     if decoded.2 {
         warn!("There were some encoding errors when decoding file {:?} with encoding {:?}",
-                path, encoding);
+                path.as_ref(), encoding);
                 info!("=>\n{}", &*decoded.0);
     }
     Ok(decoded.0.into_owned())
