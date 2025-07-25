@@ -339,7 +339,7 @@ mod test_deserialize {
                         },
                     },
                     Module::Generated {
-                        gen:  GeneratedMod {
+                        generated:  GeneratedMod {
                             gen_mod: lwc!("ccc"),
                             files: vec![
                                 FileModuleOrigin::Local { local: "my_subdir".to_string(), glob: None },
@@ -353,7 +353,7 @@ mod test_deserialize {
                         },
                     },
                     Module::Generated {
-                        gen:  GeneratedMod {
+                        generated:  GeneratedMod {
                             gen_mod: lwc!("ddd"),
                             files: vec![
                                 FileModuleOrigin::Local { local: "my_other_subdir".to_string(), glob: Some("*.itm".to_string()) },
@@ -401,7 +401,7 @@ mod test_deserialize {
                     },
                 },
                 Module::Generated {
-                    gen:  GeneratedMod {
+                    generated:  GeneratedMod {
                         gen_mod: lwc!("ccc"),
                         files: vec![
                             FileModuleOrigin::Local { local: "my_subdir".to_string(), glob: None },
@@ -415,7 +415,7 @@ mod test_deserialize {
                     },
                 },
                 Module::Generated {
-                    gen:  GeneratedMod {
+                    generated:  GeneratedMod {
                         gen_mod: lwc!("ddd"),
                         files: vec![
                             FileModuleOrigin::Local { local: "my_other_subdir".to_string(), glob: Some("*.itm".to_string()) },
