@@ -43,7 +43,6 @@ impl ReplaceSpec {
     fn find_matching_files(&self, root: &PathBuf) -> Result<GlobWalker> {
         let walker = GlobWalkerBuilder::from_patterns(root, &self.file_globs)
             .case_insensitive(true)
-            .max_depth(self.max_depth.unwrap_or(0))
             .file_type(globwalk::FileType::FILE);
 
         let walker = match self.max_depth {
@@ -84,7 +83,7 @@ impl ReplaceSpec {
     }
 
     pub fn exec(&self, root: &PathBuf, get_options: &GetOptions) -> Result<()> {
-        info!("ReplaceSpec.exec on {:?} - {} => {}", &self.file_globs, &self.replace, &self.with);
+        info!("ReplaceSpec.exec on {:?} - '{}' => '{}' from {:?}", &self.file_globs, &self.replace, &self.with, root);
         let walker = self.find_matching_files(root)?;
         let pattern = if self.regex {
             Cow::Borrowed(&self.replace)
