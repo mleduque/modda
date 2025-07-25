@@ -135,7 +135,7 @@ impl ReplaceSpec {
             (false, Fail) => bail!("strict `replace` condition {:?} was not upheld (actual replacements: {replace_count}", self.check),
             (false, Ask) => {
                 let prompt = formatdoc!(r#"
-                Replace action has condition {:?} that was broken (actual count {}
+                Replace action has condition {:?} that was broken (actual count {})
                 Do you which to ignore the issue and continue the installation?
                 "#, self.check, replace_count);
                 match dialoguer::Confirm::new().with_prompt(prompt).interact()? {
