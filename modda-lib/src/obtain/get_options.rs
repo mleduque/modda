@@ -8,8 +8,11 @@ pub struct GetOptions {
 
 #[derive(Debug, Copy, Clone, ValueEnum, Deserialize, Serialize)]
 pub enum StrictReplaceAction {
+    #[serde(alias="ignore", alias="IGNORE")]
     Ignore,
+    #[serde(alias="fail", alias="FAIL")]
     Fail,
+    #[serde(alias="ask", alias="ASK")]
     Ask,
 }
 
