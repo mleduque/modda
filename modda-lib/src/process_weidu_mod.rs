@@ -1,5 +1,4 @@
 
-use std::default;
 use std::io::BufWriter;
 use std::io::Write;
 use std::path::Path;

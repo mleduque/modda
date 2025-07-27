@@ -7,7 +7,7 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 
 use anyhow::{bail, Ok, Result};
-use log::debug;
+use log::{debug, warn};
 use serde::{Deserialize, Serialize};
 
 use crate::canon_path::CanonPath;

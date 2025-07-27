@@ -1,5 +1,5 @@
 
-use std::{borrow::Cow, fs::{copy, rename, File, OpenOptions}, io::{Read, Write}, path::PathBuf};
+use std::{borrow::Cow, fs::{copy, rename, OpenOptions}, io::{Write}, path::PathBuf};
 
 use anyhow::{Result, bail};
 
