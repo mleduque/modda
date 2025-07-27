@@ -185,7 +185,10 @@ impl Settings {
                 let reader = BufReader::new(file);
                 let config = match serde_yaml::from_reader(reader) {
                     std::result::Result::Ok(config) => Some(config),
-                    std::result::Result::Err(_) => None,
+                    std::result::Result::Err(err) => {
+                        warn!("Could not read config file at {path_as_str}\n{err}");
+                        None
+                    }
                 };
                 debug!("Config read at {path_as_str}: {config:?}");
                 Ok(Some(ConfigSource {
