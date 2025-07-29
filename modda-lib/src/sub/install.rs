@@ -136,7 +136,11 @@ pub fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &
             check_install_complete(&module)?
         }
     }
-    info!("Installation done with no error");
+    if !opts.dry_run {
+        info!("dry run done with no error");
+    } else {
+        info!("Installation done with no error");
+    }
     timelines.push(InstallTimeline::new(lwc!("finished"), Local::now()));
     handle_timeline(opts.timeline, &timelines);
     Ok(())
