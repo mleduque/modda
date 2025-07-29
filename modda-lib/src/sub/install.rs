@@ -3,6 +3,7 @@ use std::cell::RefCell;
 use std::io::BufWriter;
 use std::path::{PathBuf, Path};
 
+use indoc::formatdoc;
 use nu_ansi_term::Color::{Blue, Green, Red};
 use anyhow::{Result, anyhow, bail};
 use chrono::Local;
@@ -195,17 +196,25 @@ fn check_safely_installable(module: &Module) -> Result<SafetyResult> {
         Components::Ask | Components::All => {
             let existing = installed.iter().filter(|comp| comp.mod_key == *module.get_name()).collect_vec();
             if !existing.is_empty() {
-                let prompt = format!(r#"
-                    For the next module fragment ({}), weidu will ask which components must be installed.
-                    Be aware that selecting a component that was already installed will uninstall all
-                    components that were installed in the meantime, reinstall this component and all the
-                    following ones which can take a long time (and, possibly, break things) and is better avoided.
-
-                    The following components for the same mod were installed:
-                    {}
+                let prompt = formatdoc!(r#"
+                    #
+                    ####################################
+                    #
+                    # For the next module fragment ({mod_name}), weidu will ask which components must be installed.
+                    # Be aware that selecting a component that was already installed will uninstall all
+                    # components that were installed in the meantime, reinstall this component and all the
+                    # following ones which can take a long time (and, possibly, break things) and is better avoided.
+                    #
+                    ####################################
+                    #
+                    The following components for the same mod ({mod_name}) were installed:
+                    {components}
 
                     Continue?
-                "#, module.get_name(), existing.iter().map(|comp| comp.index.to_string()).join(", "));
+                "#, mod_name = module.get_name(),
+                    components = existing.iter().map(|comp|
+                        format!(" - {} {}", comp.index, comp.name.as_ref().map_or("(unknown)", |name| name))
+                    ).join("\n"));
                 if dialoguer::Confirm::new().with_prompt(prompt).interact()? {
                     Ok(SafetyResult::Safe)
                 } else{
@@ -217,7 +226,11 @@ fn check_safely_installable(module: &Module) -> Result<SafetyResult> {
         }
         Components::List(list) => {
             let matches = list.iter().fold(vec![], |mut matches, current| {
-                let current = UniqueComponent { mod_key: module.get_name().to_owned(), index: current.index() };
+                let current = UniqueComponent {
+                    mod_key: module.get_name().to_owned(),
+                    index: current.index(),
+                    name: None,
+                };
                 if installed.contains(&current) {
                     matches.push(current);
                     matches

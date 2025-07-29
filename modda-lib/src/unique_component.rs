@@ -5,6 +5,7 @@ use crate::lowercase::LwcString;
 pub struct UniqueComponent {
     pub mod_key: LwcString,
     pub index: u32,
+    pub name: Option<String>,
 }
 
 impl UniqueComponent {

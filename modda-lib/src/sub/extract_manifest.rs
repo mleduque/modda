@@ -101,7 +101,11 @@ fn bare_mod_from_log_row(row: &LogRow) -> BareMod {
 pub fn extract_unique_components() -> Result<HashSet<UniqueComponent>> {
     let log_rows = parse_weidu_log(None)?;
     log_rows.iter().try_fold(HashSet::new(), |mut set, row| {
-        let unique_component = UniqueComponent { mod_key: lwc!(&row.module), index: row.component_index };
+        let unique_component = UniqueComponent {
+            mod_key: lwc!(&row.module),
+            index: row.component_index,
+            name: Some(row.component_name.clone()),
+        };
         if set.insert(unique_component.clone()) {
             Ok(set)
         } else {
