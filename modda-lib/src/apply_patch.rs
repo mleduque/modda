@@ -59,7 +59,7 @@ fn patch_module_with_content(game_dir: &CanonPath, module_name: &LwcString, patc
 }
 
 fn check_path(base: &CanonPath, path: &CanonPath) -> Result<()> {
-    if !path.starts_with(base.path()) {
+    if !path.starts_with(base.path()) && path.to_path_buf().as_os_str() != "/dev/null" {
         bail!("Attempt to patch file not in game directory\n  {:?} not in {:?}", path, base);
     }
     Ok(())
@@ -90,12 +90,14 @@ fn patch_files(old: &CanonPath, new: &CanonPath, diff: &Patch, encoding: PatchEn
         Ok(new_lines) => new_lines,
     };
 
-    let save_old_path = crate::utils::pathext::append_extension("old", &old.to_path_buf());
-    if let Err(error) = std::fs::write(&save_old_path, old_lines.join("\n")) {
-        bail!("Error saving old file to {:?}\n -> {:?}", save_old_path, error);
-    }
-    if old != new {
-        std::fs::remove_file(old)?;
+    if old.path() != PathBuf::from("/dev/null") {
+        let save_old_path = crate::utils::pathext::append_extension("old", &old.to_path_buf());
+        if let Err(error) = std::fs::write(&save_old_path, old_lines.join("\n")) {
+            bail!("Error saving old file to {:?}\n -> {:?}", save_old_path, error);
+        }
+        if old != new {
+            std::fs::remove_file(old)?;
+        }
     }
     if let Err(error) = std::fs::write(new, new_lines.join("\n")) {
         bail!("Error writing new file to {:?}\n -> {:?}", new, error);
@@ -105,6 +107,7 @@ fn patch_files(old: &CanonPath, new: &CanonPath, diff: &Patch, encoding: PatchEn
 
 fn get_old_content(old: &CanonPath, encoding: PatchEncoding) -> Result<String> {
     if old.path() == PathBuf::from("/dev/null") {
+        debug!("Patch creates a new file");
         Ok("".to_string())
     } else {
         match decode_file(old, encoding) {
