@@ -69,7 +69,7 @@ fn check_path(base: &CanonPath, path: &CanonPath) -> Result<()> {
 pub fn  decode_file<T: AsRef<Path>>(path: &T, encoding: PatchEncoding) -> Result<String> {
     let bytes = match std::fs::read(path) {
         Ok(content) => content,
-        Err(error) => bail!("Failed to read patch file {:?}\n -> {:?}", path.as_ref(), error),
+        Err(error) => bail!("Failed to read file to patch {:?}\n -> {:?}", path.as_ref(), error),
     };
     let decoded = encoding.decode(&bytes);
     if decoded.2 {
