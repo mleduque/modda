@@ -204,12 +204,12 @@ struct ReleaseInfo {
     pub url: String,
     pub html_url: String,
     pub assets_url: String,
-    pub tarball_url: String,
-    pub zipball_url: String,
+    pub tarball_url: Option<String>,
+    pub zipball_url: Option<String>,
     pub id: u32,
     pub tag_name: String,
-    pub body: String,
-    pub name: String,
+    pub body: Option<String>,
+    pub name: Option<String>,
     pub assets: Vec<Asset>,
 }
 #[derive(Deserialize, Debug, PartialEq, Clone)]
