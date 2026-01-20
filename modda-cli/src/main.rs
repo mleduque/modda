@@ -46,7 +46,7 @@ fn main() -> Result<()> {
     let current_dir = CanonPath::new(current_dir)?;
 
     if cli.command.wants_chitin_key() {
-        if ensure_chitin_key().is_err() {
+        if ensure_chitin_key(current_dir.as_ref()).is_err() {
             bail!("Must be run from the game directory (where chitin.key is)");
         } else {
             debug!("chitin.key found");

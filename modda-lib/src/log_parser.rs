@@ -4,11 +4,10 @@
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::BufReader;
-use std::path::PathBuf;
 
 use anyhow::{anyhow, bail, Result};
 use lazy_static::lazy_static;
-use log::{warn, info};
+use log::{info, warn};
 use regex::{Regex, RegexBuilder};
 
 use crate::lowercase::LwcString;
@@ -16,6 +15,7 @@ use crate::module::components::Components;
 use crate::module::module::Module;
 use crate::module::weidu_mod::WeiduMod;
 use crate::utils::bufread_raw::BufReadRaw;
+use crate::utils::insensitive::find_insensitive;
 
 // doesn't support --quick-log generated logs ATM
 // just need to actually look at then and set field as optional and update regexes
@@ -33,10 +33,13 @@ lazy_static! {
 }
 
 pub fn parse_weidu_log(mod_filter: Option<&LwcString>) -> Result<Vec<LogRow>> {
-    if !PathBuf::from("weidu.log").exists() {
-        return Ok(vec![]);
-    }
-    let weidu_log = match std::fs::File::open("weidu.log") { // TODO: handle case variations
+    let weidu_log_path = match find_insensitive(".", "weidu.log") {
+        Ok(None) =>return Ok(vec![]),
+        Ok(Some(path)) => path,
+        Err(error) => bail!("could not find weidu.log file\n {:?}", error)
+    };
+
+    let weidu_log = match std::fs::File::open(&weidu_log_path) {
         Err(error) => return Err(
             anyhow!(format!("Could not open weidu.log - {:?}", error)
         )),

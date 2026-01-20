@@ -19,6 +19,7 @@ use crate::lowercase::{LwcString, lwc};
 use crate::module::location::location::ConcreteLocation;
 use crate::module::pre_copy_command::PrecopyCommand;
 use crate::config::{Config, ExtractorCommand};
+use crate::utils::insensitive::find_insensitive;
 
 
 #[cfg_attr(test, faux::create)]
@@ -283,7 +284,11 @@ impl <'a> Extractor<'a> {
         let mut command = Command::new(&precopy.command);
         let work_dir = match &precopy.subdir {
             None => from.to_path_buf(),
-            Some(subdir) => from.join(subdir),
+            Some(subdir) => match find_insensitive(from, subdir) {
+                Err(_) => bail!("Error looking for precopy subdir {subdir:?} in {from:?}"),
+                Ok(None) => bail!("Precopy subdir {subdir:?} not found in {from:?}"),
+                Ok(Some(subdir)) => from.join(subdir),
+            },
         };
         command.current_dir(work_dir)
             .stdin(Stdio::inherit())

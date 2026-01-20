@@ -11,6 +11,7 @@ use crate::canon_path::CanonPath;
 use crate::global::Global;
 use crate::lowercase::LwcString;
 use crate::patch_source::{PatchDesc, PatchEncoding, PatchSource};
+use crate::utils::insensitive::find_insensitive;
 
 pub async fn patch_module(game_dir: &CanonPath, module_name: &LwcString, patch: &PatchDesc,
                             opts: &Install, global: &Global) -> Result<()> {
@@ -36,7 +37,16 @@ fn patch_module_with_content(game_dir: &CanonPath, module_name: &LwcString, patc
         Err(error) => bail!("Couldn't parse patch for module {}\n -> {:?}", module_name, error),
     };
     for patch in diff {
-        let old_path = game_dir.join(&*patch.old.path);
+        let old_path = &*patch.old.path;
+        let old_path = match find_insensitive(game_dir, old_path) {
+            Err(error) => bail!("Could not look for old path  in {old_path:?} in {game_dir:?}\n  {error:?}"),
+            Ok(None) => bail!("Old path  in {old_path:?} not found in {game_dir:?}"),
+            Ok(Some(old_path)) => {
+                debug!("found old path {old_path:?}");
+                old_path
+            }
+        };
+        let old_path = game_dir.join(&old_path);
         let old = match old_path {
             Ok(path) => path,
             Err(ref error) => bail!("Failed to canonicalize old file path {:?} while patching mod {}\n -> {:?}",
@@ -44,7 +54,16 @@ fn patch_module_with_content(game_dir: &CanonPath, module_name: &LwcString, patc
         };
         check_path(game_dir, &old)?;
 
-        let new_path = game_dir.join(&*patch.new.path);
+        let new_path = &*patch.new.path;
+        let new_path = match find_insensitive(game_dir, new_path) {
+            Err(error) => bail!("Could not look for new path  in {new_path:?} in {game_dir:?}\n  {error:?}"),
+            Ok(None) => bail!("New path  in {new_path:?} not found in {game_dir:?}"),
+            Ok(Some(new_path)) => {
+                debug!("found new path {new_path:?}");
+                new_path
+            }
+        };
+        let new_path = game_dir.join(&new_path);
         let new = match new_path {
             Ok(path) => path,
             Err(ref error) => bail!("Failed to canonicalize new file path {:?} while patching mod {}\n -> {:?}",
