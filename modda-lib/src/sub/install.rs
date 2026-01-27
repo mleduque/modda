@@ -73,7 +73,7 @@ pub fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &
         info!("module {} - {}", real_index, module.describe());
         debug!("{:?}", module);
 
-        match check_safely_installable(module)? {
+        match check_safely_installable(&game_dir, module)? {
             SafetyResult::Abort => bail!("Aborted"),
             SafetyResult::Safe => {}
             SafetyResult::Conflicts(matches) if matches.is_empty() => {}
@@ -91,7 +91,7 @@ pub fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &
                 }
                 match module {
                     Module::Mod { weidu_mod } =>
-                        install_weidu(weidu_mod, &modda_context, &manifest, opts, index, real_index)?,
+                        install_weidu(weidu_mod, &modda_context, &manifest, &modda_context, index, real_index)?,
                     Module::Generated { generated } =>
                         process_generated_mod(generated, &modda_context, &manifest, real_index)?,
                 }
@@ -134,7 +134,7 @@ pub fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &
         // Now check we actually installed all requested components
         // if dry_run, nothing will have been installed at all so don't check
         if !opts.dry_run && !was_disabled {
-            check_install_complete(&module)?
+            check_install_complete(game_dir, &module)?
         }
     }
     if !opts.dry_run {
@@ -148,12 +148,12 @@ pub fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &
 }
 
 fn install_weidu(weidu_mod: &WeiduMod, modda_context: &ModdaContext, manifest: &Manifest,
-                opts: &Install, index: usize, real_index: usize) -> Result<ProcessResult> {
+                context: &ModdaContext, index: usize, real_index: usize) -> Result<ProcessResult> {
     let result = process_weidu_mod(weidu_mod, &modda_context, &manifest, real_index)?;
     if weidu_mod.components.is_ask() {
-        if let Some(output_path) = &opts.record {
-            let manifest_path = PathBuf::from(&opts.manifest_path);
-            record_selection(index, weidu_mod, &output_path, &manifest_path, opts)?;
+        if let Some(output_path) = &context.opts.record {
+            let manifest_path = PathBuf::from(&context.opts.manifest_path);
+            record_selection(index, weidu_mod, &output_path, &manifest_path, context)?;
         }
     }
     Ok(result)
@@ -189,8 +189,8 @@ fn  get_modules_range<'a>(modules: &'a[Module], opts: &Install) -> Result<&'a [M
     Ok(result)
 }
 
-fn check_safely_installable(module: &Module) -> Result<SafetyResult> {
-    let installed = extract_unique_components()?;
+fn check_safely_installable(game_dir: &CanonPath, module: &Module) -> Result<SafetyResult> {
+    let installed = extract_unique_components(game_dir)?;
     match module.get_components() {
         Components::None => Ok(SafetyResult::Safe),
         Components::Ask | Components::All => {
@@ -266,8 +266,8 @@ pub enum SafetyResult {
     Abort,
 }
 
-fn record_selection(index: usize, module: &WeiduMod, output_file: &str, original_manifest_path: &Path, opts: &Install) -> Result<()> {
-    let log_rows = parse_weidu_log(None)?;
+fn record_selection(index: usize, module: &WeiduMod, output_file: &str, original_manifest_path: &Path, context: &ModdaContext) -> Result<()> {
+    let log_rows = parse_weidu_log(&context.current_dir, None)?;
     let output_path = PathBuf::from(output_file);
     let mut record_manifest = if output_path.exists() {
         Manifest::read_path_convert_comments(&output_path)?
@@ -311,7 +311,7 @@ fn record_selection(index: usize, module: &WeiduMod, output_file: &str, original
         Component::Full(FullComponent { index: row.component_index, component_name: row.component_name.to_owned() })
     ).collect_vec();
 
-    if confirm_record(opts.record_no_confirm, &selection_rows, &module.name)? {
+    if confirm_record(context.opts.record_no_confirm, &selection_rows, &module.name)? {
         // update manifest with new component selection
         let components = if selection.is_empty() {
             Components::None
@@ -325,7 +325,7 @@ fn record_selection(index: usize, module: &WeiduMod, output_file: &str, original
         } };
 
         // write updated manifest to new file
-        record_manifest.write(&output_path, opts.record_with_comment_as_field)?;
+        record_manifest.write(&output_path, context.opts.record_with_comment_as_field)?;
 
     }
 

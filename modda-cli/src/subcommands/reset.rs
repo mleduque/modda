@@ -14,7 +14,7 @@ use modda_lib::tp2::find_tp2_str;
 
 
 pub fn reset(args: &Reset, weidu_context: &WeiduContext) -> Result<()> {
-    let installed = extract_bare_mods()?;
+    let installed = extract_bare_mods(weidu_context.current_dir)?;
     let manifest = Manifest::read_path(&args.manifest_path,)?;
 
     let reset_index = args.to_index;

@@ -173,7 +173,7 @@ mod test_retrieve_location {
     use crate::module::location::location::{ConcreteLocation, Location};
     use crate::module::location::source::Source;
     use crate::module::weidu_mod::WeiduMod;
-    use crate:: config::{Config, DefaultOptions};
+    use crate:: config::Config;
     use crate::canon_path::CanonPath;
     use crate::cache::Cache;
     use crate::obtain::get_module::ModuleDownload;
