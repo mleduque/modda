@@ -19,8 +19,8 @@ use crate::module::weidu_mod::BareMod;
 use crate::unique_component::UniqueComponent;
 use crate::weidu_conf::read_weidu_conf_lang_dir;
 
-pub fn extract_bare_mods() -> Result<Vec<BareMod>> {
-    let log_rows = parse_weidu_log(None)?;
+pub fn extract_bare_mods(game_dir: &CanonPath) -> Result<Vec<BareMod>> {
+    let log_rows = parse_weidu_log(game_dir, None)?;
     let init: Vec<BareMod> = vec![];
     let mod_fragments = log_rows.iter().fold(init, |mut accumulator, row| {
         let current_mod = row.module.to_lowercase();
@@ -47,7 +47,7 @@ fn format_modules(bare_mods: Vec<BareMod>, export_component_name: Option<bool>, 
 }
 
 pub fn extract_manifest(args: &Reverse, game_dir: &CanonPath) -> Result<()> {
-    let mods = extract_bare_mods()?;
+    let mods = extract_bare_mods(game_dir)?;
     let mods = format_modules(mods, args.export_component_name, args.export_language);
     let manifest = generate_manifest(game_dir, mods)?;
 
@@ -98,8 +98,8 @@ fn bare_mod_from_log_row(row: &LogRow) -> BareMod {
     }
 }
 
-pub fn extract_unique_components() -> Result<HashSet<UniqueComponent>> {
-    let log_rows = parse_weidu_log(None)?;
+pub fn extract_unique_components(game_dir: &CanonPath) -> Result<HashSet<UniqueComponent>> {
+    let log_rows = parse_weidu_log(game_dir, None)?;
     log_rows.iter().try_fold(HashSet::new(), |mut set, row| {
         let unique_component = UniqueComponent {
             mod_key: lwc!(&row.module),

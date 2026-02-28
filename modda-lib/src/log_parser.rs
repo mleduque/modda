@@ -10,6 +10,7 @@ use lazy_static::lazy_static;
 use log::{info, warn};
 use regex::{Regex, RegexBuilder};
 
+use crate::canon_path::CanonPath;
 use crate::lowercase::LwcString;
 use crate::module::components::Components;
 use crate::module::module::Module;
@@ -32,8 +33,8 @@ lazy_static! {
                                         .case_insensitive(true).build().unwrap();
 }
 
-pub fn parse_weidu_log(mod_filter: Option<&LwcString>) -> Result<Vec<LogRow>> {
-    let weidu_log_path = match find_insensitive(".", "weidu.log") {
+pub fn parse_weidu_log(game_dir: &CanonPath,mod_filter: Option<&LwcString>) -> Result<Vec<LogRow>> {
+    let weidu_log_path = match find_insensitive(game_dir, "weidu.log") {
         Ok(None) =>return Ok(vec![]),
         Ok(Some(path)) => path,
         Err(error) => bail!("could not find weidu.log file\n {:?}", error)
@@ -91,15 +92,15 @@ pub fn parse_weidu_log(mod_filter: Option<&LwcString>) -> Result<Vec<LogRow>> {
     result
 }
 
-pub fn check_install_complete(module: &Module) -> Result<()> {
+pub fn check_install_complete(game_dir: &CanonPath, module: &Module) -> Result<()> {
     match module {
-        Module::Mod { weidu_mod } => check_install_weidu_mod(weidu_mod),
-        Module::Generated { generated } => check_install_weidu_mod(&generated.as_weidu()),
+        Module::Mod { weidu_mod } => check_install_weidu_mod(game_dir, weidu_mod),
+        Module::Generated { generated } => check_install_weidu_mod(game_dir, &generated.as_weidu()),
     }
 }
 
-fn check_install_weidu_mod(weidu_mod: &WeiduMod) -> Result<()> {
-    match check_installed_components(weidu_mod) {
+fn check_install_weidu_mod(game_dir: &CanonPath, weidu_mod: &WeiduMod) -> Result<()> {
+    match check_installed_components(game_dir, weidu_mod) {
         Err(err) => return Err(err),
         Ok(missing) => if !missing.is_empty() {
             bail!("All requested components for mod {} could not be installed.\nMissing: {:?}", weidu_mod.name , missing);
@@ -107,13 +108,13 @@ fn check_install_weidu_mod(weidu_mod: &WeiduMod) -> Result<()> {
     }
 }
 
-fn check_installed_components(module: &WeiduMod) -> Result<Vec<u32>> {
+fn check_installed_components(game_dir: &CanonPath, module: &WeiduMod) -> Result<Vec<u32>> {
     match &module.components {
         Components::None => Ok(vec![]),
         Components::Ask => Ok(vec![]),
         Components::All => Ok(vec![]),
         Components::List(components) => {
-            let log_rows = match parse_weidu_log(Some(&module.name)) {
+            let log_rows = match parse_weidu_log(game_dir, Some(&module.name)) {
                 Ok(log_rows) => log_rows,
                 Err(err) => bail!("Could not check installed components\n -> {:?}", err),
             };

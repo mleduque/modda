@@ -1,0 +1,5 @@
+// Log of Currently Installed WeiDU Mods
+// The top of the file is the 'oldest' mod
+// ~TP2_File~ #language_number #component_number // [Subcomponent Name -> ] Component Name [ : Version]
+// Recently Uninstalled: ~DLCMERGER/DLCMERGER.TP2~ #0 #1 // Merge DLC into game -> Merge "Siege of Dragonspear" DLC: 1.7
+~DLCMERGER/DLCMERGER.TP2~ #0 #1 // Merge DLC into game -> Merge "Siege of Dragonspear" DLC: 1.7

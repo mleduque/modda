@@ -1,7 +1,6 @@
 
 use std::io::BufWriter;
 use std::io::Write;
-use std::path::Path;
 
 
 use nu_ansi_term::Color;
@@ -26,6 +25,7 @@ use crate::tp2::find_tp2;
 use crate::tp2_template::create_tp2;
 use crate::run_weidu::run_weidu_install;
 use crate::modda_context::ModdaContext;
+use crate::utils::insensitive::find_insensitive;
 
 pub struct ProcessResult {
     pub was_disabled: bool,
@@ -63,7 +63,7 @@ pub fn process_weidu_mod(weidu_mod: &WeiduMod, modda_context: &ModdaContext, man
                     return Err(error)
                 }
                 Ok(setup_log) => {
-                    configure_module(weidu_mod)?;
+                    configure_module(weidu_mod, modda_context)?;
                     SetupTimeline {
                         configured: Some(Local::now()),
                         ..setup_log
@@ -185,9 +185,14 @@ fn fail_warnings(module: &WeiduMod, index: usize, total: usize) -> (String, Colo
     (message, Red)
 }
 
-fn configure_module(module: &WeiduMod) -> Result<()> {
+fn configure_module(module: &WeiduMod, modda_context: &ModdaContext) -> Result<()> {
     if let Some(conf) = &module.add_conf {
-        let conf_path = Path::new(module.name.as_ref()).join(&conf.file_name);
+        let mod_dir = match find_insensitive(modda_context.current_dir, module.name.as_ref()) {
+            Ok(Some(path)) => path,
+            Ok(None) => bail!("Could not find mod directory {}", module.name),
+            Err(err) => bail!("Error looking for mod directory {} - {err:?}", module.name),
+        };
+        let conf_path = mod_dir.join(&conf.file_name);
         let file = match std::fs::OpenOptions::new()
                         .create(true).write(true).truncate(true)
                         .open(&conf_path) {
