@@ -221,8 +221,8 @@ mod test_retrieve_location {
             downloader.download(_, {expected_dest}, _, _, _)
         ).then(|(_, _, _, _, _)| Ok(PathBuf::from("/cache_path/http/example.com/some_mod.zip")));
         when!(
-            downloader.download_partial(_, _, _, _)
-        ).then(|(_, _, _, _)| bail!("Should not be called"));
+            downloader.download_partial(_, _, _, _, _)
+        ).then(|(_, _, _, _, _)| bail!("Should not be called"));
         when!(
             downloader.rename_partial(_, _)
         ).then(|(_, _)| bail!("Should not be called"));

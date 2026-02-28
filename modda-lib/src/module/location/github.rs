@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::credentials::{Credentials, GithubCredentials};
 use crate::download::{Downloader, DownloadOpts};
+use crate::module::location::size_hint::SizeHint;
 use crate::module::refresh::RefreshCondition;
 use crate::progname::PROGNAME;
 
@@ -25,12 +26,15 @@ pub struct Github {
     pub no_cache: bool,
     /// None -> no auth needed, Some -> method + credentials for example `PAT <token_name>`
     pub auth: Option<String>,
+    /// Approximation of the expected size, only used for progress display abd on ly if actual size is unknown.
+    #[serde(default)]
+    pub size_hint: Option<SizeHint>,
 }
 
 impl Github {
     pub async fn get_github(&self, downloader: &Downloader, dest: &PathBuf, save_name: PathBuf) -> Result<PathBuf> {
         let url = self.descriptor.get_url(&self.github_user, &self.repository, &self.auth).await?;
-        let opts = &DownloadOpts { no_cache: self.no_cache, refresh: self.refresh() };
+        let opts = &DownloadOpts { no_cache: self.no_cache, refresh: self.refresh(), size_hint: self.size_hint.clone() };
         let mut headers = HeaderMap::new();
         headers.insert(ACCEPT, self.descriptor.get_media_type());
         headers.insert(&*GITHUB_API_VERSION_NAME, (*GITHUB_API_VERSION_VALUE).clone());
