@@ -11,6 +11,7 @@ use indicatif::{ProgressBar, ProgressStyle, ProgressState};
 use log::{debug, info};
 use reqwest::header::{HeaderMap, USER_AGENT};
 
+use crate::module::location::size_hint::SizeHint;
 use crate::module::refresh::RefreshCondition;
 use crate::progname::PROGNAME;
 
@@ -22,6 +23,8 @@ pub struct Downloader {}
 pub struct DownloadOpts {
     pub no_cache: bool,
     pub refresh: RefreshCondition,
+    /// Approximation of the expected size, only used for progress display and only if actual size is unknown.
+    pub size_hint: Option<SizeHint>,
 }
 
 #[cfg_attr(test, faux::methods)]
@@ -46,7 +49,7 @@ impl Downloader {
 
         let partial_name = get_partial_filename(&file_name)?;
 
-        if let Err(error) = self.download_partial(url, &partial_name, &dest_dir, headers).await {
+        if let Err(error) = self.download_partial(url, &partial_name, &dest_dir, headers, opts).await {
             bail!("download_partial failed for {} to {:?}\n  {}", url, partial_name, error);
         };
 
@@ -61,7 +64,7 @@ impl Downloader {
     }
 
     pub async fn download_partial(&self, url: &str, partial_name: &PathBuf, dest_dir: &PathBuf,
-                                    headers: &Option<HeaderMap>)  -> Result<()> {
+                                    headers: &Option<HeaderMap>, download_opts: &DownloadOpts)  -> Result<()> {
         info!("download {} to {:?}", url, dest_dir);
         std::fs::create_dir_all(dest_dir)?;
 
@@ -86,33 +89,17 @@ impl Downloader {
 
 
         // Indicatif setup
-        let pb = match total_size {
-            Some(total_size) => {
-                let pb = ProgressBar::new(total_size);
-                pb.set_style(ProgressStyle::default_bar()
-                    .template("{msg}\n{spinner:.green} [{elapsed_precise}] {percent:>3}% of {total_bytes} {smoothed_eta:>10}")?
-                    .progress_chars("#>-")
-                    // https://github.com/console-rs/indicatif/issues/394
-                    .with_key("smoothed_eta",
-                        |s: &ProgressState, w: &mut dyn std::fmt::Write| match (s.pos(), s.len()) {
-                            (pos, Some(len)) if pos != 0 =>
-                                write!(w, "{:#}",
-                                    indicatif::HumanDuration(std::time::Duration::from_millis(
-                                        (s.elapsed().as_millis() * (len as u128 - pos as u128) / (pos as u128)) as u64
-                                    ))
-                                ).unwrap(),
-                            _ => write!(w, "-").unwrap(),
-                        },
-                    )
-                );
-                pb
-            }
-            None => {
-                let pb = ProgressBar::new_spinner();
-                pb.set_style(ProgressStyle::default_bar()
-                    .template("{msg}\n{spinner:.green} [{elapsed_precise}]  {bytes}/(unknown size)")?
-                );
-                pb
+        let pb = match (total_size) {
+            Some(total_size) => Self::progress_with_size(total_size)?,
+            None => match &download_opts.size_hint{
+                None =>{
+                    let pb = ProgressBar::new_spinner();
+                    pb.set_style(ProgressStyle::default_bar()
+                        .template("{msg}\n{spinner:.green} [{elapsed_precise}]  {bytes}/(unknown size)")?
+                    );
+                    pb
+                },
+                Some(total_size) => Self::progress_with_size(total_size.size())?,
             }
         };
         pb.set_message(format!("Downloading {}", url));
@@ -145,6 +132,27 @@ impl Downloader {
         }
         pb.finish_with_message(format!("Download from {} finished", url));
         Ok(())
+    }
+
+    fn progress_with_size(total_size: u64) -> Result<ProgressBar> {
+        let pb = ProgressBar::new(total_size);
+        pb.set_style(ProgressStyle::default_bar()
+            .template("{msg}\n{spinner:.green} [{elapsed_precise}] {percent:>3}% of {total_bytes} {smoothed_eta:>10}")?
+            .progress_chars("#>-")
+            // https://github.com/console-rs/indicatif/issues/394
+            .with_key("smoothed_eta",
+                |s: &ProgressState, w: &mut dyn std::fmt::Write| match (s.pos(), s.len()) {
+                    (pos, Some(len)) if pos != 0 =>
+                        write!(w, "{:#}",
+                            indicatif::HumanDuration(std::time::Duration::from_millis(
+                                (s.elapsed().as_millis() * (len as u128 - pos as u128) / (pos as u128)) as u64
+                            ))
+                        ).unwrap(),
+                    _ => write!(w, "-").unwrap(),
+                },
+            )
+        );
+        Ok(pb)
     }
 
     pub fn rename_partial(&self, partial_file_name: &PathBuf, final_file_name: &PathBuf) -> Result<()> {
@@ -237,7 +245,11 @@ mod test_cache_duration {
     fn cached_file_is_expired() -> Result<()> {
         let _cleanup = Cleanup(function_name!().to_string());
 
-        let opts = DownloadOpts { no_cache: false, refresh: RefreshCondition::Duration(humantime::parse_duration("1day")?) };
+        let opts = DownloadOpts {
+            no_cache: false,
+            refresh: RefreshCondition::Duration(humantime::parse_duration("1day")?),
+            size_hint: None,
+        };
 
         let project = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let file_loc = project.join("target").join("test_data").join("caching");
@@ -258,7 +270,11 @@ mod test_cache_duration {
     fn cached_file_is_not_expired() -> Result<()> {
         let _cleanup = Cleanup(function_name!().to_string());
 
-        let opts = DownloadOpts { no_cache: false, refresh: RefreshCondition::Duration(humantime::parse_duration("1day")?) };
+        let opts = DownloadOpts {
+            no_cache: false,
+            refresh: RefreshCondition::Duration(humantime::parse_duration("1day")?),
+            size_hint: None,
+        };
 
         let project = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let file_loc = project.join("target").join("test_data").join("caching");
@@ -279,7 +295,7 @@ mod test_cache_duration {
     fn cached_file_is_always_refreshed() -> Result<()> {
         let _cleanup = Cleanup(function_name!().to_string());
 
-        let opts = DownloadOpts { no_cache: false, refresh: RefreshCondition::Always };
+        let opts = DownloadOpts { no_cache: false, refresh: RefreshCondition::Always, size_hint: None };
 
         let project = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let file_loc = project.join("target").join("test_data").join("caching");
@@ -300,7 +316,7 @@ mod test_cache_duration {
     fn cached_file_is_never_refreshed() -> Result<()> {
         let _cleanup = Cleanup(function_name!().to_string());
 
-        let opts = DownloadOpts { no_cache: false, refresh: RefreshCondition::Never };
+        let opts = DownloadOpts { no_cache: false, refresh: RefreshCondition::Never, size_hint: None };
 
         let project = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         let file_loc = project.join("target").join("test_data").join("caching");
