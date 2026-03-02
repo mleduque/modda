@@ -19,6 +19,7 @@ pub mod weidu_mod;
 
 #[cfg(test)]
 mod test_deserialize {
+    use bytesize::ByteSize;
     use serde_yaml::Deserializer;
 
     use crate::lowercase::lwc;
@@ -30,6 +31,7 @@ mod test_deserialize {
     use crate::module::location::github::{Github, GithubDescriptor};
     use crate::module::location::http::Http;
     use crate::module::location::location::{ConcreteLocation, Location};
+    use crate::module::location::size_hint::SizeHint;
     use crate::module::location::source::Source;
     use crate::module::module_conf::{ModuleConf, ModuleContent};
     use crate::module::weidu_mod::WeiduMod;
@@ -648,6 +650,84 @@ mod test_deserialize {
                         DisableCondition::File { in_file: "disabling.file".to_string(), key: "dlcmerger".to_string() },
                     ],
                 }),
+                ..WeiduMod::default()
+            }
+        );
+    }
+
+    #[test]
+    fn deserialize_github_mod_with_bytes_size_hint() {
+        let yaml = r#"
+        name: DlcMerger
+        components:
+            - 1
+        location:
+            github_user: Argent77
+            repository: A7-DlcMerger
+            commit: aaaaa
+            size_hint: 12345
+        "#;
+        let module: WeiduMod = serde_yaml::from_str(yaml).unwrap();
+        pretty_assertions::assert_eq!(
+            module,
+            WeiduMod {
+                name: lwc!("DlcMerger"),
+                components: Components::List(vec! [ Component::Simple(1) ]),
+                location: Some(
+                    Location::Concrete {
+                        concrete: ConcreteLocation {
+                            source: Source::Github(Github {
+                                github_user: "Argent77".to_string(),
+                                repository: "A7-DlcMerger".to_string(),
+                                descriptor: GithubDescriptor::Commit {
+                                    commit: "aaaaa".to_string(),
+                                },
+                                size_hint: Some(SizeHint::Bytes(12345)),
+                                ..Default::default()
+                            }),
+                                ..Default::default()
+                        }
+                    }
+                ),
+                ..WeiduMod::default()
+            }
+        );
+    }
+
+    #[test]
+    fn deserialize_github_mod_with_human_size_hint() {
+        let yaml = r#"
+        name: DlcMerger
+        components:
+            - 1
+        location:
+            github_user: Argent77
+            repository: A7-DlcMerger
+            commit: aaaaa
+            size_hint: 12Kb
+        "#;
+        let module: WeiduMod = serde_yaml::from_str(yaml).unwrap();
+        pretty_assertions::assert_eq!(
+            module,
+            WeiduMod {
+                name: lwc!("DlcMerger"),
+                components: Components::List(vec! [ Component::Simple(1) ]),
+                location: Some(
+                    Location::Concrete {
+                        concrete: ConcreteLocation {
+                            source: Source::Github(Github {
+                                github_user: "Argent77".to_string(),
+                                repository: "A7-DlcMerger".to_string(),
+                                descriptor: GithubDescriptor::Commit {
+                                    commit: "aaaaa".to_string(),
+                                },
+                                size_hint: Some(SizeHint::Human(ByteSize(12_000))),
+                                ..Default::default()
+                            }),
+                                ..Default::default()
+                        }
+                    }
+                ),
                 ..WeiduMod::default()
             }
         );
