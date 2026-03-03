@@ -137,7 +137,7 @@ pub fn install(opts: &Install, settings: &Config, game_dir: &CanonPath, cache: &
             check_install_complete(game_dir, &module)?
         }
     }
-    if !opts.dry_run {
+    if opts.dry_run {
         info!("dry run done with no error");
     } else {
         info!("Installation done with no error");
