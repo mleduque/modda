@@ -145,7 +145,7 @@ impl Downloader {
                     (pos, Some(len)) if pos != 0 =>
                         write!(w, "{:#}",
                             indicatif::HumanDuration(std::time::Duration::from_millis(
-                                (s.elapsed().as_millis() * (len as u128 - pos as u128) / (pos as u128)) as u64
+                                (s.elapsed().as_millis() * ((len as u128).saturating_sub(pos as u128)) / (pos as u128)) as u64
                             ))
                         ).unwrap(),
                     _ => write!(w, "-").unwrap(),
