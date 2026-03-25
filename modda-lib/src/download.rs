@@ -89,7 +89,7 @@ impl Downloader {
 
 
         // Indicatif setup
-        let pb = match (total_size) {
+        let pb = match total_size {
             Some(total_size) => Self::progress_with_size(total_size)?,
             None => match &download_opts.size_hint{
                 None =>{

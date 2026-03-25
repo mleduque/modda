@@ -3,7 +3,9 @@ use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Result, bail};
-use log::debug;
+use itertools::Itertools;
+use log::{debug, info};
+use same_file::Handle;
 
 /// Looks for a file matching the argument, allowing case-insensitive matches.
 ///
@@ -20,10 +22,15 @@ pub fn find_insensitive<P>(base: P, searched: &str) -> Result<Option<PathBuf>>
         },
         [ref name] => Ok(Some(PathBuf::from(name))),
         _ => {
-            let msg = format!("More than one candidate ({count}) for lookup of {searched:?} in {base:?}",
-                                    count = candidates.len());
-            debug!("{msg}");
-            bail!(msg)
+            match handle_multiple_matches(&candidates, searched) {
+                Ok(result) => Ok(result),
+                Err(_) => {
+                    let msg = format!("More than one candidate ({count}) for lookup of {searched:?} in {base:?}",
+                                            count = candidates.len());
+                    debug!("{msg}");
+                    bail!(msg)
+                }
+            }
         },
     }
 }
@@ -108,6 +115,24 @@ pub fn find_all_insensitive<P>(base: P, searched: &str) -> Result<Vec<PathBuf>>
         .map(|dir_entry| base.as_ref().join(dir_entry.into_path()))
         .collect::<Vec<_>>();
     Ok(result)
+}
+
+fn handle_multiple_matches(candidates: &[PathBuf], searched: &str) -> Result<Option<PathBuf>> {
+    let handles: Result<Vec<Handle>, std::io::Error> = candidates.iter()
+        .map(|path| Handle::from_path(path))
+        .collect();
+    let handles = match handles {
+        Err(err) => bail!("Couldn't open all matching candidates\n  {:?}", err),
+        Ok(handles) => handles,
+    };
+    if handles.iter().all_equal() {
+        let chosen = itertools::sorted(candidates.iter()).next().cloned();
+        info!("multiple ({count}) candidates for {searched} but all are the same file - choose {chosen:?}",
+                count = candidates.len());
+        Ok(chosen)
+    } else {
+        bail!("Multiple matches for {searched}, not the same file")
+    }
 }
 
 #[cfg(test)]
@@ -274,5 +299,24 @@ mod tests {
                 PathBuf::from(&base).join("mod2").join("File"),
             ].iter().collect::<HashSet<_>>(),
         );
+    }
+
+    #[cfg(target_family = "unix")]
+    #[test]
+    fn multiple_candidates_symlink_same_file() {
+        let _ = env_logger::builder().is_test(true).filter_level(log::LevelFilter::Debug).try_init();
+        let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("resources/test/file_lookup/conflicts");
+        assert_eq!(
+            find_insensitive(&base, "mod1").unwrap(),
+            Some(PathBuf::from(&base).join("MOD1")),
+        );
+    }
+
+    #[cfg(target_family = "unix")]
+    #[test]
+    fn multiple_candidates_symlink_different_file() {
+        let _ = env_logger::builder().is_test(true).filter_level(log::LevelFilter::Debug).try_init();
+        let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("resources/test/file_lookup/conflicts");
+        assert!(find_insensitive(&base, "mod2").is_err());
     }
 }
