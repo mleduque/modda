@@ -15,6 +15,7 @@ pub struct InstallTimeline {
     pub configured: Option<DateTime<Local>>,
     pub start_install: Option<DateTime<Local>>,
     pub installed: Option<DateTime<Local>>,
+    pub post_populate_done: Option<DateTime<Local>>,
 }
 
 impl InstallTimeline {
@@ -32,29 +33,36 @@ impl InstallTimeline {
         self.copied = setup.copied;
         self.patched = setup.patched;
         self.configured = setup.configured;
+        self.post_populate_done = setup.post_install_done;
     }
 
     pub fn short(&self) -> String {
         let mut result = format!("({}) {}" , self.start.format("%H:%M:%S"), self.name);
-            result +=" download: ";
+        result +=" download: ";
         if let (Some(start), Some(end)) = (self.start_download, self.downloaded) {
-            result+= &format_duration(end - start).to_string();
+            result += &format_duration(end - start).to_string();
         } else {
             result += "-"
         }
-            result +=" extract: ";
+        result +=" extract: ";
         if let (Some(downloaded), Some(copied)) = (self.downloaded, self.copied) {
             result+= &format_duration(copied - downloaded).to_string();
         } else {
             result += "-"
         }
-            result +=" prepare: ";
+        result +=" prepare: ";
         if let (Some(copied), Some(configured)) = (self.copied, self.configured) {
             result+= &format_duration(configured - copied).to_string();
         } else {
             result += "-"
         }
-            result +=" install: ";
+        result +=" post-populate: ";
+        if let (Some(post_action), Some(copied)) = (self.post_populate_done, self.copied) {
+            result+= &format_duration(post_action - copied).to_string();
+        } else {
+            result += "-"
+        }
+        result +=" install: ";
         if let (Some(start_install), Some(installed)) = (self.start_install, self.installed) {
             result+= &format_duration(installed - start_install).to_string();
         } else {
@@ -77,4 +85,5 @@ pub struct SetupTimeline {
     pub patched: Option<DateTime<Local>>,
     pub replaced: Option<DateTime<Local>>,
     pub configured: Option<DateTime<Local>>,
+    pub post_install_done: Option<DateTime<Local>>,
 }

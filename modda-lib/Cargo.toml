@@ -45,6 +45,7 @@ serde_path_to_error = "0.1.20"
 serde_with = "3.17.0"
 serde_yaml = "0.9.34-deprecated"
 shellexpand = "3.1.2"
+symlink = "0.1.0"
 tar = "0.4.45"
 tokio = { version = "1.49.0", features = ["full"] }
 tempfile = "3.26.0"

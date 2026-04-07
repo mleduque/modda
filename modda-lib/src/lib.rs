@@ -21,6 +21,7 @@ pub mod patch_source;
 pub mod post_install;
 pub mod process_weidu_mod;
 pub mod progname;
+pub mod run_post_install_action;
 pub mod run_result;
 pub mod run_weidu;
 pub mod config;

@@ -10,6 +10,7 @@ use serde_with::skip_serializing_none;
 use void::Void;
 
 use crate::lowercase::{LwcString, lwc};
+use crate::module::location::post_install_action::PostPopulateAction;
 use crate::module::pre_copy_command::PrecopyCommand;
 use crate::{archive_layout::Layout, patch_source::PatchDesc};
 
@@ -64,6 +65,9 @@ pub struct ConcreteLocation {
     /// regex-based search and replace, runs after patch.
     pub replace: Option<Vec<ReplaceSpec>>,
     pub precopy: Option<PrecopyCommand>,
+    /// Things that will be done after installing the mod inside the game directory
+    #[serde(default)]
+    pub post_populate: Vec<PostPopulateAction>,
 }
 
 pub fn location_deser<'de, D>(deserializer: D) -> Result<Location, D::Error>
