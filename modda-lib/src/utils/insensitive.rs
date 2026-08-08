@@ -240,11 +240,11 @@ mod tests {
         let _ = env_logger::builder().is_test(true).filter_level(log::LevelFilter::Debug).try_init();
         let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("resources/test/file_lookup/multiple");
         assert_eq!(
-            find_all_insensitive(&base, "file2.txt").unwrap(),
+            find_all_insensitive(&base, "file2.txt").unwrap().into_iter().collect::<HashSet<_>>(),
             vec![
                 PathBuf::from(&base).join("File2.txt"),
                 PathBuf::from(&base).join("File2.Txt"),
-            ],
+            ].into_iter().collect::<HashSet<_>>(),
         );
     }
 
