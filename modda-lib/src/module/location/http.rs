@@ -27,7 +27,11 @@ impl Http {
     pub fn from(http: &str) -> Self { Self { http: http.to_owned(), ..Self::default() } }
 
     pub async fn download(&self, downloader: &Downloader, dest: &PathBuf, save_name: PathBuf) -> Result<PathBuf> {
-        let opts = &DownloadOpts { no_cache: self.no_cache, refresh: self.refresh.clone(), size_hint: self.size_hint.clone() };
+        let opts = &DownloadOpts {
+            no_cache: self.no_cache,
+            refresh: self.refresh.clone(),
+            size_hint: self.size_hint.clone(),
+        };
         downloader.download(&self.http, dest, save_name, opts, &None).await
     }
 }

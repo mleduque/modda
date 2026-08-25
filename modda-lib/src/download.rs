@@ -182,7 +182,7 @@ fn get_partial_filename(file_name: &PathBuf) -> Result<PathBuf> {
     Ok(PathBuf::from(partial_name))
 }
 
-fn use_from_cache(opts: &DownloadOpts, file_name: &PathBuf) -> Result<bool> {
+pub fn use_from_cache(opts: &DownloadOpts, file_name: &PathBuf) -> Result<bool> {
     match opts.refresh {
         RefreshCondition::Always => Ok(false),
         RefreshCondition::Never => Ok(file_name.exists()),

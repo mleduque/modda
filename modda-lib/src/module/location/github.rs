@@ -10,7 +10,7 @@ use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 
 use crate::credentials::{Credentials, GithubCredentials};
-use crate::download::{Downloader, DownloadOpts};
+use crate::download::{DownloadOpts, Downloader, use_from_cache};
 use crate::module::location::size_hint::SizeHint;
 use crate::module::refresh::RefreshCondition;
 use crate::progname::PROGNAME;
@@ -33,8 +33,21 @@ pub struct Github {
 
 impl Github {
     pub async fn get_github(&self, downloader: &Downloader, dest: &PathBuf, save_name: PathBuf) -> Result<PathBuf> {
+        let opts = &DownloadOpts {
+            no_cache: self.no_cache,
+            refresh: self.refresh(),
+            size_hint: self.size_hint.clone(),
+        };
+
+        // check if archive exists in the cache
+        let file_name = dest.join(&save_name);
+
+        if use_from_cache(opts, &file_name)? {
+            info!("File already downloaded before, reusing");
+            return Ok(file_name.to_owned());
+        }
+
         let url = self.descriptor.get_url(&self.github_user, &self.repository, &self.auth).await?;
-        let opts = &DownloadOpts { no_cache: self.no_cache, refresh: self.refresh(), size_hint: self.size_hint.clone() };
         let mut headers = HeaderMap::new();
         headers.insert(ACCEPT, self.descriptor.get_media_type());
         headers.insert(&*GITHUB_API_VERSION_NAME, (*GITHUB_API_VERSION_VALUE).clone());
