@@ -13,6 +13,7 @@ impl CanonPath {
     pub fn join_path<P: AsRef<Path>>(&self, p: P) -> PathBuf { self.0.join(p) }
     pub fn starts_with<P: AsRef<Path>>(&self, base: P) -> bool { self.0.starts_with(base) }
     pub fn to_path_buf(&self) -> PathBuf { self.0.to_path_buf() }
+    pub fn dev_null() -> Self { CanonPath(PathBuf::from("/dev/null")) }
 }
 
 impl AsRef<Path> for CanonPath {

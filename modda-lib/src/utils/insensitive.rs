@@ -53,7 +53,7 @@ pub fn find_all_insensitive<P>(base: P, searched: &str) -> Result<Vec<PathBuf>>
         .try_fold(vec![], |mut acc: Vec<PathBuf>, curr| {
             let part = match curr {
                 std::path::Component::Normal(part) => part,
-                _ => bail!("Path component is not allowed: `{curr:?}` (in `{searched:?}`")
+                _ => bail!("Path component is not allowed: `{curr:?}` (in `{searched:?}`)")
             };
             let next = match acc.last() {
                 None => PathBuf::from(part),
