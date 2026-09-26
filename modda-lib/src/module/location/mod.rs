@@ -1,6 +1,7 @@
 pub mod github;
 pub mod http;
 pub mod location;
+pub mod post_install_action;
 pub mod replace;
 pub mod size_hint;
 pub mod source;

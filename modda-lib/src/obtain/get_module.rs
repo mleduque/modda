@@ -17,6 +17,7 @@ use crate::module::global_locations::GlobalLocations;
 use crate::module::location::location::{ConcreteLocation, Location};
 use crate::module::location::replace::ReplaceSpec;
 use crate::module::location::source::Source;
+use crate::run_post_install_action::run_post_populate_action;
 use crate::timeline::SetupTimeline;
 use crate::lowercase::LwcString;
 use crate::module::weidu_mod::WeiduMod;
@@ -53,9 +54,10 @@ impl <'a> ModuleDownload<'a> {
     // at some point, I'd like to have a pool of downloads with installations done
     // concurrently as soon as modules are there
     #[tokio::main]
-    pub async fn get_module(&self, module: &WeiduMod, get_options: &GetOptions) -> Result<SetupTimeline> {
+    pub async fn get_module(&self, module: &WeiduMod,
+                            get_options: &GetOptions, game_dir: &CanonPath) -> Result<SetupTimeline> {
         let concrete_location = self.get_module_location(module)?;
-        self.get_mod_from_concrete_location(concrete_location, &module.name, get_options).await
+        self.get_mod_from_concrete_location(concrete_location, &module.name, get_options, game_dir).await
     }
 
     pub fn get_module_location(&'a self, module: &'a WeiduMod) -> Result<&'a ConcreteLocation> {
@@ -80,9 +82,11 @@ impl <'a> ModuleDownload<'a> {
     /// 3. run `precopy` command if any -> the mod content is modified in-place (temp location)
     /// 4. move content (whole or part, according to `layout`) to the game directory -> the mod content is in the game directory
     /// 5. apply `patch` in-place (on mod data in game directory)
-    /// 5. apply `replace` in-place (on mod data in game directory)
-    async fn get_mod_from_concrete_location(&self, location: &ConcreteLocation,
-                                            mod_name: &LwcString, get_options: &GetOptions) -> Result<SetupTimeline> {
+    /// 6. apply `replace` in-place (on mod data in game directory)
+    /// 7. execute post-install actions
+    async fn get_mod_from_concrete_location(&self,
+            location: &ConcreteLocation, mod_name: &LwcString,
+            get_options: &GetOptions, game_dir: &CanonPath) -> Result<SetupTimeline> {
         let start = Local::now();
         let archive = match self.retrieve_location(&location, &mod_name).await {
             Ok(archive) => archive,
@@ -114,7 +118,14 @@ impl <'a> ModuleDownload<'a> {
         replace_module(&dest, &mod_name , &location.replace, get_options)?;
         let replaced = Some(Local::now());
 
-        Ok(SetupTimeline { start, downloaded, copied, patched, replaced, configured: None })
+        // Execute post-install actions
+        location.post_populate.iter().enumerate().try_for_each(|(index, action)| {
+            info!("[{mod_name}] running post-action {index}: {action:?}");
+            run_post_populate_action(action, game_dir, &mod_name)
+                .and_then(|_| { info!("[{mod_name}] post-action {index} successful"); Ok(()) })
+        })?;
+        let post_install_done = Some(Local::now());
+        Ok(SetupTimeline { start, downloaded, copied, patched, replaced, configured: None, post_install_done })
     }
 
     pub async fn retrieve_location(&self, loc: &ConcreteLocation, mod_name: &LwcString) -> Result<PathBuf> {

@@ -54,7 +54,11 @@ pub fn process_weidu_mod(weidu_mod: &WeiduMod, modda_context: &ModdaContext, man
                     }
                 )
             };
-            let setup_log = match module_downloader.get_module(&weidu_mod, &get_options) {
+            let setup_log = match module_downloader.get_module(
+                &weidu_mod,
+                &get_options,
+                modda_context.current_dir,
+            ) {
                 Err(error) => {
                     let message = format!("module {name} (index={idx}/{len}) download/installation failed, stopping.",
                                                     name = weidu_mod.name, idx = real_index, len = mod_count);
